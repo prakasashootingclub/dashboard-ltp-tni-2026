@@ -137,7 +137,8 @@
   }
   .section-title::after{content:""; flex:1; height:1px; background:var(--line);}
 
-  table{width:100%; border-collapse:collapse; font-size:12.5px;}
+  .table-wrap{ width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  table{width:100%; min-width:520px; border-collapse:collapse; font-size:12.5px;}
   thead th{
     text-align:left; padding:9px 12px; background:var(--panel-2);
     color:var(--ink-faint); font-weight:600; text-transform:uppercase; font-size:10.5px;
@@ -229,6 +230,41 @@
   .item-nums span b{ color:var(--ink); font-size:13px; }
   .item-nums .lbl-verif b{ color:var(--olive-bright); }
   .item-nums .lbl-checkin b{ color:var(--amber-bright); }
+
+  /* ---------- MOBILE ---------- */
+  @media(max-width:700px){
+    body{ padding:16px 12px 40px; }
+
+    header{ flex-direction:column; align-items:flex-start; gap:10px; }
+    .clock-block{ text-align:left; width:100%; }
+    h1{ font-size:20px; }
+    .subtitle{ font-size:12px; }
+    .clock{ font-size:18px; }
+
+    .totals{ grid-template-columns:repeat(2,1fr); }
+    .total-cell{ padding:12px 10px; }
+    .total-cell .n{ font-size:21px; }
+    .total-cell .l{ font-size:10px; }
+
+    .filters{ gap:6px; }
+    .filters .flabel{ width:100%; margin:6px 0 2px; }
+    .chip{ padding:5px 10px; font-size:11px; }
+
+    .card{ padding:14px 14px 12px; }
+    .card-head{ flex-wrap:wrap; gap:6px; }
+    .frow{ grid-template-columns:88px 1fr 40px; gap:6px; }
+    .frow .flab{ font-size:10.5px; }
+
+    .modal-backdrop{ padding:0; align-items:stretch; }
+    .modal-box{ max-width:none; width:100%; min-height:100%; border-radius:0; padding:18px 16px 24px; }
+    .item-nums{ flex-wrap:wrap; gap:10px 16px; }
+
+    footer{ flex-direction:column; gap:4px; }
+  }
+
+  @media(max-width:380px){
+    .totals{ grid-template-columns:1fr; }
+  }
 </style>
 </head>
 <body class="locked">
@@ -282,19 +318,21 @@
 
   <!-- BREAKDOWN TABLE -->
   <div class="section-title">Rincian per Kategori &times; Sumber &times; Golongan</div>
-  <table>
-    <thead>
-      <tr>
-        <th>Kategori</th>
-        <th>Sumber</th>
-        <th>Golongan</th>
-        <th class="num">Terdaftar (Lunas)</th>
-        <th class="num">Verif. Pusat</th>
-        <th class="num">Check In Materi</th>
-      </tr>
-    </thead>
-    <tbody id="tableBody"></tbody>
-  </table>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Kategori</th>
+          <th>Sumber</th>
+          <th>Golongan</th>
+          <th class="num">Terdaftar (Lunas)</th>
+          <th class="num">Verif. Pusat</th>
+          <th class="num">Check In Materi</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
 
   <footer>
     <span>Sumber data: Google Sheets (auto-sync Apps Script)</span>
