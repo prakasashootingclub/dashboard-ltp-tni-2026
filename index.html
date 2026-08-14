@@ -139,6 +139,14 @@
 
   .table-wrap{ width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; }
   table{width:100%; min-width:520px; border-collapse:collapse; font-size:12.5px;}
+
+  /* Versi mobile dari tabel rincian — daftar baris vertikal, bukan tabel sempit. */
+  .mobile-panel{
+    display:none; background:var(--panel); border:1px solid var(--line); border-radius:8px;
+    padding:2px 16px;
+  }
+  .mobile-panel .item-row .item-name{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+  .mobile-panel .empty{ padding:16px 0; text-align:center; color:var(--ink-faint); font-size:12px; }
   thead th{
     text-align:left; padding:9px 12px; background:var(--panel-2);
     color:var(--ink-faint); font-weight:600; text-transform:uppercase; font-size:10.5px;
@@ -259,6 +267,9 @@
     .modal-box{ max-width:none; width:100%; min-height:100%; border-radius:0; padding:18px 16px 24px; }
     .item-nums{ flex-wrap:wrap; gap:10px 16px; }
 
+    .table-wrap{ display:none; }
+    .mobile-panel{ display:block; }
+
     footer{ flex-direction:column; gap:4px; }
   }
 
@@ -333,6 +344,7 @@
       <tbody id="tableBody"></tbody>
     </table>
   </div>
+  <div class="mobile-panel" id="breakdownMobile"></div>
 
   <footer>
     <span>Sumber data: Google Sheets (auto-sync Apps Script)</span>
@@ -545,7 +557,7 @@ function render(){
     `;
   }).join("");
 
-  // TABLE
+  // TABLE (desktop)
   const tbody = document.getElementById("tableBody");
   const sumberLabel = {online:"Online", ots:"OTS"};
   const golLabel = {sipil:"Sipil", tni:"TNI/Polri"};
@@ -562,6 +574,26 @@ function render(){
       </tr>
     `;
   }).join("");
+
+  // DAFTAR VERTIKAL (mobile) — data sama, tampilan baris bukan tabel
+  const mobilePanel = document.getElementById("breakdownMobile");
+  if (fr.length === 0) {
+    mobilePanel.innerHTML = `<div class="empty">Belum ada data untuk filter ini.</div>`;
+  } else {
+    mobilePanel.innerHTML = fr.map(r=>{
+      const katNama = kategoriList.find(k=>k.key===r.kat).nama;
+      return `
+        <div class="item-row">
+          <div class="item-name">${katNama} <span class="tag ${r.sumber}">${sumberLabel[r.sumber]}</span> &middot; ${golLabel[r.golongan]}</div>
+          <div class="item-nums">
+            <span class="lbl-terdaftar">Terdaftar <b>${fmt(r.terdaftar)}</b></span>
+            <span class="lbl-verif">Verif. Pusat <b>${fmt(r.verif)}</b></span>
+            <span class="lbl-checkin">Check In <b>${fmt(r.checkin)}</b></span>
+          </div>
+        </div>
+      `;
+    }).join("");
+  }
 }
 
 // ---------- MODAL RINCIAN PER SUB-MATERI ----------
