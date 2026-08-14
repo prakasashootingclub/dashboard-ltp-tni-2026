@@ -83,6 +83,7 @@
   .total-cell{background:var(--panel); padding:16px 14px;}
   .total-cell .n{font-family:var(--mono); font-size:28px; font-weight:700; color:var(--ink);}
   .total-cell .l{font-size:11px; color:var(--ink-dim); text-transform:uppercase; letter-spacing:.08em; margin-top:4px;}
+  .total-cell .sub{font-family:var(--mono); font-size:10px; color:var(--ink-faint); margin-top:5px;}
   .total-cell.accent .n{color:var(--olive-bright);}
   .total-cell.amber .n{color:var(--amber-bright);}
 
@@ -503,19 +504,25 @@ function fmt(n){ return n.toLocaleString("id-ID"); }
 function render(){
   const fr = filteredRows();
 
-  // TOTALS STRIP — 3 angka inti saja. Rasio sudah tercermin di bar progres
-  // tiap kartu kategori, jadi tidak perlu diulang di sini (dulu 5 kotak,
-  // dua di antaranya persentase yang membingungkan saat datanya masih 0).
+  // TOTALS STRIP — 3 kotak. Persentase ditaruh MENYATU di dalam kotak
+  // Verifikasi/Check In (bukan kotak terpisah seperti sebelumnya, itu yang
+  // bikin grid ganjil 5 kotak & membingungkan). "—" dipakai kalau belum
+  // ada yang Terdaftar sama sekali, supaya tidak menyesatkan seolah 0%.
   const sum = (field)=> fr.reduce((a,r)=>a+r[field],0);
+  const terdaftarSum = sum("terdaftar");
+  const verifSum = sum("verif");
+  const checkinSum = sum("checkin");
+  const pct = (num)=> terdaftarSum > 0 ? Math.round(num/terdaftarSum*100)+"%" : "—";
   const totals = [
-    {n:sum("terdaftar"), l:"Terdaftar", cls:""},
-    {n:sum("verif"), l:"Verifikasi Pusat", cls:"accent"},
-    {n:sum("checkin"), l:"Check In Materi", cls:"amber"},
+    {n:terdaftarSum, l:"Terdaftar", cls:"", sub:null},
+    {n:verifSum, l:"Verifikasi Pusat", cls:"accent", sub:pct(verifSum)+" dari terdaftar"},
+    {n:checkinSum, l:"Check In Materi", cls:"amber", sub:pct(checkinSum)+" dari terdaftar"},
   ];
   document.getElementById("totalsStrip").innerHTML = totals.map(t=>`
     <div class="total-cell ${t.cls}">
-      <div class="n">${typeof t.n==="number"?fmt(t.n):t.n}</div>
+      <div class="n">${fmt(t.n)}</div>
       <div class="l">${t.l}</div>
+      ${t.sub ? `<div class="sub">${t.sub}</div>` : ""}
     </div>
   `).join("");
 
