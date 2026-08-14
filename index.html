@@ -190,6 +190,45 @@
   .gate-box button:hover{ background:var(--olive-bright); }
   .gate-err{ color:var(--red); font-size:12px; margin-top:10px; min-height:14px; }
   body.locked > .wrap{ display:none; }
+
+  .card{ cursor:pointer; transition:.15s; }
+  .card:hover{ border-color:var(--olive); background:rgba(143,179,90,0.03); }
+  .card-hint{
+    font-family:var(--mono); font-size:10px; color:var(--ink-faint);
+    margin-top:12px; padding-top:10px; border-top:1px dashed var(--line);
+    text-align:center; letter-spacing:.04em;
+  }
+
+  .modal-backdrop{
+    position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:200;
+    display:flex; align-items:flex-start; justify-content:center;
+    padding:40px 16px; overflow-y:auto;
+  }
+  .modal-backdrop.hidden{ display:none; }
+  .modal-box{
+    background:var(--panel); border:1px solid var(--line); border-radius:8px;
+    width:100%; max-width:640px; padding:22px 24px 20px;
+  }
+  .modal-head{
+    display:flex; justify-content:space-between; align-items:flex-start;
+    margin-bottom:16px; padding-bottom:14px; border-bottom:1px solid var(--line);
+  }
+  .modal-head h3{ font-size:17px; color:var(--ink); }
+  .modal-head .coord{ font-size:11px; color:var(--ink-faint); font-family:var(--mono); margin-top:4px; }
+  .modal-close{
+    background:none; border:1px solid var(--line); border-radius:5px; color:var(--ink-dim);
+    width:28px; height:28px; cursor:pointer; font-size:15px; line-height:1; flex-shrink:0;
+  }
+  .modal-close:hover{ border-color:var(--red); color:var(--red); }
+  .item-row{
+    padding:11px 0; border-bottom:1px solid var(--line);
+  }
+  .item-row:last-child{ border-bottom:none; }
+  .item-row .item-name{ font-size:12.5px; color:var(--ink); margin-bottom:7px; }
+  .item-nums{ display:flex; gap:16px; font-family:var(--mono); font-size:11px; color:var(--ink-dim); }
+  .item-nums span b{ color:var(--ink); font-size:13px; }
+  .item-nums .lbl-verif b{ color:var(--olive-bright); }
+  .item-nums .lbl-checkin b{ color:var(--amber-bright); }
 </style>
 </head>
 <body class="locked">
@@ -264,6 +303,19 @@
 
 </div>
 
+<div class="modal-backdrop hidden" id="modalBackdrop">
+  <div class="modal-box">
+    <div class="modal-head">
+      <div>
+        <h3 id="modalTitle"></h3>
+        <div class="coord" id="modalCoord"></div>
+      </div>
+      <button class="modal-close" id="modalClose">&times;</button>
+    </div>
+    <div id="modalBody"></div>
+  </div>
+</div>
+
 <script>
 // ---------- GERBANG PASSWORD (client-side, penghalang ringan bukan enkripsi kuat) ----------
 const GATE_HASH = "139402feb08d859f6fdead96a630a96d77b7ae4bebf421bfa7ac85c7b4798c10";
@@ -301,11 +353,55 @@ const kategoriList = [
   {key:"Air Rifle", nama:"Air Rifle", coord:"Danyonzipur 9/1 Kostrad & Perbakin"},
 ];
 
+// ---------- KATALOG SUB-MATERI per kategori (urutan tetap, sesuai KATEGORI_LIST di Code.gs) ----------
+// Ditulis eksplisit supaya item dengan 0 pendaftar tetap tampil di rincian,
+// bukan cuma item yang sudah ada datanya.
+const itemCatalog = {
+  "Senapan": [
+    "100 M Plat Baja 3 Sikap Perorangan (Open)",
+    "100 M Plat Baja 3 Sikap Beregu (Open)",
+    "100 M Plat Baja 3 Sikap Perorangan (Standard/Pejera Logam)",
+    "100 M Plat Baja 3 Sikap Beregu (Standard/Pejera Logam)",
+    "300 M Plat Baja 3 Sikap Perorangan (Open)",
+    "300 M Plat Baja 3 Sikap Beregu (Open)",
+    "300 M Plat Baja 3 Sikap Perorangan (Standard/Pejera Logam)",
+    "300 M Plat Baja 3 Sikap Beregu (Standard/Pejera Logam)",
+    "600 M Tactical Prone Perorangan (TNI/Polri)",
+    "600 M Tactical Prone Perorangan (Sipil)",
+  ],
+  "Pistol": [
+    "20 M Eksekutif Perorangan Putra",
+    "20 M Eksekutif Perorangan Putri",
+    "20 M Eksekutif Beregu Putra",
+    "20 M Eksekutif Perorangan Putra (TNI/Polri)",
+    "20 M Eksekutif Perorangan Putri (TNI/Polri)",
+    "20 M Eksekutif Beregu Putra (TNI/Polri)",
+    "Duel Falling Plate (Undangan)",
+    "Pati / Tamu Undangan VIP 20 M Eksekutif",
+  ],
+  "Tembak Reaksi IPSC Level II": [
+    "Divisi Open",
+    "Divisi Standard",
+    "Divisi Optic",
+    "Divisi Production",
+    "Divisi Production Optic",
+    "Divisi PCC Optic",
+  ],
+  "Air Rifle": [
+    "WRABS HR 25 M (Junior)",
+    "WRABS HR 25 M (Senior)",
+    "WRABS LR 25 M (Junior)",
+    "WRABS LR 25 M (Senior)",
+    "IMSSU Multirange 18-41 M (Junior)",
+    "IMSSU Multirange 18-41 M (Senior)",
+  ],
+};
+
 // ---------- DATA ASLI dari Google Sheets via Apps Script Web App ----------
 // Endpoint HANYA mengirim angka rekap (tidak ada nama/HP/KTP peserta).
 const DATA_URL = "https://script.google.com/macros/s/AKfycbyGY8Pi3gBALM8GVP6XCB04P_eebPw2thlP_ShQR6IVC31vuCZcWXxQK677crIgHysu/exec?data=1";
 
-let rows = []; // {kat, sumber, golongan, terdaftar, verif, checkin} — kat memakai nama kategori persis dari sheet
+let rows = []; // {kat, item, sumber, golongan, terdaftar, verif, checkin} — kat/item memakai nama persis dari sheet
 
 async function muatData(){
   const note = document.getElementById("statusNote");
@@ -314,8 +410,11 @@ async function muatData(){
     const json = await res.json();
     if (!json.ok) throw new Error("Respons endpoint tidak ok");
 
-    rows = json.rows.map(r => ({kat: r.kategori, sumber: r.sumber, golongan: r.golongan,
+    rows = json.rows.map(r => ({kat: r.kategori, item: r.item, sumber: r.sumber, golongan: r.golongan,
       terdaftar: r.terdaftar, verif: r.verif, checkin: r.checkin}));
+
+    // Modal detail mungkin sedang terbuka saat data refresh tiap 30 detik — perbarui isinya juga.
+    if (modalOpenKat) bukaDetail(modalOpenKat);
 
     const totalPeserta = rows.reduce((a,r)=>a+r.terdaftar,0);
     note.innerHTML = totalPeserta === 0
@@ -380,7 +479,7 @@ function render(){
     const max = Math.max(t,1);
     const bar = (val)=> Math.max(4, Math.round(val/max*100));
     return `
-      <div class="card">
+      <div class="card" data-kat="${k.key}">
         <div class="card-head">
           <div>
             <h3>${k.nama}</h3>
@@ -403,6 +502,7 @@ function render(){
           <span>Belum check in: <b>${fmt(v-c)}</b></span>
           <span>Belum verif. pusat: <b>${fmt(t-v)}</b></span>
         </div>
+        <div class="card-hint">Klik untuk rincian per sub-materi &rarr;</div>
       </div>
     `;
   }).join("");
@@ -425,6 +525,61 @@ function render(){
     `;
   }).join("");
 }
+
+// ---------- MODAL RINCIAN PER SUB-MATERI ----------
+let modalOpenKat = null; // key kategori yang modalnya sedang terbuka, null kalau tertutup
+
+function bukaDetail(katKey){
+  const k = kategoriList.find(x=>x.key===katKey);
+  if (!k) return;
+  modalOpenKat = katKey;
+
+  // Hormati filter Sumber/Golongan yang sedang aktif di halaman utama.
+  const kr = filteredRows().filter(r=>r.kat===katKey);
+  const byItem = {};
+  kr.forEach(r=>{
+    if (!byItem[r.item]) byItem[r.item] = {terdaftar:0, verif:0, checkin:0};
+    byItem[r.item].terdaftar += r.terdaftar;
+    byItem[r.item].verif += r.verif;
+    byItem[r.item].checkin += r.checkin;
+  });
+
+  const daftarItem = itemCatalog[katKey] || Object.keys(byItem);
+  document.getElementById("modalTitle").textContent = k.nama;
+  document.getElementById("modalCoord").textContent = k.coord;
+  document.getElementById("modalBody").innerHTML = daftarItem.map(nama=>{
+    const n = byItem[nama] || {terdaftar:0, verif:0, checkin:0};
+    return `
+      <div class="item-row">
+        <div class="item-name">${nama}</div>
+        <div class="item-nums">
+          <span class="lbl-terdaftar">Terdaftar <b>${fmt(n.terdaftar)}</b></span>
+          <span class="lbl-verif">Verif. Pusat <b>${fmt(n.verif)}</b></span>
+          <span class="lbl-checkin">Check In <b>${fmt(n.checkin)}</b></span>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  document.getElementById("modalBackdrop").classList.remove("hidden");
+}
+
+function tutupDetail(){
+  modalOpenKat = null;
+  document.getElementById("modalBackdrop").classList.add("hidden");
+}
+
+document.getElementById("cardGrid").addEventListener("click", e=>{
+  const card = e.target.closest(".card");
+  if (card) bukaDetail(card.dataset.kat);
+});
+document.getElementById("modalClose").addEventListener("click", tutupDetail);
+document.getElementById("modalBackdrop").addEventListener("click", e=>{
+  if (e.target.id === "modalBackdrop") tutupDetail();
+});
+document.addEventListener("keydown", e=>{
+  if (e.key === "Escape" && modalOpenKat) tutupDetail();
+});
 
 // ---------- LINK GOOGLE SHEETS (ganti dengan URL Sheets asli) ----------
 document.getElementById("sheetLink").href = "https://docs.google.com/spreadsheets/d/1ccXNjRIz_BtgliNMGfc2pfXi18J6kktNcFnujt0-MMM/edit";
