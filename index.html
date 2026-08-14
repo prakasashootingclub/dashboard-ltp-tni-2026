@@ -76,7 +76,7 @@
 
   /* TOTALS STRIP */
   .totals{
-    display:grid; grid-template-columns:repeat(5,1fr); gap:1px;
+    display:grid; grid-template-columns:repeat(3,1fr); gap:1px;
     background:var(--line); border:1px solid var(--line);
     margin-bottom:24px; border-radius:6px; overflow:hidden;
   }
@@ -249,10 +249,9 @@
     .subtitle{ font-size:12px; }
     .clock{ font-size:18px; }
 
-    .totals{ grid-template-columns:repeat(2,1fr); }
-    .total-cell{ padding:12px 10px; }
+    .total-cell{ padding:12px 8px; }
     .total-cell .n{ font-size:21px; }
-    .total-cell .l{ font-size:10px; }
+    .total-cell .l{ font-size:9.5px; }
 
     .filters{ gap:6px; }
     .filters .flabel{ width:100%; margin:6px 0 2px; }
@@ -273,8 +272,9 @@
     footer{ flex-direction:column; gap:4px; }
   }
 
-  @media(max-width:380px){
-    .totals{ grid-template-columns:1fr; }
+  @media(max-width:340px){
+    .total-cell .n{ font-size:18px; }
+    .total-cell .l{ font-size:8.5px; }
   }
 </style>
 </head>
@@ -503,14 +503,14 @@ function fmt(n){ return n.toLocaleString("id-ID"); }
 function render(){
   const fr = filteredRows();
 
-  // TOTALS STRIP
+  // TOTALS STRIP — 3 angka inti saja. Rasio sudah tercermin di bar progres
+  // tiap kartu kategori, jadi tidak perlu diulang di sini (dulu 5 kotak,
+  // dua di antaranya persentase yang membingungkan saat datanya masih 0).
   const sum = (field)=> fr.reduce((a,r)=>a+r[field],0);
   const totals = [
-    {n:sum("terdaftar"), l:"Terdaftar (Lunas)", cls:""},
-    {n:sum("verif"), l:"Terverifikasi Pusat", cls:"accent"},
+    {n:sum("terdaftar"), l:"Terdaftar", cls:""},
+    {n:sum("verif"), l:"Verifikasi Pusat", cls:"accent"},
     {n:sum("checkin"), l:"Check In Materi", cls:"amber"},
-    {n: fr.length ? Math.round(sum("verif")/Math.max(sum("terdaftar"),1)*100)+"%" : "0%", l:"Rasio Verifikasi", cls:"accent"},
-    {n: fr.length ? Math.round(sum("checkin")/Math.max(sum("terdaftar"),1)*100)+"%" : "0%", l:"Rasio Check In", cls:"amber"},
   ];
   document.getElementById("totalsStrip").innerHTML = totals.map(t=>`
     <div class="total-cell ${t.cls}">
