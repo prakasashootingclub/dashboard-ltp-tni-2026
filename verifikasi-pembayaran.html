@@ -51,7 +51,8 @@
   .card .meta{font-size:12px; color:#9ba488; line-height:1.6; margin-bottom:10px;}
   .card .meta b{color:#c68a2e;}
   .card .biaya{font-family:monospace; color:#8FB35A; font-weight:700;}
-  .card .warn{color:#E5A94A; font-size:11px; margin-top:4px;}
+  .card .warn{color:#E5A94A; font-size:11px; margin-top:4px; margin-bottom:10px;}
+  .card .tunai{color:#8FB35A; font-size:11px; margin-top:4px; margin-bottom:10px;}
   .card a.bukti{
     display:inline-block; font-size:12px; color:#5b8fd6; text-decoration:none;
     border:1px solid #2A322C; padding:6px 10px; border-radius:6px; margin-bottom:10px;
@@ -115,16 +116,22 @@
       card.className = "card";
       card.dataset.id = item.idPendaftaran;
 
-      var buktiHtml = item.buktiUrl
-        ? '<a class="bukti" href="' + escapeHtml(item.buktiUrl) + '" target="_blank" rel="noopener">Lihat Bukti Transfer &rarr;</a><br>'
-        : '<div class="warn">Belum ada bukti otomatis di form -- cek WA manual dulu sebelum tandai Lunas.</div>';
+      var isTunai = (item.metodeBayar || "").indexOf("Tunai") === 0;
+      var buktiHtml;
+      if (isTunai) {
+        buktiHtml = '<div class="tunai">Bayar Tunai -- konfirmasi langsung dari petugas di venue, tidak ada bukti transfer.</div>';
+      } else if (item.buktiUrl) {
+        buktiHtml = '<a class="bukti" href="' + escapeHtml(item.buktiUrl) + '" target="_blank" rel="noopener">Lihat Bukti Transfer &rarr;</a><br>';
+      } else {
+        buktiHtml = '<div class="warn">Belum ada bukti otomatis di form -- cek WA manual dulu sebelum tandai Lunas.</div>';
+      }
 
       card.innerHTML =
         '<div class="nama">' + escapeHtml(item.nama) + '</div>' +
         '<div class="meta">' +
           escapeHtml(item.kategori) + ' &middot; ' + escapeHtml(item.item) + '<br>' +
           'HP: ' + escapeHtml(item.hp) + ' &middot; Golongan: ' + escapeHtml(item.golongan) + '<br>' +
-          'Total: <b class="biaya">' + fmtRupiah(item.biaya) + '</b>' +
+          'Metode: <b>' + escapeHtml(item.metodeBayar || "-") + '</b> &middot; Total: <b class="biaya">' + fmtRupiah(item.biaya) + '</b>' +
         '</div>' +
         buktiHtml +
         '<div class="row-btn"><button class="lunas">Tandai Lunas</button></div>';
