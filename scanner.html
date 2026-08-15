@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Scanner Petugas — LTP TNI 2026</title>
-<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" defer></script>
 <style>
   *{box-sizing:border-box;}
   body{
@@ -121,7 +121,19 @@
       });
   }
 
-  function startScanner(){
+  function startScanner(retries){
+    retries = retries || 0;
+    if (typeof Html5Qrcode === "undefined") {
+      if (retries > 40) {
+        var box = document.getElementById("result");
+        box.className = "err";
+        box.textContent = "Gagal memuat pustaka kamera (jaringan lambat/terblokir). Coba muat ulang halaman.";
+        return;
+      }
+      document.getElementById("result").textContent = "Memuat pustaka kamera...";
+      setTimeout(function(){ startScanner(retries + 1); }, 250);
+      return;
+    }
     scanner = new Html5Qrcode("reader");
     scanner.start(
       { facingMode: "environment" },
