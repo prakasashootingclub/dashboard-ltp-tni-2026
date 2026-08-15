@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scanner Verifikasi Pusat — LTP TNI 2026</title>
+<script>
+  window.onerror = function(msg, src, line, col, err){
+    var d = document.createElement("div");
+    d.style.cssText = "position:fixed;top:0;left:0;right:0;z-index:99;background:#B4483A;color:#fff;padding:10px;font-size:12px;font-family:monospace;word-break:break-word;";
+    d.textContent = "JS ERROR: " + msg + " (baris " + line + ")";
+    document.body ? document.body.prepend(d) : window.addEventListener("DOMContentLoaded", function(){ document.body.prepend(d); });
+  };
+</script>
+<!-- Pustaka kamera di-hosting SENDIRI di sini (bukan CDN unpkg.com) --
+     beberapa jaringan seluler/kebijakan jaringan memblokir domain CDN
+     generik, bikin scanner macet di "Memuat pustaka kamera..." selamanya. -->
+<script src="html5-qrcode.min.js?v=4" defer></script>
+<style>
+  *{box-sizing:border-box;}
+  body{
+    font-family:-apple-system,'Segoe UI',sans-serif;
+    background:#0E1210; color:#E9EAE3; margin:0; padding:16px;
+    max-width:480px; margin-left:auto; margin-right:auto;
+  }
+  h2{font-size:18px; margin:0 0 4px;}
+  .lbl{font-size:11px; text-transform:uppercase; color:#5B6660; letter-spacing:.08em; margin-bottom:10px;}
+  #reader{width:100%; border-radius:8px; overflow:hidden; margin-bottom:14px;}
+  #result{
+    padding:16px; border-radius:8px; background:#161B17; border:1px solid #2A322C;
+    min-height:80px; font-size:14px; line-height:1.6; white-space:pre-line;
+  }
+  #result.ok{border-color:#8FB35A; background:rgba(143,179,90,0.08);}
+  #result.warn{border-color:#E5A94A; background:rgba(229,169,74,0.08);}
+  #result.err{border-color:#B4483A; background:rgba(180,72,58,0.08);}
+
+  /* ---------- gerbang password ---------- */
+  /* SENGAJA tidak pakai position:fixed -- di banyak Chrome Android, elemen
+     fixed-fullscreen bisa tergeser ke luar jangkauan layar saat keyboard
+     muncul, membuat tombol "Masuk" ada tapi tidak bisa disentuh. Layout
+     mengalir normal supaya halaman otomatis scroll saat keyboard muncul. */
+  #gate{
+    min-height:80vh; background:#0E1210; display:flex;
+    flex-direction:column; align-items:center; justify-content:center;
+    gap:14px; padding:20px;
+  }
+  #gate input{
+    width:100%; max-width:280px; padding:12px 14px; border-radius:6px;
+    border:1px solid #2A322C; background:#161B17; color:#E9EAE3; font-size:15px;
+  }
+  #gate button{
+    width:100%; max-width:280px; padding:12px; border-radius:6px; border:none;
+    background:#5C7A3A; color:#0E1210; font-size:14px; font-weight:700;
+  }
+  #gate .err{color:#E58B7A; font-size:13px; min-height:16px;}
+  /* !important wajib -- selector ID #gate{display:flex} di atas punya
+     prioritas lebih tinggi dari class .hidden, jadi tanpa !important
+     gerbang password TIDAK PERNAH hilang walau class "hidden" ditambahkan. */
+  .hidden{display:none !important;}
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <h2>Verifikasi Pusat</h2>
+  <input type="password" id="pwInput" placeholder="Password petugas" autocomplete="off">
+  <button id="pwBtn">Masuk</button>
+  <div class="err" id="pwErr"></div>
+  <div style="font-size:10px;color:#3A4A40;margin-top:20px;">build v1</div>
+</div>
+
+<div id="app" class="hidden">
+  <h2>Verifikasi Pusat</h2>
+  <div class="lbl">Scan QR e-tiket peserta di pos verifikasi pusat</div>
+  <div id="reader"></div>
+  <div id="result">Arahkan kamera ke QR e-tiket peserta.</div>
+</div>
+
+<script>
+  var WEBAPP_URL = "https://script.google.com/macros/s/AKfycbyGY8Pi3gBALM8GVP6XCB04P_eebPw2thlP_ShQR6IVC31vuCZcWXxQK677crIgHysu/exec";
+  var STORAGE_KEY = "scannerPw";
+  var ACTION = "scan_verifikasi_pusat";
+  var scanner = null;
+  var busy = false;
+
+  function onScanSuccess(decodedText){
+    if (busy) return;
+    busy = true;
+    var box = document.getElementById("result");
+    box.className = "";
+    box.textContent = "Memproses...";
+
+    var pw = sessionStorage.getItem(STORAGE_KEY);
+    fetch(WEBAPP_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: ACTION, etiket_id: decodedText, pw: pw })
+    })
+      .then(function(r){ return r.json(); })
+      .then(function(res){
+        if(!res.ok){
+          box.className = "err";
+          box.textContent = res.pesan || "QR tidak dikenali atau belum lunas.";
+        } else if(res.sudah){
+          box.className = "warn";
+          box.textContent = res.pesan + "\nNama: " + res.nama + " — " + res.kategori + " (" + res.item + ")";
+        } else {
+          box.className = "ok";
+          box.textContent = res.pesan + "\nNama: " + res.nama + " — " + res.kategori + " (" + res.item + ")";
+        }
+      })
+      .catch(function(err){
+        box.className = "err";
+        box.textContent = "Gagal terhubung ke server: " + err;
+      })
+      .finally(function(){
+        setTimeout(function(){ busy = false; }, 1500);
+      });
+  }
+
+  function startScanner(retries){
+    retries = retries || 0;
+    if (typeof Html5Qrcode === "undefined") {
+      if (retries > 40) {
+        var box = document.getElementById("result");
+        box.className = "err";
+        box.textContent = "Gagal memuat pustaka kamera (jaringan lambat/terblokir). Coba muat ulang halaman.";
+        return;
+      }
+      document.getElementById("result").textContent = "Memuat pustaka kamera...";
+      setTimeout(function(){ startScanner(retries + 1); }, 250);
+      return;
+    }
+    scanner = new Html5Qrcode("reader");
+    scanner.start(
+      { facingMode: "environment" },
+      { fps: 10, qrbox: 250 },
+      onScanSuccess
+    ).catch(function(err){
+      var box = document.getElementById("result");
+      box.className = "err";
+      box.textContent = "Kamera tidak bisa dibuka: " + err +
+        "\n\nPastikan izin kamera diaktifkan untuk browser ini di HP (Setelan > Situs > Kamera), lalu muat ulang halaman.";
+    });
+  }
+
+  function unlock(pw){
+    document.getElementById("gate").classList.add("hidden");
+    document.getElementById("app").classList.remove("hidden");
+    sessionStorage.setItem(STORAGE_KEY, pw);
+    startScanner();
+  }
+
+  // Hash SHA-256 dari password yang benar -- bukan password mentahnya --
+  // supaya tidak kelihatan polos di kode sumber halaman ini.
+  var PW_HASH = "a5951b23bb95d2aa7476253883146fa23e2786e186a6ceabc8f3696ed9159b96";
+  function sha256Hex(text){
+    var data = new TextEncoder().encode(text);
+    return crypto.subtle.digest("SHA-256", data).then(function(buf){
+      return Array.prototype.map.call(new Uint8Array(buf), function(b){
+        return b.toString(16).padStart(2, "0");
+      }).join("");
+    });
+  }
+
+  document.getElementById("pwBtn").onclick = function(){
+    var pw = document.getElementById("pwInput").value.trim();
+    if (!pw) { document.getElementById("pwErr").textContent = "Isi password dulu."; return; }
+    document.getElementById("pwErr").textContent = "";
+    sha256Hex(pw).then(function(hash){
+      if (hash !== PW_HASH) {
+        document.getElementById("pwErr").textContent = "Password salah.";
+        return;
+      }
+      unlock(pw);
+    });
+  };
+  document.getElementById("pwInput").addEventListener("keydown", function(e){
+    if (e.key === "Enter") document.getElementById("pwBtn").click();
+  });
+
+  var saved = sessionStorage.getItem(STORAGE_KEY);
+  if (saved) unlock(saved);
+</script>
+
+</body>
+</html>
