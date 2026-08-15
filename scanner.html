@@ -38,10 +38,14 @@
   #result.err{border-color:#B4483A; background:rgba(180,72,58,0.08);}
 
   /* ---------- gerbang password ---------- */
+  /* SENGAJA tidak pakai position:fixed -- di banyak Chrome Android, elemen
+     fixed-fullscreen bisa tergeser ke luar jangkauan layar saat keyboard
+     muncul, membuat tombol "Masuk" ada tapi tidak bisa disentuh. Layout
+     mengalir normal supaya halaman otomatis scroll saat keyboard muncul. */
   #gate{
-    position:fixed; inset:0; background:#0E1210; display:flex;
+    min-height:80vh; background:#0E1210; display:flex;
     flex-direction:column; align-items:center; justify-content:center;
-    gap:14px; padding:20px; z-index:10;
+    gap:14px; padding:20px;
   }
   #gate input{
     width:100%; max-width:280px; padding:12px 14px; border-radius:6px;
