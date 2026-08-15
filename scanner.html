@@ -15,7 +15,7 @@
 <!-- Pustaka kamera di-hosting SENDIRI di sini (bukan CDN unpkg.com) --
      beberapa jaringan seluler/kebijakan jaringan memblokir domain CDN
      generik, bikin scanner macet di "Memuat pustaka kamera..." selamanya. -->
-<script src="html5-qrcode.min.js" defer></script>
+<script src="html5-qrcode.min.js?v=4" defer></script>
 <style>
   *{box-sizing:border-box;}
   body{
@@ -73,6 +73,7 @@
   <input type="password" id="pwInput" placeholder="Password petugas" autocomplete="off">
   <button id="pwBtn">Masuk</button>
   <div class="err" id="pwErr"></div>
+  <div style="font-size:10px;color:#3A4A40;margin-top:20px;">build v4</div>
 </div>
 
 <div id="app" class="hidden">
