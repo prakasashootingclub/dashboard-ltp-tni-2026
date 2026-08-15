@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Verifikasi Pembayaran — LTP TNI 2026</title>
+<script>
+  window.onerror = function(msg, src, line, col, err){
+    var d = document.createElement("div");
+    d.style.cssText = "position:fixed;top:0;left:0;right:0;z-index:99;background:#B4483A;color:#fff;padding:10px;font-size:12px;font-family:monospace;word-break:break-word;";
+    d.textContent = "JS ERROR: " + msg + " (baris " + line + ")";
+    document.body ? document.body.prepend(d) : window.addEventListener("DOMContentLoaded", function(){ document.body.prepend(d); });
+  };
+</script>
+<style>
+  *{box-sizing:border-box;}
+  body{
+    font-family:-apple-system,'Segoe UI',sans-serif;
+    background:#0E1210; color:#E9EAE3; margin:0; padding:16px;
+    max-width:560px; margin-left:auto; margin-right:auto;
+  }
+  h2{font-size:18px; margin:0 0 4px;}
+  .lbl{font-size:11px; text-transform:uppercase; color:#5B6660; letter-spacing:.08em; margin-bottom:14px;}
+
+  /* ---------- gerbang password ---------- */
+  #gate{
+    min-height:80vh; background:#0E1210; display:flex;
+    flex-direction:column; align-items:center; justify-content:center;
+    gap:14px; padding:20px;
+  }
+  #gate input{
+    width:100%; max-width:280px; padding:12px 14px; border-radius:6px;
+    border:1px solid #2A322C; background:#161B17; color:#E9EAE3; font-size:15px;
+  }
+  #gate button{
+    width:100%; max-width:280px; padding:12px; border-radius:6px; border:none;
+    background:#5C7A3A; color:#0E1210; font-size:14px; font-weight:700;
+  }
+  #gate .err{color:#E58B7A; font-size:13px; min-height:16px;}
+  .hidden{display:none !important;}
+
+  #refreshBtn{
+    width:100%; padding:10px; border-radius:6px; border:1px solid #2A322C;
+    background:#161B17; color:#8FB35A; font-size:13px; font-weight:600; margin-bottom:14px;
+  }
+  #list{display:flex; flex-direction:column; gap:10px;}
+  .card{
+    background:#161B17; border:1px solid #2A322C; border-radius:8px; padding:14px;
+  }
+  .card .nama{font-size:15px; font-weight:700; margin-bottom:2px;}
+  .card .meta{font-size:12px; color:#9ba488; line-height:1.6; margin-bottom:10px;}
+  .card .meta b{color:#c68a2e;}
+  .card .biaya{font-family:monospace; color:#8FB35A; font-weight:700;}
+  .card .warn{color:#E5A94A; font-size:11px; margin-top:4px;}
+  .card a.bukti{
+    display:inline-block; font-size:12px; color:#5b8fd6; text-decoration:none;
+    border:1px solid #2A322C; padding:6px 10px; border-radius:6px; margin-bottom:10px;
+  }
+  .card .row-btn{display:flex; gap:8px;}
+  .card button.lunas{
+    flex:1; padding:11px; border-radius:6px; border:none;
+    background:#5C7A3A; color:#0E1210; font-size:13px; font-weight:700;
+  }
+  .card button.lunas:disabled{background:#3a4a3a; color:#8C9A8A;}
+  #empty{
+    text-align:center; color:#5B6660; padding:40px 20px; font-size:14px;
+  }
+  #status{font-size:12px; color:#5B6660; margin-bottom:10px;}
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <h2>Verifikasi Pembayaran</h2>
+  <input type="password" id="pwInput" placeholder="Password petugas" autocomplete="off">
+  <button id="pwBtn">Masuk</button>
+  <div class="err" id="pwErr"></div>
+</div>
+
+<div id="app" class="hidden">
+  <h2>Verifikasi Pembayaran</h2>
+  <div class="lbl">Cek bukti transfer dulu sebelum tap "Lunas"</div>
+  <button id="refreshBtn">Muat Ulang Daftar</button>
+  <div id="status"></div>
+  <div id="list"></div>
+  <div id="empty" class="hidden">Tidak ada peserta yang menunggu verifikasi saat ini.</div>
+</div>
+
+<script>
+  var WEBAPP_URL = "https://script.google.com/macros/s/AKfycbyGY8Pi3gBALM8GVP6XCB04P_eebPw2thlP_ShQR6IVC31vuCZcWXxQK677crIgHysu/exec";
+  var STORAGE_KEY = "pembayaranPw";
+
+  function fmtRupiah(n){
+    n = Number(n) || 0;
+    return "Rp" + n.toLocaleString("id-ID");
+  }
+
+  function escapeHtml(s){
+    return String(s || "").replace(/[&<>"']/g, function(c){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+    });
+  }
+
+  function renderList(items){
+    var list = document.getElementById("list");
+    var empty = document.getElementById("empty");
+    list.innerHTML = "";
+    if (!items.length) {
+      empty.classList.remove("hidden");
+      return;
+    }
+    empty.classList.add("hidden");
+    items.forEach(function(item){
+      var card = document.createElement("div");
+      card.className = "card";
+      card.dataset.id = item.idPendaftaran;
+
+      var buktiHtml = item.buktiUrl
+        ? '<a class="bukti" href="' + escapeHtml(item.buktiUrl) + '" target="_blank" rel="noopener">Lihat Bukti Transfer &rarr;</a><br>'
+        : '<div class="warn">Belum ada bukti otomatis di form -- cek WA manual dulu sebelum tandai Lunas.</div>';
+
+      card.innerHTML =
+        '<div class="nama">' + escapeHtml(item.nama) + '</div>' +
+        '<div class="meta">' +
+          escapeHtml(item.kategori) + ' &middot; ' + escapeHtml(item.item) + '<br>' +
+          'HP: ' + escapeHtml(item.hp) + ' &middot; Golongan: ' + escapeHtml(item.golongan) + '<br>' +
+          'Total: <b class="biaya">' + fmtRupiah(item.biaya) + '</b>' +
+        '</div>' +
+        buktiHtml +
+        '<div class="row-btn"><button class="lunas">Tandai Lunas</button></div>';
+
+      card.querySelector(".lunas").onclick = function(){
+        tandaiLunas(item.idPendaftaran, card, this);
+      };
+      list.appendChild(card);
+    });
+  }
+
+  function muatDaftar(){
+    var status = document.getElementById("status");
+    status.textContent = "Memuat...";
+    var pw = sessionStorage.getItem(STORAGE_KEY);
+    fetch(WEBAPP_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "list_pending_pembayaran", pw: pw })
+    })
+      .then(function(r){ return r.json(); })
+      .then(function(res){
+        if (!res.ok) {
+          status.textContent = res.pesan || "Gagal memuat daftar.";
+          return;
+        }
+        status.textContent = res.data.length + " peserta menunggu verifikasi.";
+        renderList(res.data);
+      })
+      .catch(function(err){
+        status.textContent = "Gagal terhubung ke server: " + err;
+      });
+  }
+
+  function tandaiLunas(idPendaftaran, card, btn){
+    btn.disabled = true;
+    btn.textContent = "Memproses...";
+    var pw = sessionStorage.getItem(STORAGE_KEY);
+    fetch(WEBAPP_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "tandai_lunas", idPendaftaran: idPendaftaran, pw: pw })
+    })
+      .then(function(r){ return r.json(); })
+      .then(function(res){
+        if (!res.ok) {
+          btn.disabled = false;
+          btn.textContent = "Tandai Lunas";
+          alert(res.pesan || "Gagal menandai Lunas.");
+          return;
+        }
+        btn.textContent = "Selesai -- e-tiket terkirim";
+        card.style.opacity = "0.5";
+        setTimeout(function(){ card.remove(); }, 1200);
+      })
+      .catch(function(err){
+        btn.disabled = false;
+        btn.textContent = "Tandai Lunas";
+        alert("Gagal terhubung ke server: " + err);
+      });
+  }
+
+  document.getElementById("refreshBtn").onclick = muatDaftar;
+
+  // Hash SHA-256 dari password yang benar -- bukan password mentahnya --
+  // supaya tidak kelihatan polos di kode sumber halaman ini.
+  var PW_HASH = "9d79c8a98cba3879964958e8b60f05741f020e2eddc92126c5c76882d0793b3c";
+  function sha256Hex(text){
+    var data = new TextEncoder().encode(text);
+    return crypto.subtle.digest("SHA-256", data).then(function(buf){
+      return Array.prototype.map.call(new Uint8Array(buf), function(b){
+        return b.toString(16).padStart(2, "0");
+      }).join("");
+    });
+  }
+
+  function unlock(pw){
+    document.getElementById("gate").classList.add("hidden");
+    document.getElementById("app").classList.remove("hidden");
+    sessionStorage.setItem(STORAGE_KEY, pw);
+    muatDaftar();
+  }
+
+  document.getElementById("pwBtn").onclick = function(){
+    var pw = document.getElementById("pwInput").value.trim();
+    if (!pw) { document.getElementById("pwErr").textContent = "Isi password dulu."; return; }
+    document.getElementById("pwErr").textContent = "";
+    sha256Hex(pw).then(function(hash){
+      if (hash !== PW_HASH) {
+        document.getElementById("pwErr").textContent = "Password salah.";
+        return;
+      }
+      unlock(pw);
+    });
+  };
+  document.getElementById("pwInput").addEventListener("keydown", function(e){
+    if (e.key === "Enter") document.getElementById("pwBtn").click();
+  });
+
+  var saved = sessionStorage.getItem(STORAGE_KEY);
+  if (saved) unlock(saved);
+</script>
+
+</body>
+</html>
