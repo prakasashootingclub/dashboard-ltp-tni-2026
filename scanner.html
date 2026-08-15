@@ -56,7 +56,11 @@
     background:#5C7A3A; color:#0E1210; font-size:14px; font-weight:700;
   }
   #gate .err{color:#E58B7A; font-size:13px; min-height:16px;}
-  .hidden{display:none;}
+  /* !important wajib -- selector ID #gate{display:flex} di atas punya
+     prioritas lebih tinggi dari class .hidden, jadi tanpa !important
+     gerbang password TIDAK PERNAH hilang walau class "hidden" ditambahkan
+     (ini bug yang bikin layar password & scanner tampil bertumpuk). */
+  .hidden{display:none !important;}
 </style>
 </head>
 <body>
