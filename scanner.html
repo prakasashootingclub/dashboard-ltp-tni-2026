@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scanner Petugas — LTP TNI 2026</title>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<style>
+  *{box-sizing:border-box;}
+  body{
+    font-family:-apple-system,'Segoe UI',sans-serif;
+    background:#0E1210; color:#E9EAE3; margin:0; padding:16px;
+    max-width:480px; margin-left:auto; margin-right:auto;
+  }
+  h2{font-size:18px; margin:0 0 4px;}
+  .lbl{font-size:11px; text-transform:uppercase; color:#5B6660; letter-spacing:.08em; margin-bottom:10px;}
+  .mode-tabs{display:flex; gap:8px; margin:14px 0;}
+  .mode-tabs button{
+    flex:1; padding:12px; border-radius:6px; border:1px solid #2A322C;
+    background:#161B17; color:#8C9A8A; font-size:13px; font-weight:600;
+  }
+  .mode-tabs button.active{background:#5C7A3A; color:#0E1210; border-color:#5C7A3A;}
+  #reader{width:100%; border-radius:8px; overflow:hidden; margin-bottom:14px;}
+  #result{
+    padding:16px; border-radius:8px; background:#161B17; border:1px solid #2A322C;
+    min-height:80px; font-size:14px; line-height:1.6; white-space:pre-line;
+  }
+  #result.ok{border-color:#8FB35A; background:rgba(143,179,90,0.08);}
+  #result.warn{border-color:#E5A94A; background:rgba(229,169,74,0.08);}
+  #result.err{border-color:#B4483A; background:rgba(180,72,58,0.08);}
+
+  /* ---------- gerbang password ---------- */
+  #gate{
+    position:fixed; inset:0; background:#0E1210; display:flex;
+    flex-direction:column; align-items:center; justify-content:center;
+    gap:14px; padding:20px; z-index:10;
+  }
+  #gate input{
+    width:100%; max-width:280px; padding:12px 14px; border-radius:6px;
+    border:1px solid #2A322C; background:#161B17; color:#E9EAE3; font-size:15px;
+  }
+  #gate button{
+    width:100%; max-width:280px; padding:12px; border-radius:6px; border:none;
+    background:#5C7A3A; color:#0E1210; font-size:14px; font-weight:700;
+  }
+  #gate .err{color:#E58B7A; font-size:13px; min-height:16px;}
+  .hidden{display:none;}
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <h2>Scanner Petugas</h2>
+  <input type="password" id="pwInput" placeholder="Password petugas" autocomplete="off">
+  <button id="pwBtn">Masuk</button>
+  <div class="err" id="pwErr"></div>
+</div>
+
+<div id="app" class="hidden">
+  <h2>Scanner Petugas</h2>
+  <div class="lbl" id="modeLabel">Mode: Verifikasi Pusat</div>
+
+  <div class="mode-tabs">
+    <button id="btnVerif" class="active">Verifikasi Pusat</button>
+    <button id="btnCheckin">Check In Materi</button>
+  </div>
+
+  <div id="reader"></div>
+  <div id="result">Arahkan kamera ke QR e-tiket peserta.</div>
+</div>
+
+<script>
+  var WEBAPP_URL = "https://script.google.com/macros/s/AKfycbyGY8Pi3gBALM8GVP6XCB04P_eebPw2thlP_ShQR6IVC31vuCZcWXxQK677crIgHysu/exec";
+  var STORAGE_KEY = "scannerPw";
+  var currentMode = "scan_verifikasi_pusat";
+  var scanner = null;
+  var busy = false;
+
+  function setMode(mode){
+    currentMode = mode;
+    document.getElementById("modeLabel").textContent =
+      "Mode: " + (mode === "scan_verifikasi_pusat" ? "Verifikasi Pusat" : "Check In Materi");
+    document.getElementById("btnVerif").classList.toggle("active", mode === "scan_verifikasi_pusat");
+    document.getElementById("btnCheckin").classList.toggle("active", mode === "scan_checkin_materi");
+  }
+  document.getElementById("btnVerif").onclick = function(){ setMode("scan_verifikasi_pusat"); };
+  document.getElementById("btnCheckin").onclick = function(){ setMode("scan_checkin_materi"); };
+
+  function onScanSuccess(decodedText){
+    if (busy) return;
+    busy = true;
+    var box = document.getElementById("result");
+    box.className = "";
+    box.textContent = "Memproses...";
+
+    var pw = sessionStorage.getItem(STORAGE_KEY);
+    fetch(WEBAPP_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: currentMode, etiket_id: decodedText, pw: pw })
+    })
+      .then(function(r){ return r.json(); })
+      .then(function(res){
+        if(!res.ok){
+          box.className = "err";
+          box.textContent = res.pesan || "QR tidak dikenali atau belum lunas.";
+        } else if(res.sudah){
+          box.className = "warn";
+          box.textContent = res.pesan + "\nNama: " + res.nama + " — " + res.kategori + " (" + res.item + ")";
+        } else {
+          box.className = "ok";
+          box.textContent = res.pesan + "\nNama: " + res.nama + " — " + res.kategori + " (" + res.item + ")";
+        }
+      })
+      .catch(function(err){
+        box.className = "err";
+        box.textContent = "Gagal terhubung ke server: " + err;
+      })
+      .finally(function(){
+        setTimeout(function(){ busy = false; }, 1500);
+      });
+  }
+
+  function startScanner(){
+    scanner = new Html5Qrcode("reader");
+    scanner.start(
+      { facingMode: "environment" },
+      { fps: 10, qrbox: 250 },
+      onScanSuccess
+    ).catch(function(err){
+      var box = document.getElementById("result");
+      box.className = "err";
+      box.textContent = "Kamera tidak bisa dibuka: " + err +
+        "\n\nPastikan izin kamera diaktifkan untuk browser ini di HP (Setelan > Situs > Kamera), lalu muat ulang halaman.";
+    });
+  }
+
+  function unlock(pw){
+    document.getElementById("gate").classList.add("hidden");
+    document.getElementById("app").classList.remove("hidden");
+    sessionStorage.setItem(STORAGE_KEY, pw);
+    startScanner();
+  }
+
+  document.getElementById("pwBtn").onclick = function(){
+    var pw = document.getElementById("pwInput").value.trim();
+    if (!pw) { document.getElementById("pwErr").textContent = "Isi password dulu."; return; }
+    unlock(pw);
+  };
+  document.getElementById("pwInput").addEventListener("keydown", function(e){
+    if (e.key === "Enter") document.getElementById("pwBtn").click();
+  });
+
+  var saved = sessionStorage.getItem(STORAGE_KEY);
+  if (saved) unlock(saved);
+</script>
+
+</body>
+</html>
