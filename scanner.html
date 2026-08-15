@@ -12,7 +12,10 @@
     document.body ? document.body.prepend(d) : window.addEventListener("DOMContentLoaded", function(){ document.body.prepend(d); });
   };
 </script>
-<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" defer></script>
+<!-- Pustaka kamera di-hosting SENDIRI di sini (bukan CDN unpkg.com) --
+     beberapa jaringan seluler/kebijakan jaringan memblokir domain CDN
+     generik, bikin scanner macet di "Memuat pustaka kamera..." selamanya. -->
+<script src="html5-qrcode.min.js" defer></script>
 <style>
   *{box-sizing:border-box;}
   body{
