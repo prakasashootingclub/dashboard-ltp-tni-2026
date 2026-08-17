@@ -34,6 +34,31 @@
   #result.warn{border-color:#E5A94A; background:rgba(229,169,74,0.08);}
   #result.err{border-color:#B4483A; background:rgba(180,72,58,0.08);}
 
+  .cari-toggle{
+    display:block; width:100%; text-align:center; margin-top:12px;
+    background:none; border:none; color:#8C9A8A; font-size:12px;
+    text-decoration:underline; padding:6px;
+  }
+  #cariBox{margin-top:12px;}
+  #cariBox input{
+    width:100%; padding:10px 12px; border-radius:6px; border:1px solid #2A322C;
+    background:#161B17; color:#E9EAE3; font-size:14px; margin-bottom:8px;
+  }
+  #cariBox button.cari-btn{
+    width:100%; padding:10px; border-radius:6px; border:none;
+    background:#5C7A3A; color:#0E1210; font-size:13px; font-weight:700; margin-bottom:10px;
+  }
+  .hasil-card{
+    background:#161B17; border:1px solid #2A322C; border-radius:8px; padding:12px; margin-bottom:8px;
+  }
+  .hasil-card .nama{font-weight:700; font-size:14px;}
+  .hasil-card .meta{font-size:12px; color:#9ba488; margin:4px 0 8px;}
+  .hasil-card button.verif-manual{
+    width:100%; padding:9px; border-radius:6px; border:none;
+    background:#5C7A3A; color:#0E1210; font-size:12px; font-weight:700;
+  }
+  .hasil-card button.verif-manual:disabled{background:#3a4a3a; color:#8C9A8A;}
+
   /* ---------- gerbang password ---------- */
   /* SENGAJA tidak pakai position:fixed -- di banyak Chrome Android, elemen
      fixed-fullscreen bisa tergeser ke luar jangkauan layar saat keyboard
@@ -66,7 +91,7 @@
   <input type="password" id="pwInput" placeholder="Password petugas" autocomplete="off">
   <button id="pwBtn">Masuk</button>
   <div class="err" id="pwErr"></div>
-  <div style="font-size:10px;color:#3A4A40;margin-top:20px;">build v1</div>
+  <div style="font-size:10px;color:#3A4A40;margin-top:20px;">build v2</div>
 </div>
 
 <div id="app" class="hidden">
@@ -74,6 +99,14 @@
   <div class="lbl">Scan QR e-tiket peserta di pos verifikasi pusat</div>
   <div id="reader"></div>
   <div id="result">Arahkan kamera ke QR e-tiket peserta.</div>
+
+  <button class="cari-toggle" id="cariToggle">Peserta tidak punya QR? Cari manual by nama/NIK</button>
+  <div id="cariBox" class="hidden">
+    <input type="text" id="cariInput" placeholder="Ketik nama atau NIK...">
+    <button class="cari-btn" id="cariBtn">Cari</button>
+    <div id="cariStatus" style="font-size:12px;color:#5B6660;margin-bottom:8px;"></div>
+    <div id="cariHasil"></div>
+  </div>
 </div>
 
 <script>
@@ -143,6 +176,83 @@
         "\n\nPastikan izin kamera diaktifkan untuk browser ini di HP (Setelan > Situs > Kamera), lalu muat ulang halaman.";
     });
   }
+
+  function escapeHtml(s){
+    return String(s || "").replace(/[&<>"']/g, function(c){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+    });
+  }
+
+  function verifikasiManual(etiketId, btn){
+    btn.disabled = true;
+    btn.textContent = "Memproses...";
+    var pw = sessionStorage.getItem(STORAGE_KEY);
+    fetch(WEBAPP_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: ACTION, etiket_id: etiketId, pw: pw })
+    })
+      .then(function(r){ return r.json(); })
+      .then(function(res){
+        if (!res.ok) {
+          btn.disabled = false;
+          btn.textContent = "Verifikasi Manual";
+          alert(res.pesan || "Gagal.");
+          return;
+        }
+        btn.textContent = res.sudah ? "Sudah pernah diverifikasi" : "Berhasil diverifikasi";
+      })
+      .catch(function(err){
+        btn.disabled = false;
+        btn.textContent = "Verifikasi Manual";
+        alert("Gagal terhubung ke server: " + err);
+      });
+  }
+
+  function cariPeserta(){
+    var q = document.getElementById("cariInput").value.trim();
+    var statusEl = document.getElementById("cariStatus");
+    var hasilEl = document.getElementById("cariHasil");
+    if (!q) { statusEl.textContent = "Ketik nama atau NIK dulu."; return; }
+    statusEl.textContent = "Mencari...";
+    hasilEl.innerHTML = "";
+    var pw = sessionStorage.getItem(STORAGE_KEY);
+    fetch(WEBAPP_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "cari_peserta", kueri: q, pw: pw })
+    })
+      .then(function(r){ return r.json(); })
+      .then(function(res){
+        if (!res.ok) { statusEl.textContent = res.pesan || "Gagal mencari."; return; }
+        if (!res.data.length) { statusEl.textContent = "Tidak ada peserta Lunas yang cocok."; return; }
+        statusEl.textContent = res.data.length + " hasil ditemukan.";
+        res.data.forEach(function(p){
+          var card = document.createElement("div");
+          card.className = "hasil-card";
+          var sudahVerif = p.verifPusat === "Sudah";
+          card.innerHTML =
+            '<div class="nama">' + escapeHtml(p.nama) + '</div>' +
+            '<div class="meta">NIK: ' + escapeHtml(p.ktp) + '<br>' +
+            escapeHtml(p.kategori) + ' &middot; ' + escapeHtml(p.item) + '<br>' +
+            'Status: ' + (sudahVerif ? 'Sudah terverifikasi pusat' : 'Belum terverifikasi pusat') + '</div>' +
+            '<button class="verif-manual">' + (sudahVerif ? 'Sudah pernah diverifikasi' : 'Verifikasi Manual') + '</button>';
+          var btn = card.querySelector(".verif-manual");
+          if (sudahVerif) btn.disabled = true;
+          btn.onclick = function(){ verifikasiManual(p.etiketId, btn); };
+          hasilEl.appendChild(card);
+        });
+      })
+      .catch(function(err){ statusEl.textContent = "Gagal terhubung ke server: " + err; });
+  }
+
+  document.getElementById("cariToggle").onclick = function(){
+    document.getElementById("cariBox").classList.toggle("hidden");
+  };
+  document.getElementById("cariBtn").onclick = cariPeserta;
+  document.getElementById("cariInput").addEventListener("keydown", function(e){
+    if (e.key === "Enter") cariPeserta();
+  });
 
   function unlock(pw){
     document.getElementById("gate").classList.add("hidden");
