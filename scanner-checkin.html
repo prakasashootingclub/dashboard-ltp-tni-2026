@@ -91,7 +91,7 @@
   <input type="password" id="pwInput" placeholder="Password petugas" autocomplete="off">
   <button id="pwBtn">Masuk</button>
   <div class="err" id="pwErr"></div>
-  <div style="font-size:10px;color:#3A4A40;margin-top:20px;">build v3</div>
+  <div style="font-size:10px;color:#3A4A40;margin-top:20px;">build v4</div>
 </div>
 
 <div id="app" class="hidden">
@@ -231,11 +231,15 @@
           var card = document.createElement("div");
           card.className = "hasil-card";
           var sudahVerif = p.checkinMateri === "Sudah";
+          var fotoHtml = p.fotoKtpUrl
+            ? '<a href="' + escapeHtml(p.fotoKtpUrl) + '" target="_blank" rel="noopener" style="display:inline-block;font-size:12px;color:#5b8fd6;margin-bottom:8px;">Lihat Foto KTP &rarr;</a><br>'
+            : '<div style="font-size:11px;color:#E5A94A;margin-bottom:8px;">Tidak ada foto KTP -- cocokkan manual dengan KTP fisik.</div>';
           card.innerHTML =
             '<div class="nama">' + escapeHtml(p.nama) + '</div>' +
             '<div class="meta">NIK: ' + escapeHtml(p.ktp) + '<br>' +
             escapeHtml(p.kategori) + ' &middot; ' + escapeHtml(p.item) + '<br>' +
             'Status: ' + (sudahVerif ? 'Sudah check in materi' : 'Belum check in materi') + '</div>' +
+            fotoHtml +
             '<button class="verif-manual">' + (sudahVerif ? 'Sudah pernah check in' : 'Check In Manual') + '</button>';
           var btn = card.querySelector(".verif-manual");
           if (sudahVerif) btn.disabled = true;
