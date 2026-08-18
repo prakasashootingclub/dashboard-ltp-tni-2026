@@ -78,6 +78,27 @@
     background:#5C7A3A; color:#0E1210; font-size:14px; font-weight:700;
   }
   #gate .err{color:#E58B7A; font-size:13px; min-height:16px;}
+
+  /* ---------- pilih pos materi ---------- */
+  #pilihMateri{
+    min-height:80vh; background:#0E1210; display:flex;
+    flex-direction:column; align-items:center; justify-content:center;
+    gap:12px; padding:20px;
+  }
+  #pilihMateri .materi-btn{
+    width:100%; max-width:280px; padding:16px; border-radius:8px;
+    border:1px solid #2A322C; background:#161B17; color:#E9EAE3;
+    font-size:15px; font-weight:700;
+  }
+  #pilihMateri .materi-btn:active{background:#5C7A3A; color:#0E1210;}
+  .pos-aktif{
+    font-size:11px; color:#8C9A8A; margin-bottom:10px;
+  }
+  .pos-aktif button{
+    background:none; border:none; color:#5b8fd6; text-decoration:underline;
+    font-size:11px; padding:0; margin-left:6px;
+  }
+
   /* !important wajib -- selector ID #gate{display:flex} di atas punya
      prioritas lebih tinggi dari class .hidden, jadi tanpa !important
      gerbang password TIDAK PERNAH hilang walau class "hidden" ditambahkan. */
@@ -91,11 +112,21 @@
   <input type="password" id="pwInput" placeholder="Password petugas" autocomplete="off">
   <button id="pwBtn">Masuk</button>
   <div class="err" id="pwErr"></div>
-  <div style="font-size:10px;color:#3A4A40;margin-top:20px;">build v4</div>
+  <div style="font-size:10px;color:#3A4A40;margin-top:20px;">build v5</div>
+</div>
+
+<div id="pilihMateri" class="hidden">
+  <h2>Pos Materi Mana?</h2>
+  <div class="lbl" style="margin-bottom:10px;">Pilih materi yang dijaga di pos ini</div>
+  <button class="materi-btn" data-materi="Senapan">Senapan</button>
+  <button class="materi-btn" data-materi="Pistol">Pistol</button>
+  <button class="materi-btn" data-materi="Tembak Reaksi IPSC Level II">Tembak Reaksi IPSC Level II</button>
+  <button class="materi-btn" data-materi="Air Rifle">Air Rifle</button>
 </div>
 
 <div id="app" class="hidden">
   <h2>Check In Materi</h2>
+  <div class="pos-aktif">Pos: <b id="posAktifLabel"></b><button id="gantiPosBtn">Ganti</button></div>
   <div class="lbl">Scan QR e-tiket peserta di pos check in materi</div>
   <div id="reader"></div>
   <div id="result">Arahkan kamera ke QR e-tiket peserta.</div>
@@ -112,6 +143,7 @@
 <script>
   var WEBAPP_URL = "https://script.google.com/macros/s/AKfycbyGY8Pi3gBALM8GVP6XCB04P_eebPw2thlP_ShQR6IVC31vuCZcWXxQK677crIgHysu/exec";
   var STORAGE_KEY = "scannerPw";
+  var MATERI_KEY = "scannerMateri";
   var ACTION = "scan_checkin_materi";
   var scanner = null;
   var busy = false;
@@ -124,10 +156,11 @@
     box.textContent = "Memproses...";
 
     var pw = sessionStorage.getItem(STORAGE_KEY);
+    var materi = sessionStorage.getItem(MATERI_KEY);
     fetch(WEBAPP_URL, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ action: ACTION, etiket_id: decodedText, pw: pw })
+      body: JSON.stringify({ action: ACTION, etiket_id: decodedText, pw: pw, kategori_materi: materi })
     })
       .then(function(r){ return r.json(); })
       .then(function(res){
@@ -187,10 +220,11 @@
     btn.disabled = true;
     btn.textContent = "Memproses...";
     var pw = sessionStorage.getItem(STORAGE_KEY);
+    var materi = sessionStorage.getItem(MATERI_KEY);
     fetch(WEBAPP_URL, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ action: ACTION, etiket_id: etiketId, pw: pw })
+      body: JSON.stringify({ action: ACTION, etiket_id: etiketId, pw: pw, kategori_materi: materi })
     })
       .then(function(r){ return r.json(); })
       .then(function(res){
@@ -260,10 +294,32 @@
 
   function unlock(pw){
     document.getElementById("gate").classList.add("hidden");
-    document.getElementById("app").classList.remove("hidden");
     sessionStorage.setItem(STORAGE_KEY, pw);
-    startScanner();
+    var materi = sessionStorage.getItem(MATERI_KEY);
+    if (materi) {
+      bukaApp(materi);
+    } else {
+      document.getElementById("pilihMateri").classList.remove("hidden");
+    }
   }
+
+  function bukaApp(materi){
+    sessionStorage.setItem(MATERI_KEY, materi);
+    document.getElementById("pilihMateri").classList.add("hidden");
+    document.getElementById("posAktifLabel").textContent = materi;
+    document.getElementById("app").classList.remove("hidden");
+    if (!scanner) startScanner();
+  }
+
+  document.querySelectorAll(".materi-btn").forEach(function(btn){
+    btn.onclick = function(){ bukaApp(btn.getAttribute("data-materi")); };
+  });
+
+  document.getElementById("gantiPosBtn").onclick = function(){
+    sessionStorage.removeItem(MATERI_KEY);
+    document.getElementById("app").classList.add("hidden");
+    document.getElementById("pilihMateri").classList.remove("hidden");
+  };
 
   // Hash SHA-256 dari password yang benar -- bukan password mentahnya --
   // supaya tidak kelihatan polos di kode sumber halaman ini.
