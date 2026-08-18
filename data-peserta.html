@@ -89,6 +89,13 @@
 
   .empty-row td{text-align:center; padding:30px 12px; color:var(--ink-faint);}
 
+  .kat-section{margin-bottom:28px;}
+  .kat-head{
+    display:flex; align-items:baseline; gap:10px; margin-bottom:8px;
+  }
+  .kat-head h2{font-size:15px; font-weight:700; color:var(--ink);}
+  .kat-head .kat-count{font-family:var(--mono); font-size:11px; color:var(--ink-faint);}
+
   .note{
     background:var(--panel-2); border:1px solid var(--line); border-left:3px solid var(--amber);
     border-radius:4px; padding:11px 14px; font-size:11.5px; color:var(--ink-dim); margin-bottom:18px;
@@ -121,29 +128,11 @@
   </div>
 
   <div class="toolbar">
-    <input type="text" id="searchInput" placeholder="Cari nama, kategori, atau item...">
+    <input type="text" id="searchInput" placeholder="Cari nama atau item...">
     <div class="count-badge" id="countBadge">memuat…</div>
   </div>
 
-  <div class="table-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th>Nama</th>
-          <th>No HP</th>
-          <th>Kategori</th>
-          <th>Item/Divisi</th>
-          <th>Golongan</th>
-          <th>Status Bayar</th>
-          <th>Verif. Pusat</th>
-          <th>Check In Materi</th>
-        </tr>
-      </thead>
-      <tbody id="tbody">
-        <tr class="empty-row"><td colspan="8">Memuat data…</td></tr>
-      </tbody>
-    </table>
-  </div>
+  <div id="katSections">Memuat data…</div>
 
   <footer>
     <span id="lastSync">—</span>
@@ -175,35 +164,86 @@ function tagStatus(status){
   return `<span class="tag ${cls}">${escapeHtml(status)}</span>`;
 }
 
+// Urutan materi TETAP (sama seperti KATEGORI_LIST di backend) -- supaya
+// tiap materi selalu tampil di section-nya sendiri, TIDAK PERNAH dicampur
+// jadi satu tabel gabungan (permintaan Kang, 18 Agustus 2026).
+const URUTAN_KATEGORI = ["Senapan", "Pistol", "Tembak Reaksi IPSC Level II", "Air Rifle"];
+
+function tabelHtml(rows){
+  if (!rows.length){
+    return `<div class="table-wrap"><table><tbody><tr class="empty-row"><td>Belum ada peserta di materi ini.</td></tr></tbody></table></div>`;
+  }
+  return `
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Nama</th>
+            <th>No HP</th>
+            <th>Item/Divisi</th>
+            <th>Golongan</th>
+            <th>Status Bayar</th>
+            <th>Verif. Pusat</th>
+            <th>Check In Materi</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map(r => `
+            <tr>
+              <td class="nama">${escapeHtml(r.nama)}</td>
+              <td class="hp">${waLink(r.hp)}</td>
+              <td>${escapeHtml(r.item)}</td>
+              <td>${escapeHtml(r.golongan)}</td>
+              <td>${tagBayar(r.statusBayar)}</td>
+              <td>${tagStatus(r.verifPusat)}</td>
+              <td>${tagStatus(r.checkinMateri)}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
 function render(){
   const q = document.getElementById("searchInput").value.trim().toLowerCase();
   const rows = q
     ? allRows.filter(r =>
         (r.nama || "").toLowerCase().includes(q) ||
-        (r.kategori || "").toLowerCase().includes(q) ||
         (r.item || "").toLowerCase().includes(q))
     : allRows;
 
-  const tbody = document.getElementById("tbody");
   document.getElementById("countBadge").textContent = rows.length + " dari " + allRows.length + " peserta";
 
-  if (!rows.length){
-    tbody.innerHTML = `<tr class="empty-row"><td colspan="8">${allRows.length ? "Tidak ada yang cocok." : "Belum ada peserta terdaftar."}</td></tr>`;
+  const container = document.getElementById("katSections");
+  if (!allRows.length){
+    container.innerHTML = `<div class="table-wrap"><table><tbody><tr class="empty-row"><td>Belum ada peserta terdaftar.</td></tr></tbody></table></div>`;
     return;
   }
 
-  tbody.innerHTML = rows.map(r => `
-    <tr>
-      <td class="nama">${escapeHtml(r.nama)}</td>
-      <td class="hp">${waLink(r.hp)}</td>
-      <td>${escapeHtml(r.kategori)}</td>
-      <td>${escapeHtml(r.item)}</td>
-      <td>${escapeHtml(r.golongan)}</td>
-      <td>${tagBayar(r.statusBayar)}</td>
-      <td>${tagStatus(r.verifPusat)}</td>
-      <td>${tagStatus(r.checkinMateri)}</td>
-    </tr>
-  `).join("");
+  // Kelompokkan per kategori -- urutan tetap sesuai URUTAN_KATEGORI, materi
+  // di luar daftar itu (kalau ada) ditaruh di paling akhir.
+  const dipakai = new Set();
+  const grup = {};
+  rows.forEach(r => {
+    const k = r.kategori || "Lainnya";
+    if (!grup[k]) grup[k] = [];
+    grup[k].push(r);
+  });
+  const urutanFinal = URUTAN_KATEGORI.concat(Object.keys(grup).filter(k => !URUTAN_KATEGORI.includes(k)));
+
+  container.innerHTML = urutanFinal.map(kat => {
+    const krows = grup[kat] || [];
+    return `
+      <div class="kat-section">
+        <div class="kat-head">
+          <h2>${escapeHtml(kat)}</h2>
+          <span class="kat-count">${krows.length} peserta</span>
+        </div>
+        ${tabelHtml(krows)}
+      </div>
+    `;
+  }).join("");
 }
 
 async function muatData(){
@@ -216,7 +256,8 @@ async function muatData(){
     const now = new Date();
     document.getElementById("lastSync").textContent = "Terakhir diperbarui: " + now.toLocaleTimeString("id-ID", {hour12:false});
   } catch (err){
-    document.getElementById("tbody").innerHTML = `<tr class="empty-row"><td colspan="8">Gagal terhubung ke server: ${escapeHtml(err.message || err)}</td></tr>`;
+    document.getElementById("katSections").innerHTML =
+      `<div class="table-wrap"><table><tbody><tr class="empty-row"><td>Gagal terhubung ke server: ${escapeHtml(err.message || err)}</td></tr></tbody></table></div>`;
   }
 }
 
