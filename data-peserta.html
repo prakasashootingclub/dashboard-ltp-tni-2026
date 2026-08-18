@@ -65,7 +65,7 @@
   }
 
   .table-wrap{ width:100%; overflow-x:auto; border:1px solid var(--line); border-radius:8px; }
-  table{width:100%; min-width:760px; border-collapse:collapse; font-size:12.5px; background:var(--panel);}
+  table{width:100%; min-width:600px; border-collapse:collapse; font-size:12.5px; background:var(--panel);}
   thead th{
     text-align:left; padding:10px 12px; background:var(--panel-2);
     color:var(--ink-faint); font-weight:600; text-transform:uppercase; font-size:10.5px;
@@ -91,10 +91,19 @@
 
   .kat-section{margin-bottom:28px;}
   .kat-head{
-    display:flex; align-items:baseline; gap:10px; margin-bottom:8px;
+    display:flex; align-items:baseline; gap:10px; margin-bottom:10px;
+    padding-bottom:6px; border-bottom:1px solid var(--line);
   }
-  .kat-head h2{font-size:15px; font-weight:700; color:var(--ink);}
+  .kat-head h2{font-size:16px; font-weight:700; color:var(--ink);}
   .kat-head .kat-count{font-family:var(--mono); font-size:11px; color:var(--ink-faint);}
+
+  .sub-materi{margin-bottom:16px; margin-left:4px;}
+  .sub-materi:last-child{margin-bottom:0;}
+  .sub-head{
+    display:flex; align-items:baseline; gap:8px; margin-bottom:6px;
+  }
+  .sub-head h3{font-size:12.5px; font-weight:600; color:var(--olive-bright);}
+  .sub-head .kat-count{font-family:var(--mono); font-size:10.5px; color:var(--ink-faint);}
 
   .note{
     background:var(--panel-2); border:1px solid var(--line); border-left:3px solid var(--amber);
@@ -169,9 +178,9 @@ function tagStatus(status){
 // jadi satu tabel gabungan (permintaan Kang, 18 Agustus 2026).
 const URUTAN_KATEGORI = ["Senapan", "Pistol", "Tembak Reaksi IPSC Level II", "Air Rifle"];
 
-function tabelHtml(rows){
+function tabelSubMateriHtml(rows){
   if (!rows.length){
-    return `<div class="table-wrap"><table><tbody><tr class="empty-row"><td>Belum ada peserta di materi ini.</td></tr></tbody></table></div>`;
+    return `<div class="table-wrap"><table><tbody><tr class="empty-row"><td>Belum ada peserta di sub-materi ini.</td></tr></tbody></table></div>`;
   }
   return `
     <div class="table-wrap">
@@ -180,7 +189,6 @@ function tabelHtml(rows){
           <tr>
             <th>Nama</th>
             <th>No HP</th>
-            <th>Item/Divisi</th>
             <th>Golongan</th>
             <th>Status Bayar</th>
             <th>Verif. Pusat</th>
@@ -192,7 +200,6 @@ function tabelHtml(rows){
             <tr>
               <td class="nama">${escapeHtml(r.nama)}</td>
               <td class="hp">${waLink(r.hp)}</td>
-              <td>${escapeHtml(r.item)}</td>
               <td>${escapeHtml(r.golongan)}</td>
               <td>${tagBayar(r.statusBayar)}</td>
               <td>${tagStatus(r.verifPusat)}</td>
@@ -203,6 +210,32 @@ function tabelHtml(rows){
       </table>
     </div>
   `;
+}
+
+function tabelHtml(rows){
+  if (!rows.length){
+    return `<div class="table-wrap"><table><tbody><tr class="empty-row"><td>Belum ada peserta di materi ini.</td></tr></tbody></table></div>`;
+  }
+  // Kelompokkan lagi per sub-materi (Item/Divisi) di dalam materi ini --
+  // urutan sub-materi mengikuti urutan kemunculan pertama di data (bukan
+  // acak), supaya konsisten tiap refresh.
+  const urutanItem = [];
+  const grupItem = {};
+  rows.forEach(r => {
+    const it = r.item || "Lainnya";
+    if (!grupItem[it]) { grupItem[it] = []; urutanItem.push(it); }
+    grupItem[it].push(r);
+  });
+
+  return urutanItem.map(item => `
+    <div class="sub-materi">
+      <div class="sub-head">
+        <h3>${escapeHtml(item)}</h3>
+        <span class="kat-count">${grupItem[item].length} peserta</span>
+      </div>
+      ${tabelSubMateriHtml(grupItem[item])}
+    </div>
+  `).join("");
 }
 
 function render(){
