@@ -55,13 +55,6 @@
     color:var(--amber-bright); letter-spacing:.02em;
   }
   .clock-label{font-size:11px; color:var(--ink-faint); font-family:var(--mono); letter-spacing:.1em; text-transform:uppercase;}
-  .sheet-btn{
-    display:inline-block; margin-top:10px; font-family:var(--mono); font-size:11px;
-    padding:7px 13px; border:1px solid var(--olive); border-radius:5px;
-    color:var(--olive-bright); text-decoration:none; letter-spacing:.03em;
-    transition:.15s;
-  }
-  .sheet-btn:hover{background:var(--olive); color:#0E1210;}
 
   /* PORTAL NAV — menu tombol ke halaman internal lain */
   .portal-nav{
@@ -195,28 +188,6 @@
     line-height:1.55;
   }
   .note b{color:var(--amber-bright);}
-  .gate{
-    position:fixed; inset:0; background:var(--bg); z-index:100;
-    display:flex; align-items:center; justify-content:center;
-  }
-  .gate-box{
-    background:var(--panel); border:1px solid var(--line); border-radius:8px;
-    padding:32px 30px; width:100%; max-width:320px; text-align:center;
-  }
-  .gate-box .brand-eyebrow{ justify-content:center; }
-  .gate-box h2{ font-size:16px; margin:6px 0 18px; color:var(--ink); }
-  .gate-box input{
-    width:100%; padding:10px 12px; background:var(--panel-2); border:1px solid var(--line);
-    border-radius:5px; color:var(--ink); font-size:14px; margin-bottom:10px;
-    font-family:var(--mono);
-  }
-  .gate-box button{
-    width:100%; padding:10px 12px; background:var(--olive); border:none; border-radius:5px;
-    color:#0E1210; font-weight:700; font-size:13px; cursor:pointer; letter-spacing:.03em;
-  }
-  .gate-box button:hover{ background:var(--olive-bright); }
-  .gate-err{ color:var(--red); font-size:12px; margin-top:10px; min-height:14px; }
-  body.locked > .wrap{ display:none; }
 
   .card{ cursor:pointer; transition:.15s; }
   .card:hover{ border-color:var(--olive); background:rgba(143,179,90,0.03); }
@@ -296,17 +267,7 @@
   }
 </style>
 </head>
-<body class="locked">
-
-<div class="gate" id="gate">
-  <div class="gate-box">
-    <div class="brand-eyebrow">Bag Pendaftaran &middot; Prakasa Shooting Club</div>
-    <h2>Dashboard Internal — Masukkan Password</h2>
-    <input type="password" id="gatePass" placeholder="Password" autocomplete="off">
-    <button id="gateBtn">Buka Dashboard</button>
-    <div class="gate-err" id="gateErr"></div>
-  </div>
-</div>
+<body>
 
 <div class="wrap">
 
@@ -319,7 +280,6 @@
     <div class="clock-block">
       <div class="clock"><span class="live-dot"></span><span id="clockTime">00:00:00</span></div>
       <div class="clock-label" id="clockDate">memuat tanggal…</div>
-      <a href="#" id="sheetLink" class="sheet-btn" target="_blank" rel="noopener">Lihat Data Lengkap Peserta ↗</a>
     </div>
   </header>
 
@@ -327,7 +287,7 @@
     <a class="portal-btn" href="scanner-verifikasi.html" target="_blank" rel="noopener">Scan Verifikasi Pusat ↗</a>
     <a class="portal-btn" href="scanner-checkin.html" target="_blank" rel="noopener">Scan Check-in Materi ↗</a>
     <a class="portal-btn" href="verifikasi-pembayaran.html" target="_blank" rel="noopener">Verifikasi Pembayaran ↗</a>
-    <a class="portal-btn" href="https://docs.google.com/spreadsheets/d/1ccXNjRIz_BtgliNMGfc2pfXi18J6kktNcFnujt0-MMM/preview" target="_blank" rel="noopener">Data Peserta (Lihat Saja) ↗</a>
+    <a class="portal-btn" href="data-peserta.html" target="_blank" rel="noopener">Data Peserta ↗</a>
     <a class="portal-btn" href="https://prakasashootingclub.github.io/ltp-tni-2026/" target="_blank" rel="noopener">Landing Page Publik ↗</a>
   </nav>
 
@@ -393,34 +353,6 @@
 </div>
 
 <script>
-// ---------- GERBANG PASSWORD (client-side, penghalang ringan bukan enkripsi kuat) ----------
-const GATE_HASH = "139402feb08d859f6fdead96a630a96d77b7ae4bebf421bfa7ac85c7b4798c10";
-
-async function sha256Hex(text){
-  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
-  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("");
-}
-
-async function cobaBuka(){
-  const val = document.getElementById("gatePass").value;
-  const hash = await sha256Hex(val);
-  if (hash === GATE_HASH){
-    sessionStorage.setItem("dashLtpUnlocked", "1");
-    document.getElementById("gate").style.display = "none";
-    document.body.classList.remove("locked");
-    mulaiDashboard();
-  } else {
-    document.getElementById("gateErr").textContent = "Password salah.";
-  }
-}
-document.getElementById("gateBtn").addEventListener("click", cobaBuka);
-document.getElementById("gatePass").addEventListener("keydown", e=>{ if(e.key==="Enter") cobaBuka(); });
-
-if (sessionStorage.getItem("dashLtpUnlocked") === "1"){
-  document.getElementById("gate").style.display = "none";
-  document.body.classList.remove("locked");
-}
-
 // ---------- KATEGORI (statis — daftar & koordinator tidak berubah tiap fetch) ----------
 const kategoriList = [
   {key:"Senapan", nama:"Senapan", coord:"Danyonif 328 & Danyon Armed 10"},
@@ -683,9 +615,6 @@ document.addEventListener("keydown", e=>{
   if (e.key === "Escape" && modalOpenKat) tutupDetail();
 });
 
-// ---------- LINK GOOGLE SHEETS (ganti dengan URL Sheets asli) ----------
-document.getElementById("sheetLink").href = "https://docs.google.com/spreadsheets/d/1ccXNjRIz_BtgliNMGfc2pfXi18J6kktNcFnujt0-MMM/edit";
-
 // ---------- CLOCK ----------
 function tickClock(){
   const now = new Date();
@@ -695,7 +624,7 @@ function tickClock(){
 }
 let dashboardStarted = false;
 function mulaiDashboard(){
-  if (dashboardStarted) return; // cegah interval dobel kalau gate dibuka lebih dari sekali
+  if (dashboardStarted) return; // cegah interval dobel kalau fungsi ini kepanggil lebih dari sekali
   dashboardStarted = true;
   tickClock();
   setInterval(tickClock, 1000);
@@ -703,7 +632,7 @@ function mulaiDashboard(){
   setInterval(muatData, 30000); // refresh data tiap 30 detik
 }
 
-if (sessionStorage.getItem("dashLtpUnlocked") === "1") mulaiDashboard();
+mulaiDashboard();
 </script>
 </body>
 </html>

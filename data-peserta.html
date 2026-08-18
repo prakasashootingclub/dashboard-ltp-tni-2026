@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>LTP TNI 2026 — Data Peserta</title>
+<style>
+  :root{
+    --bg:#0E1210;
+    --panel:#161B17;
+    --panel-2:#1D2420;
+    --line:#2A322C;
+    --ink:#E9EAE3;
+    --ink-dim:#8C9A8A;
+    --ink-faint:#5B6660;
+    --olive:#5C7A3A;
+    --olive-bright:#8FB35A;
+    --amber:#C7852E;
+    --amber-bright:#E5A94A;
+    --red:#B4483A;
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", "Roboto Mono", Consolas, monospace;
+    --sans: -apple-system, "Segoe UI", "Inter", Helvetica, Arial, sans-serif;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:
+      radial-gradient(1200px 600px at 15% -10%, rgba(92,122,58,0.09), transparent 60%),
+      var(--bg);
+    color:var(--ink);
+    font-family:var(--sans);
+    padding:24px 16px 50px;
+    min-height:100vh;
+  }
+  .wrap{max-width:1100px; margin:0 auto;}
+
+  header{
+    border-bottom:1px solid var(--line);
+    padding-bottom:16px; margin-bottom:18px;
+  }
+  .brand-eyebrow{
+    font-family:var(--mono); font-size:11px; letter-spacing:.18em;
+    color:var(--olive-bright); text-transform:uppercase; margin-bottom:6px;
+  }
+  h1{font-size:22px; font-weight:700; letter-spacing:-0.01em;}
+  .subtitle{font-size:12.5px; color:var(--ink-dim); margin-top:4px;}
+  .back-link{
+    display:inline-block; margin-top:10px; font-family:var(--mono); font-size:11px;
+    color:var(--olive-bright); text-decoration:none;
+  }
+  .back-link:hover{text-decoration:underline;}
+
+  .toolbar{
+    display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:14px;
+  }
+  #searchInput{
+    flex:1; min-width:200px; padding:10px 12px; background:var(--panel);
+    border:1px solid var(--line); border-radius:6px; color:var(--ink);
+    font-size:13px; font-family:var(--sans);
+  }
+  #searchInput:focus{outline:none; border-color:var(--olive);}
+  .count-badge{
+    font-family:var(--mono); font-size:11px; color:var(--ink-faint);
+    white-space:nowrap;
+  }
+
+  .table-wrap{ width:100%; overflow-x:auto; border:1px solid var(--line); border-radius:8px; }
+  table{width:100%; min-width:760px; border-collapse:collapse; font-size:12.5px; background:var(--panel);}
+  thead th{
+    text-align:left; padding:10px 12px; background:var(--panel-2);
+    color:var(--ink-faint); font-weight:600; text-transform:uppercase; font-size:10.5px;
+    letter-spacing:.06em; font-family:var(--mono);
+    border-bottom:1px solid var(--line); position:sticky; top:0;
+  }
+  tbody td{padding:9px 12px; border-bottom:1px solid var(--line); color:var(--ink-dim); vertical-align:top;}
+  tbody tr:hover{background:rgba(143,179,90,0.04);}
+  tbody td.nama{color:var(--ink); font-weight:600;}
+  tbody td.hp a{color:var(--olive-bright); text-decoration:none; font-family:var(--mono); font-size:12px;}
+  tbody td.hp a:hover{text-decoration:underline;}
+
+  .tag{
+    font-family:var(--mono); font-size:10.5px; padding:3px 8px; border-radius:4px;
+    display:inline-block; white-space:nowrap;
+  }
+  .tag.lunas{background:rgba(143,179,90,0.18); color:var(--olive-bright);}
+  .tag.pending{background:rgba(229,169,74,0.18); color:var(--amber-bright);}
+  .tag.sudah{background:rgba(143,179,90,0.18); color:var(--olive-bright);}
+  .tag.belum{background:rgba(91,102,96,0.25); color:var(--ink-faint);}
+
+  .empty-row td{text-align:center; padding:30px 12px; color:var(--ink-faint);}
+
+  .note{
+    background:var(--panel-2); border:1px solid var(--line); border-left:3px solid var(--amber);
+    border-radius:4px; padding:11px 14px; font-size:11.5px; color:var(--ink-dim); margin-bottom:18px;
+    line-height:1.55;
+  }
+  .note b{color:var(--amber-bright);}
+
+  footer{
+    margin-top:24px; padding-top:14px; border-top:1px solid var(--line);
+    font-size:11px; color:var(--ink-faint); font-family:var(--mono);
+    display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px;
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header>
+    <div class="brand-eyebrow">Bag Pendaftaran &middot; Prakasa Shooting Club</div>
+    <h1>Data Peserta</h1>
+    <div class="subtitle">Lomba Tembak Piala Panglima TNI 2026 — daftar operasional, tanpa NIK/data sensitif</div>
+    <a class="back-link" href="index.html">&larr; Kembali ke Dashboard</a>
+  </header>
+
+  <div class="note">
+    Halaman ini <b>tidak menampilkan NIK atau data sensitif lain</b> — cuma nama, No HP,
+    kategori, dan status. Untuk data lengkap (NIK, bukti transfer, dsb), buka Spreadsheet asli
+    (akses dibatasi admin).
+  </div>
+
+  <div class="toolbar">
+    <input type="text" id="searchInput" placeholder="Cari nama, kategori, atau item...">
+    <div class="count-badge" id="countBadge">memuat…</div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Nama</th>
+          <th>No HP</th>
+          <th>Kategori</th>
+          <th>Item/Divisi</th>
+          <th>Golongan</th>
+          <th>Status Bayar</th>
+          <th>Verif. Pusat</th>
+          <th>Check In Materi</th>
+        </tr>
+      </thead>
+      <tbody id="tbody">
+        <tr class="empty-row"><td colspan="8">Memuat data…</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <footer>
+    <span id="lastSync">—</span>
+    <span>Auto-refresh tiap 30 detik</span>
+  </footer>
+
+</div>
+
+<script>
+const DATA_URL = "https://script.google.com/macros/s/AKfycbyGY8Pi3gBALM8GVP6XCB04P_eebPw2thlP_ShQR6IVC31vuCZcWXxQK677crIgHysu/exec?peserta=1";
+let allRows = [];
+
+function escapeHtml(s){
+  return String(s || "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+function waLink(hp){
+  const digits = String(hp || "").replace(/[^0-9]/g, "");
+  return digits ? `<a href="https://wa.me/${digits}" target="_blank" rel="noopener">${escapeHtml(hp)}</a>` : "-";
+}
+
+function tagBayar(status){
+  const cls = status === "Lunas" ? "lunas" : "pending";
+  return `<span class="tag ${cls}">${escapeHtml(status)}</span>`;
+}
+
+function tagStatus(status){
+  const cls = status === "Sudah" ? "sudah" : "belum";
+  return `<span class="tag ${cls}">${escapeHtml(status)}</span>`;
+}
+
+function render(){
+  const q = document.getElementById("searchInput").value.trim().toLowerCase();
+  const rows = q
+    ? allRows.filter(r =>
+        (r.nama || "").toLowerCase().includes(q) ||
+        (r.kategori || "").toLowerCase().includes(q) ||
+        (r.item || "").toLowerCase().includes(q))
+    : allRows;
+
+  const tbody = document.getElementById("tbody");
+  document.getElementById("countBadge").textContent = rows.length + " dari " + allRows.length + " peserta";
+
+  if (!rows.length){
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="8">${allRows.length ? "Tidak ada yang cocok." : "Belum ada peserta terdaftar."}</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = rows.map(r => `
+    <tr>
+      <td class="nama">${escapeHtml(r.nama)}</td>
+      <td class="hp">${waLink(r.hp)}</td>
+      <td>${escapeHtml(r.kategori)}</td>
+      <td>${escapeHtml(r.item)}</td>
+      <td>${escapeHtml(r.golongan)}</td>
+      <td>${tagBayar(r.statusBayar)}</td>
+      <td>${tagStatus(r.verifPusat)}</td>
+      <td>${tagStatus(r.checkinMateri)}</td>
+    </tr>
+  `).join("");
+}
+
+async function muatData(){
+  try {
+    const res = await fetch(DATA_URL, {cache: "no-store"});
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.pesan || "Gagal memuat data.");
+    allRows = json.rows || [];
+    render();
+    const now = new Date();
+    document.getElementById("lastSync").textContent = "Terakhir diperbarui: " + now.toLocaleTimeString("id-ID", {hour12:false});
+  } catch (err){
+    document.getElementById("tbody").innerHTML = `<tr class="empty-row"><td colspan="8">Gagal terhubung ke server: ${escapeHtml(err.message || err)}</td></tr>`;
+  }
+}
+
+document.getElementById("searchInput").addEventListener("input", render);
+
+muatData();
+setInterval(muatData, 30000);
+</script>
+
+</body>
+</html>
