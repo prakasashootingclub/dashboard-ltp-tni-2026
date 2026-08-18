@@ -86,6 +86,7 @@
   .tag.pending{background:rgba(229,169,74,0.18); color:var(--amber-bright);}
   .tag.sudah{background:rgba(143,179,90,0.18); color:var(--olive-bright);}
   .tag.belum{background:rgba(91,102,96,0.25); color:var(--ink-faint);}
+  .waktu{font-family:var(--mono); font-size:10px; color:var(--ink-faint); margin-top:3px;}
 
   .empty-row td{text-align:center; padding:30px 12px; color:var(--ink-faint);}
 
@@ -163,14 +164,18 @@ function waLink(hp){
   return digits ? `<a href="https://wa.me/${digits}" target="_blank" rel="noopener">${escapeHtml(hp)}</a>` : "-";
 }
 
-function tagBayar(status){
-  const cls = status === "Lunas" ? "lunas" : "pending";
-  return `<span class="tag ${cls}">${escapeHtml(status)}</span>`;
+function waktuHtml(waktu){
+  return waktu ? `<div class="waktu">${escapeHtml(waktu)}</div>` : "";
 }
 
-function tagStatus(status){
+function tagBayar(status, waktu){
+  const cls = status === "Lunas" ? "lunas" : "pending";
+  return `<span class="tag ${cls}">${escapeHtml(status)}</span>${waktuHtml(waktu)}`;
+}
+
+function tagStatus(status, waktu){
   const cls = status === "Sudah" ? "sudah" : "belum";
-  return `<span class="tag ${cls}">${escapeHtml(status)}</span>`;
+  return `<span class="tag ${cls}">${escapeHtml(status)}</span>${waktuHtml(waktu)}`;
 }
 
 // Urutan materi TETAP (sama seperti KATEGORI_LIST di backend) -- supaya
@@ -201,9 +206,9 @@ function tabelSubMateriHtml(rows){
               <td class="nama">${escapeHtml(r.nama)}</td>
               <td class="hp">${waLink(r.hp)}</td>
               <td>${escapeHtml(r.golongan)}</td>
-              <td>${tagBayar(r.statusBayar)}</td>
-              <td>${tagStatus(r.verifPusat)}</td>
-              <td>${tagStatus(r.checkinMateri)}</td>
+              <td>${tagBayar(r.statusBayar, r.waktuLunas)}</td>
+              <td>${tagStatus(r.verifPusat, r.waktuVerifPusat)}</td>
+              <td>${tagStatus(r.checkinMateri, r.waktuCheckin)}</td>
             </tr>
           `).join("")}
         </tbody>
