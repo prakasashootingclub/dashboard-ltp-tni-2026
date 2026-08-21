@@ -126,7 +126,7 @@
   <div class="lbl" style="margin-bottom:10px;">Pilih materi yang dijaga di pos ini</div>
   <button class="materi-btn" data-materi="Senapan">Senapan</button>
   <button class="materi-btn" data-materi="Pistol">Pistol</button>
-  <button class="materi-btn" data-materi="Tembak Reaksi IPSC Level II">Tembak Reaksi IPSC Level II</button>
+  <button class="materi-btn" data-materi="Tembak Reaksi IPSC Level II">IPSC Level II</button>
   <button class="materi-btn" data-materi="Air Rifle">Air Rifle</button>
 </div>
 
@@ -154,6 +154,12 @@
   var scanner = null;
   var busy = false;
 
+  // Nama tampilan SAJA (label lebih ringkas) -- nilai data-materi/kategori
+  // yang dikirim ke server TETAP "Tembak Reaksi IPSC Level II", tidak
+  // diubah, supaya tetap cocok dengan data yang sudah tercatat di Sheet.
+  var NAMA_TAMPILAN_MATERI = { "Tembak Reaksi IPSC Level II": "IPSC Level II" };
+  function namaTampilanMateri(materi){ return NAMA_TAMPILAN_MATERI[materi] || materi; }
+
   function escapeHtml(s){
     return String(s || "").replace(/[&<>"']/g, function(c){
       return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
@@ -180,7 +186,7 @@
         '<div class="nama">' + escapeHtml(res.nama) + '</div>' +
         '<div class="meta">NIK: ' + escapeHtml(res.ktp) + '<br>' +
         'HP: ' + hpHtml + '<br>' +
-        escapeHtml(res.kategori) + ' &middot; ' + escapeHtml(res.item) + '<br>' +
+        escapeHtml(namaTampilanMateri(res.kategori)) + ' &middot; ' + escapeHtml(res.item) + '<br>' +
         'Golongan: ' + escapeHtml(res.golongan) + '</div>' +
         fotoHtml
       ) : '');
@@ -300,7 +306,7 @@
           card.innerHTML =
             '<div class="nama">' + escapeHtml(p.nama) + '</div>' +
             '<div class="meta">NIK: ' + escapeHtml(p.ktp) + '<br>' +
-            escapeHtml(p.kategori) + ' &middot; ' + escapeHtml(p.item) + '<br>' +
+            escapeHtml(namaTampilanMateri(p.kategori)) + ' &middot; ' + escapeHtml(p.item) + '<br>' +
             'Status: ' + (sudahVerif ? 'Sudah check in materi' : 'Belum check in materi') + '</div>' +
             fotoHtml +
             '<button class="verif-manual">' + (sudahVerif ? 'Sudah pernah check in' : 'Check In Manual') + '</button>';
@@ -335,7 +341,7 @@
   function bukaApp(materi){
     sessionStorage.setItem(MATERI_KEY, materi);
     document.getElementById("pilihMateri").classList.add("hidden");
-    document.getElementById("posAktifLabel").textContent = materi;
+    document.getElementById("posAktifLabel").textContent = namaTampilanMateri(materi);
     document.getElementById("app").classList.remove("hidden");
     if (!scanner) startScanner();
   }

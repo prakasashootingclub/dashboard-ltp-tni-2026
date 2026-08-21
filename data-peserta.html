@@ -183,6 +183,12 @@ function tagStatus(status, waktu){
 // jadi satu tabel gabungan (permintaan Kang, 18 Agustus 2026).
 const URUTAN_KATEGORI = ["Senapan", "Pistol", "Tembak Reaksi IPSC Level II", "Air Rifle"];
 
+// Nama tampilan SAJA (label lebih ringkas) -- nilai asli di data (kolom
+// Kategori Sheet) TETAP "Tembak Reaksi IPSC Level II", tidak diubah, supaya
+// tidak mempengaruhi pencocokan pos/data yang sudah tercatat.
+const NAMA_TAMPILAN_KATEGORI = { "Tembak Reaksi IPSC Level II": "IPSC Level II" };
+function namaTampilanKategori(kat){ return NAMA_TAMPILAN_KATEGORI[kat] || kat; }
+
 function tabelSubMateriHtml(rows){
   if (!rows.length){
     return `<div class="table-wrap"><table><tbody><tr class="empty-row"><td>Belum ada peserta di sub-materi ini.</td></tr></tbody></table></div>`;
@@ -275,7 +281,7 @@ function render(){
     return `
       <div class="kat-section">
         <div class="kat-head">
-          <h2>${escapeHtml(kat)}</h2>
+          <h2>${escapeHtml(namaTampilanKategori(kat))}</h2>
           <span class="kat-count">${krows.length} peserta</span>
         </div>
         ${tabelHtml(krows)}

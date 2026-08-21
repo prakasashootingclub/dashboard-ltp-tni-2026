@@ -122,6 +122,11 @@
   var scanner = null;
   var busy = false;
 
+  // Nama tampilan SAJA (label lebih ringkas) -- nilai kategori dari server
+  // TETAP "Tembak Reaksi IPSC Level II", tidak diubah.
+  var NAMA_TAMPILAN_MATERI = { "Tembak Reaksi IPSC Level II": "IPSC Level II" };
+  function namaTampilanMateri(materi){ return NAMA_TAMPILAN_MATERI[materi] || materi; }
+
   function escapeHtml(s){
     return String(s || "").replace(/[&<>"']/g, function(c){
       return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
@@ -148,7 +153,7 @@
         '<div class="nama">' + escapeHtml(res.nama) + '</div>' +
         '<div class="meta">NIK: ' + escapeHtml(res.ktp) + '<br>' +
         'HP: ' + hpHtml + '<br>' +
-        escapeHtml(res.kategori) + ' &middot; ' + escapeHtml(res.item) + '<br>' +
+        escapeHtml(namaTampilanMateri(res.kategori)) + ' &middot; ' + escapeHtml(res.item) + '<br>' +
         'Golongan: ' + escapeHtml(res.golongan) + '</div>' +
         fotoHtml
       ) : '');
@@ -268,7 +273,7 @@
           card.innerHTML =
             '<div class="nama">' + escapeHtml(p.nama) + '</div>' +
             '<div class="meta">NIK: ' + escapeHtml(p.ktp) + '<br>' +
-            escapeHtml(p.kategori) + ' &middot; ' + escapeHtml(p.item) + '<br>' +
+            escapeHtml(namaTampilanMateri(p.kategori)) + ' &middot; ' + escapeHtml(p.item) + '<br>' +
             'Status: ' + (sudahVerif ? 'Sudah terverifikasi pusat' : 'Belum terverifikasi pusat') + '</div>' +
             fotoHtml +
             '<button class="verif-manual">' + (sudahVerif ? 'Sudah pernah diverifikasi' : 'Verifikasi Manual') + '</button>';

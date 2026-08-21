@@ -113,7 +113,7 @@
   <div class="lbl" style="margin-bottom:10px;">Pilih materi yang dijaga di pos ini</div>
   <button class="materi-btn" data-materi="Senapan">Senapan</button>
   <button class="materi-btn" data-materi="Pistol">Pistol</button>
-  <button class="materi-btn" data-materi="Tembak Reaksi IPSC Level II">Tembak Reaksi IPSC Level II</button>
+  <button class="materi-btn" data-materi="Tembak Reaksi IPSC Level II">IPSC Level II</button>
   <button class="materi-btn" data-materi="Air Rifle">Air Rifle</button>
 </div>
 
@@ -133,6 +133,12 @@
   var STORAGE_KEY = "pembayaranPw";
   var MATERI_KEY = "pembayaranMateri";
   var semuaItem = []; // hasil fetch terakhir (belum difilter materi/cari) -- dipakai ulang saat cari diketik, tidak perlu fetch ulang ke server
+
+  // Nama tampilan SAJA (label lebih ringkas) -- nilai materi/kategori yang
+  // dipakai buat filter & dikirim ke server TETAP "Tembak Reaksi IPSC Level
+  // II", tidak diubah.
+  var NAMA_TAMPILAN_MATERI = { "Tembak Reaksi IPSC Level II": "IPSC Level II" };
+  function namaTampilanMateri(materi){ return NAMA_TAMPILAN_MATERI[materi] || materi; }
 
   function fmtRupiah(n){
     n = Number(n) || 0;
@@ -172,7 +178,7 @@
       card.innerHTML =
         '<div class="nama">' + escapeHtml(item.nama) + '</div>' +
         '<div class="meta">' +
-          escapeHtml(item.kategori) + ' &middot; ' + escapeHtml(item.item) + '<br>' +
+          escapeHtml(namaTampilanMateri(item.kategori)) + ' &middot; ' + escapeHtml(item.item) + '<br>' +
           'HP: ' + escapeHtml(item.hp) + ' &middot; Golongan: ' + escapeHtml(item.golongan) + '<br>' +
           'Metode: <b>' + escapeHtml(item.metodeBayar || "-") + '</b> &middot; Total: <b class="biaya">' + fmtRupiah(item.biaya) + '</b>' +
         '</div>' +
@@ -299,7 +305,7 @@
   function bukaApp(materi){
     sessionStorage.setItem(MATERI_KEY, materi);
     document.getElementById("pilihMateri").classList.add("hidden");
-    document.getElementById("posAktifLabel").textContent = materi;
+    document.getElementById("posAktifLabel").textContent = namaTampilanMateri(materi);
     document.getElementById("app").classList.remove("hidden");
     muatDaftar();
   }
