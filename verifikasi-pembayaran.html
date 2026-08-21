@@ -63,6 +63,11 @@
     background:#5C7A3A; color:#0E1210; font-size:13px; font-weight:700;
   }
   .card button.lunas:disabled{background:#3a4a3a; color:#8C9A8A;}
+  .card a.wa-btn{
+    display:block; text-align:center; margin-top:8px; padding:11px;
+    border-radius:6px; background:#25D366; color:#0E1210; font-size:13px;
+    font-weight:700; text-decoration:none;
+  }
   #empty{
     text-align:center; color:#5B6660; padding:40px 20px; font-size:14px;
   }
@@ -183,9 +188,21 @@
           alert(res.pesan || "Gagal menandai Lunas.");
           return;
         }
-        btn.textContent = "Selesai -- e-tiket terkirim";
-        card.style.opacity = "0.5";
-        setTimeout(function(){ card.remove(); }, 1200);
+        if (res.waLink) {
+          // emailDikirim === false berarti sudah masuk masa OTS -- email
+          // dimatikan otomatis, tombol WA ini SATU-SATUNYA jalur e-tiket
+          // sampai ke peserta. emailDikirim === true (periode online) --
+          // email tetap jalan, tombol WA ini cuma cadangan/tambahan.
+          btn.outerHTML =
+            (res.emailDikirim === false
+              ? '<div class="tunai">Masa OTS -- email dimatikan, kirim e-tiket lewat tombol ini:</div>'
+              : '') +
+            '<a class="wa-btn" href="' + res.waLink + '" target="_blank" rel="noopener">Kirim E-Tiket via WhatsApp</a>';
+        } else {
+          btn.textContent = "Selesai -- e-tiket terkirim";
+          card.style.opacity = "0.5";
+          setTimeout(function(){ card.remove(); }, 1200);
+        }
       })
       .catch(function(err){
         btn.disabled = false;
