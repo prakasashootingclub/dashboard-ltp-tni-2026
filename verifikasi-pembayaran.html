@@ -39,6 +39,31 @@
   #gate .err{color:#E58B7A; font-size:13px; min-height:16px;}
   .hidden{display:none !important;}
 
+  /* ---------- pilih pos materi ---------- */
+  #pilihMateri{
+    min-height:80vh; background:#0E1210; display:flex;
+    flex-direction:column; align-items:center; justify-content:center;
+    gap:12px; padding:20px;
+  }
+  #pilihMateri .materi-btn{
+    width:100%; max-width:280px; padding:16px; border-radius:8px;
+    border:1px solid #2A322C; background:#161B17; color:#E9EAE3;
+    font-size:15px; font-weight:700;
+  }
+  #pilihMateri .materi-btn:active{background:#5C7A3A; color:#0E1210;}
+  .pos-aktif{
+    font-size:11px; color:#8C9A8A; margin-bottom:10px;
+  }
+  .pos-aktif button{
+    background:none; border:none; color:#5b8fd6; text-decoration:underline;
+    font-size:11px; padding:0; margin-left:6px;
+  }
+
+  #cariInput{
+    width:100%; padding:10px 12px; border-radius:6px; border:1px solid #2A322C;
+    background:#161B17; color:#E9EAE3; font-size:14px; margin-bottom:14px;
+  }
+
   #refreshBtn{
     width:100%; padding:10px; border-radius:6px; border:1px solid #2A322C;
     background:#161B17; color:#8FB35A; font-size:13px; font-weight:600; margin-bottom:14px;
@@ -83,9 +108,20 @@
   <div class="err" id="pwErr"></div>
 </div>
 
+<div id="pilihMateri" class="hidden">
+  <h2>Pos Materi Mana?</h2>
+  <div class="lbl" style="margin-bottom:10px;">Pilih materi yang dijaga di pos ini</div>
+  <button class="materi-btn" data-materi="Senapan">Senapan</button>
+  <button class="materi-btn" data-materi="Pistol">Pistol</button>
+  <button class="materi-btn" data-materi="Tembak Reaksi IPSC Level II">Tembak Reaksi IPSC Level II</button>
+  <button class="materi-btn" data-materi="Air Rifle">Air Rifle</button>
+</div>
+
 <div id="app" class="hidden">
   <h2>Verifikasi Pembayaran</h2>
+  <div class="pos-aktif">Pos: <b id="posAktifLabel"></b><button id="gantiPosBtn">Ganti</button></div>
   <div class="lbl">Cek bukti transfer dulu sebelum tap "Lunas"</div>
+  <input type="text" id="cariInput" placeholder="Cari nama atau NIK...">
   <button id="refreshBtn">Muat Ulang Daftar</button>
   <div id="status"></div>
   <div id="list"></div>
@@ -95,6 +131,8 @@
 <script>
   var WEBAPP_URL = "https://script.google.com/macros/s/AKfycbyGY8Pi3gBALM8GVP6XCB04P_eebPw2thlP_ShQR6IVC31vuCZcWXxQK677crIgHysu/exec";
   var STORAGE_KEY = "pembayaranPw";
+  var MATERI_KEY = "pembayaranMateri";
+  var semuaItem = []; // hasil fetch terakhir (belum difilter materi/cari) -- dipakai ulang saat cari diketik, tidak perlu fetch ulang ke server
 
   function fmtRupiah(n){
     n = Number(n) || 0;
@@ -148,6 +186,27 @@
     });
   }
 
+  // Filter list yang sedang tampil sesuai materi pos ini + kata kunci cari
+  // (nama atau NIK) -- semuanya dari data yang sudah di-fetch, tidak perlu
+  // panggil server lagi tiap kali ketik.
+  function terapkanFilter(){
+    var status = document.getElementById("status");
+    var materi = sessionStorage.getItem(MATERI_KEY);
+    var q = document.getElementById("cariInput").value.trim().toLowerCase();
+
+    var hasil = semuaItem.filter(function(item){
+      return item.kategori === materi;
+    });
+    if (q) {
+      hasil = hasil.filter(function(item){
+        return String(item.nama || "").toLowerCase().indexOf(q) !== -1 ||
+          String(item.nik || "").toLowerCase().indexOf(q) !== -1;
+      });
+    }
+    status.textContent = hasil.length + " peserta menunggu verifikasi" + (q ? " (hasil cari)" : " -- " + materi) + ".";
+    renderList(hasil);
+  }
+
   function muatDaftar(){
     var status = document.getElementById("status");
     status.textContent = "Memuat...";
@@ -163,8 +222,8 @@
           status.textContent = res.pesan || "Gagal memuat daftar.";
           return;
         }
-        status.textContent = res.data.length + " peserta menunggu verifikasi.";
-        renderList(res.data);
+        semuaItem = res.data;
+        terapkanFilter();
       })
       .catch(function(err){
         status.textContent = "Gagal terhubung ke server: " + err;
@@ -212,6 +271,7 @@
   }
 
   document.getElementById("refreshBtn").onclick = muatDaftar;
+  document.getElementById("cariInput").addEventListener("input", terapkanFilter);
 
   // Hash SHA-256 dari password yang benar -- bukan password mentahnya --
   // supaya tidak kelihatan polos di kode sumber halaman ini.
@@ -227,10 +287,32 @@
 
   function unlock(pw){
     document.getElementById("gate").classList.add("hidden");
-    document.getElementById("app").classList.remove("hidden");
     sessionStorage.setItem(STORAGE_KEY, pw);
+    var materi = sessionStorage.getItem(MATERI_KEY);
+    if (materi) {
+      bukaApp(materi);
+    } else {
+      document.getElementById("pilihMateri").classList.remove("hidden");
+    }
+  }
+
+  function bukaApp(materi){
+    sessionStorage.setItem(MATERI_KEY, materi);
+    document.getElementById("pilihMateri").classList.add("hidden");
+    document.getElementById("posAktifLabel").textContent = materi;
+    document.getElementById("app").classList.remove("hidden");
     muatDaftar();
   }
+
+  document.querySelectorAll(".materi-btn").forEach(function(btn){
+    btn.onclick = function(){ bukaApp(btn.getAttribute("data-materi")); };
+  });
+
+  document.getElementById("gantiPosBtn").onclick = function(){
+    sessionStorage.removeItem(MATERI_KEY);
+    document.getElementById("app").classList.add("hidden");
+    document.getElementById("pilihMateri").classList.remove("hidden");
+  };
 
   document.getElementById("pwBtn").onclick = function(){
     var pw = document.getElementById("pwInput").value.trim();
