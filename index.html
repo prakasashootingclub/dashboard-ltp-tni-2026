@@ -354,11 +354,31 @@
 
 <script>
 // ---------- KATEGORI (statis — daftar & koordinator tidak berubah tiap fetch) ----------
+// Falling Plate & Non IPSC punya form pendaftaran sendiri, jadi ditampilkan
+// sebagai kartu dashboard sendiri juga (dipisah sama seperti form) -- meski
+// di sheet mentah keduanya masih ditandai kat="Pistol"/"Tembak Reaksi IPSC
+// Level II" (SENGAJA, supaya pos Verifikasi Pembayaran & Check-in Materi di
+// lokasi tetap 1 kelompok, lihat komentar di Code.gs KATEGORI_LIST). Di sini
+// pemisahannya dilakukan lewat "match" berdasarkan nama item, bukan field kat.
+const FALLING_PLATE_ITEMS = [
+  "Falling Plate Optic", "Falling Plate Non Optic",
+  "Falling Plate Optic (TNI/Polri)", "Falling Plate Non Optic (TNI/Polri)",
+];
+const NON_IPSC_ITEMS = ["Non IPSC Standard Putra", "Non IPSC Standard Putri"];
+
 const kategoriList = [
-  {key:"Senapan", nama:"Senapan", coord:"Danyonif 328 & Danyon Armed 10"},
-  {key:"Pistol", nama:"Pistol", coord:"Kasbrig 17 & Danyonkav 1/1 Kostrad"},
-  {key:"Tembak Reaksi IPSC Level II", nama:"IPSC Level II", coord:"Danyon Armed 9/1 Kostrad"},
-  {key:"Air Rifle", nama:"Air Rifle", coord:"Danyonzipur 9/1 Kostrad & Perbakin"},
+  {key:"Senapan", nama:"Senapan", coord:"Danyonif 328 & Danyon Armed 10",
+    match:r=>r.kat==="Senapan"},
+  {key:"Pistol", nama:"Pistol", coord:"Kasbrig 17 & Danyonkav 1/1 Kostrad",
+    match:r=>r.kat==="Pistol" && !FALLING_PLATE_ITEMS.includes(r.item)},
+  {key:"FallingPlate", nama:"Falling Plate", coord:"Kasbrig 17 & Danyonkav 1/1 Kostrad",
+    match:r=>r.kat==="Pistol" && FALLING_PLATE_ITEMS.includes(r.item)},
+  {key:"Tembak Reaksi IPSC Level II", nama:"IPSC Level II", coord:"Danyon Armed 9/1 Kostrad",
+    match:r=>r.kat==="Tembak Reaksi IPSC Level II" && !NON_IPSC_ITEMS.includes(r.item)},
+  {key:"NonIPSC", nama:"Non IPSC", coord:"Danyon Armed 9/1 Kostrad",
+    match:r=>r.kat==="Tembak Reaksi IPSC Level II" && NON_IPSC_ITEMS.includes(r.item)},
+  {key:"Air Rifle", nama:"Air Rifle", coord:"Danyonzipur 9/1 Kostrad & Perbakin",
+    match:r=>r.kat==="Air Rifle"},
 ];
 
 // ---------- KATALOG SUB-MATERI per kategori (urutan tetap, sesuai KATEGORI_LIST di Code.gs) ----------
@@ -386,11 +406,8 @@ const itemCatalog = {
     "20 M Eksekutif Beregu Putra (TNI/Polri)",
     // Pati/Tamu Undangan VIP SENGAJA tidak dimasukkan -- jalur undangan
     // terpisah, koordinator beda, tidak lewat form ini.
-    "Falling Plate Optic",
-    "Falling Plate Non Optic",
-    "Falling Plate Optic (TNI/Polri)",
-    "Falling Plate Non Optic (TNI/Polri)",
   ],
+  "FallingPlate": FALLING_PLATE_ITEMS,
   "Tembak Reaksi IPSC Level II": [
     "Divisi Open",
     "Divisi Standard",
@@ -398,9 +415,8 @@ const itemCatalog = {
     "Divisi Production",
     "Divisi Production Optic",
     "Divisi PCC Optic",
-    "Non IPSC Standard Putra",
-    "Non IPSC Standard Putri",
   ],
+  "NonIPSC": NON_IPSC_ITEMS,
   "Air Rifle": [
     "WRABF HR 25 M (Junior)",
     "WRABF HR 25 M (Senior)",
@@ -492,7 +508,7 @@ function render(){
   // CARDS per kategori
   const grid = document.getElementById("cardGrid");
   grid.innerHTML = kategoriList.map(k=>{
-    const kr = fr.filter(r=>r.kat===k.key);
+    const kr = fr.filter(r=>k.match(r));
     const t = kr.reduce((a,r)=>a+r.terdaftar,0);
     const v = kr.reduce((a,r)=>a+r.verif,0);
     const c = kr.reduce((a,r)=>a+r.checkin,0);
@@ -532,7 +548,7 @@ function render(){
   const sumberLabel = {online:"Online", ots:"OTS"};
   const golLabel = {sipil:"Sipil", tni:"TNI/Polri"};
   tbody.innerHTML = fr.map(r=>{
-    const katNama = kategoriList.find(k=>k.key===r.kat).nama;
+    const katNama = kategoriList.find(k=>k.match(r)).nama;
     return `
       <tr>
         <td class="katname">${katNama}</td>
@@ -551,7 +567,7 @@ function render(){
     mobilePanel.innerHTML = `<div class="empty">Belum ada data untuk filter ini.</div>`;
   } else {
     mobilePanel.innerHTML = fr.map(r=>{
-      const katNama = kategoriList.find(k=>k.key===r.kat).nama;
+      const katNama = kategoriList.find(k=>k.match(r)).nama;
       return `
         <div class="item-row">
           <div class="item-name">${katNama} <span class="tag ${r.sumber}">${sumberLabel[r.sumber]}</span> &middot; ${golLabel[r.golongan]}</div>
@@ -575,7 +591,7 @@ function bukaDetail(katKey){
   modalOpenKat = katKey;
 
   // Hormati filter Sumber/Golongan yang sedang aktif di halaman utama.
-  const kr = filteredRows().filter(r=>r.kat===katKey);
+  const kr = filteredRows().filter(r=>k.match(r));
   const byItem = {};
   kr.forEach(r=>{
     if (!byItem[r.item]) byItem[r.item] = {terdaftar:0, verif:0, checkin:0};
