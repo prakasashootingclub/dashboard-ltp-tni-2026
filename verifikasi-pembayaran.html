@@ -135,20 +135,20 @@
 <div id="app" class="hidden">
   <h2>Verifikasi Pembayaran</h2>
   <div class="pos-aktif">Pos: <b id="posAktifLabel"></b><button id="gantiPosBtn">Ganti</button></div>
-  <div class="lbl">Cek bukti transfer dulu sebelum tap "Lunas"</div>
-  <input type="text" id="cariInput" placeholder="Cari nama atau NIK...">
-  <button id="refreshBtn">Muat Ulang Daftar</button>
-  <div id="status"></div>
-  <div id="list"></div>
-  <div id="empty" class="hidden">Tidak ada peserta yang menunggu verifikasi saat ini.</div>
-
-  <div class="resend-section">
+  <div class="resend-section" style="margin-top:0; padding-top:0; border-top:none;">
     <div class="lbl">Peserta sudah Lunas minta dikirim ulang e-tiket?</div>
     <input type="text" id="cariLunasInput" placeholder="Cari Nama, NIK, Email, atau No HP...">
     <button id="cariLunasBtn">Cari Peserta</button>
     <div id="statusLunas"></div>
     <div id="listLunas"></div>
   </div>
+
+  <div class="lbl" style="margin-top:24px; padding-top:18px; border-top:1px solid #2A322C;">Cek bukti transfer dulu sebelum tap "Lunas"</div>
+  <input type="text" id="cariInput" placeholder="Cari nama atau NIK...">
+  <button id="refreshBtn">Muat Ulang Daftar</button>
+  <div id="status"></div>
+  <div id="list"></div>
+  <div id="empty" class="hidden">Tidak ada peserta yang menunggu verifikasi saat ini.</div>
 </div>
 
 <script>
