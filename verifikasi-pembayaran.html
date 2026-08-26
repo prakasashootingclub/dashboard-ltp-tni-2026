@@ -97,6 +97,21 @@
     text-align:center; color:#5B6660; padding:40px 20px; font-size:14px;
   }
   #status{font-size:12px; color:#5B6660; margin-bottom:10px;}
+
+  /* ---------- kirim ulang e-tiket (peserta sudah Lunas) ---------- */
+  .resend-section{
+    margin-top:28px; padding-top:18px; border-top:1px solid #2A322C;
+  }
+  #cariLunasInput{
+    width:100%; padding:10px 12px; border-radius:6px; border:1px solid #2A322C;
+    background:#161B17; color:#E9EAE3; font-size:14px; margin-bottom:10px;
+  }
+  #cariLunasBtn{
+    width:100%; padding:10px; border-radius:6px; border:1px solid #2A322C;
+    background:#161B17; color:#c68a2e; font-size:13px; font-weight:600; margin-bottom:14px;
+  }
+  #statusLunas{font-size:12px; color:#5B6660; margin-bottom:10px;}
+  #listLunas{display:flex; flex-direction:column; gap:10px;}
 </style>
 </head>
 <body>
@@ -126,6 +141,14 @@
   <div id="status"></div>
   <div id="list"></div>
   <div id="empty" class="hidden">Tidak ada peserta yang menunggu verifikasi saat ini.</div>
+
+  <div class="resend-section">
+    <div class="lbl">Peserta sudah Lunas minta dikirim ulang e-tiket?</div>
+    <input type="text" id="cariLunasInput" placeholder="Cari Nama, NIK, Email, atau No HP...">
+    <button id="cariLunasBtn">Cari Peserta</button>
+    <div id="statusLunas"></div>
+    <div id="listLunas"></div>
+  </div>
 </div>
 
 <script>
@@ -278,6 +301,61 @@
 
   document.getElementById("refreshBtn").onclick = muatDaftar;
   document.getElementById("cariInput").addEventListener("input", terapkanFilter);
+
+  // ---------- Kirim ulang e-tiket (peserta sudah Lunas) ----------
+  // Terpisah dari daftar utama di atas (yang cuma isi peserta BELUM
+  // Lunas) -- ini khusus buat kasus peserta minta dikirim ulang karena
+  // pesan WA lama hilang/terhapus. Dicari langsung ke server tiap klik
+  // Cari (bukan filter dari data yang sudah di-fetch), soalnya daftar
+  // utama tidak pernah memuat peserta yang sudah Lunas sama sekali.
+  function renderListLunas(items){
+    var list = document.getElementById("listLunas");
+    list.innerHTML = "";
+    items.forEach(function(item){
+      var card = document.createElement("div");
+      card.className = "card";
+      card.innerHTML =
+        '<div class="nama">' + escapeHtml(item.nama) + '</div>' +
+        '<div class="meta">' +
+          escapeHtml(namaTampilanMateri(item.kategori)) + ' &middot; ' + escapeHtml(item.item) + '<br>' +
+          'NIK: ' + escapeHtml(item.nik) + ' &middot; HP: ' + escapeHtml(item.hp) + '<br>' +
+          'Email: ' + escapeHtml(item.email || "-") +
+        '</div>' +
+        (item.waLink
+          ? '<a class="wa-btn" href="' + item.waLink + '" target="_blank" rel="noopener">Kirim Ulang E-Tiket via WhatsApp</a>'
+          : '<div class="warn">QR e-tiket belum tersedia untuk peserta ini -- cek manual di Spreadsheet.</div>');
+      list.appendChild(card);
+    });
+  }
+
+  function cariLunas(){
+    var statusLunas = document.getElementById("statusLunas");
+    var q = document.getElementById("cariLunasInput").value.trim();
+    if (!q) { statusLunas.textContent = "Isi kata kunci pencarian dulu."; document.getElementById("listLunas").innerHTML = ""; return; }
+    statusLunas.textContent = "Mencari...";
+    var pw = sessionStorage.getItem(STORAGE_KEY);
+    fetch(WEBAPP_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "cari_lunas", kueri: q, pw: pw })
+    })
+      .then(function(r){ return r.json(); })
+      .then(function(res){
+        if (!res.ok) { statusLunas.textContent = res.pesan || "Gagal mencari."; return; }
+        statusLunas.textContent = res.data.length
+          ? res.data.length + " peserta ditemukan."
+          : "Tidak ada peserta Lunas yang cocok dengan pencarian ini.";
+        renderListLunas(res.data);
+      })
+      .catch(function(err){
+        statusLunas.textContent = "Gagal terhubung ke server: " + err;
+      });
+  }
+
+  document.getElementById("cariLunasBtn").onclick = cariLunas;
+  document.getElementById("cariLunasInput").addEventListener("keydown", function(e){
+    if (e.key === "Enter") cariLunas();
+  });
 
   // Hash SHA-256 dari password yang benar -- bukan password mentahnya --
   // supaya tidak kelihatan polos di kode sumber halaman ini.
