@@ -97,6 +97,8 @@
     border-radius:6px; padding:10px; line-height:1.6; margin-bottom:8px;
   }
   .card .row-btn{display:flex; gap:8px;}
+  .card .row-btn.confirm-wrap{flex-direction:column; align-items:stretch;}
+  .card .confirm-actions{display:flex; gap:8px; margin-top:8px;}
   .card button.lunas{
     flex:1; padding:11px; border-radius:6px; border:none;
     background:#5C7A3A; color:#0E1210; font-size:13px; font-weight:700;
@@ -237,22 +239,21 @@
   // benar sebelum verifikasi beneran jalan (permintaan Kang 27 Agustus 2026).
   function tampilkanKonfirmasi(item, card){
     var box = card.querySelector(".row-btn");
+    box.classList.add("confirm-wrap");
     box.innerHTML =
-      '<div style="flex-direction:column; display:flex; width:100%;">' +
-        '<div class="confirm-recap">Cek ulang sebelum verifikasi:<br>' +
-          '<b>' + escapeHtml(item.nama) + '</b><br>' +
-          escapeHtml(namaTampilanMateri(item.kategori)) + ' &middot; ' + escapeHtml(item.item) + '<br>' +
-          'Golongan: ' + escapeHtml(item.golongan) + ' &middot; Metode: ' + escapeHtml(item.metodeBayar || "-") + '<br>' +
-          'Total: <b>' + fmtRupiah(item.biaya) + '</b>' +
-        '</div>' +
-        '<div class="row-btn">' +
-          '<button class="batal">Batal</button>' +
-          '<button class="ya-lunas">Ya, Data Benar -- Tandai Lunas</button>' +
-        '</div>' +
+      '<div class="confirm-recap">Cek ulang sebelum verifikasi:<br>' +
+        '<b>' + escapeHtml(item.nama) + '</b><br>' +
+        escapeHtml(namaTampilanMateri(item.kategori)) + ' &middot; ' + escapeHtml(item.item) + '<br>' +
+        'Golongan: ' + escapeHtml(item.golongan) + ' &middot; Metode: ' + escapeHtml(item.metodeBayar || "-") + '<br>' +
+        'Total: <b>' + fmtRupiah(item.biaya) + '</b>' +
+      '</div>' +
+      '<div class="confirm-actions">' +
+        '<button class="batal">Batal</button>' +
+        '<button class="ya-lunas">Ya, Data Benar -- Tandai Lunas</button>' +
       '</div>';
     box.querySelector(".batal").onclick = function(){ terapkanFilter(); };
     box.querySelector(".ya-lunas").onclick = function(){
-      tandaiLunas(item.idPendaftaran, card, box.querySelector(".ya-lunas"));
+      tandaiLunas(item.idPendaftaran, card, box.querySelector(".ya-lunas"), box);
     };
   }
 
@@ -361,7 +362,7 @@
       });
   }
 
-  function tandaiLunas(idPendaftaran, card, btn){
+  function tandaiLunas(idPendaftaran, card, btn, box){
     btn.disabled = true;
     btn.textContent = "Memproses...";
     var pw = sessionStorage.getItem(STORAGE_KEY);
@@ -377,25 +378,27 @@
           terapkanFilter(); // reset kartu ke tampilan normal (batal konfirmasi)
           return;
         }
+        // Ganti ISI box konfirmasi (bukan cuma tombolnya) -- box tetap ada
+        // di kartu SAMPAI admin reload daftar manual, TIDAK auto-hilang,
+        // supaya tombol WA (kalau ada) selalu sempat kelihatan & bisa
+        // ditekan kapan saja tanpa buru-buru.
         if (res.waLink) {
           // emailDikirim === false berarti sudah masuk masa OTS -- email
           // dimatikan otomatis, tombol WA ini SATU-SATUNYA jalur e-tiket
           // sampai ke peserta. emailDikirim === true (periode online) --
           // email tetap jalan, tombol WA ini cuma cadangan/tambahan.
-          btn.outerHTML =
+          box.innerHTML =
             (res.emailDikirim === false
               ? '<div class="tunai">Masa OTS -- email dimatikan, kirim e-tiket lewat tombol ini:</div>'
-              : '') +
+              : '<div class="tunai">Lunas -- e-tiket sudah dikirim otomatis ke email peserta. Tombol di bawah cadangan kalau mau kirim manual juga:</div>') +
             '<a class="wa-btn" href="' + res.waLink + '" target="_blank" rel="noopener">Kirim E-Tiket via WhatsApp</a>';
         } else {
-          btn.textContent = "Selesai -- e-tiket terkirim";
-          card.style.opacity = "0.5";
-          setTimeout(function(){ card.remove(); }, 1200);
+          box.innerHTML = '<div class="tunai">Lunas -- e-tiket sudah terkirim.</div>';
         }
       })
       .catch(function(err){
         btn.disabled = false;
-        btn.textContent = "Tandai Lunas";
+        btn.textContent = "Ya, Data Benar -- Tandai Lunas";
         alert("Gagal terhubung ke server: " + err);
       });
   }
