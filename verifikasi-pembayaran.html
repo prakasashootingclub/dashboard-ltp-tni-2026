@@ -198,39 +198,83 @@
     });
   }
 
+  // Foto kamera HP mentah biasanya 3-8 MB -- di venue (data seluler,
+  // bukan wifi kencang) itu lambat/gampang gagal, apalagi kalau admin
+  // proses banyak peserta OTS berturut-turut. Kompres dulu di browser
+  // (turunkan resolusi maks 1280px sisi terpanjang, JPEG kualitas 0.7)
+  // sebelum dikirim -- biasanya jadi ratusan KB saja, jauh lebih tahan
+  // koneksi jelek. PDF/tipe non-gambar dikirim apa adanya (tidak bisa
+  // dikompres lewat canvas).
+  function kompresGambar_(file){
+    return new Promise(function(resolve){
+      if (!file.type || file.type.indexOf("image/") !== 0) {
+        resolve({ blob: file, mimeType: file.type });
+        return;
+      }
+      var url = URL.createObjectURL(file);
+      var img = new Image();
+      img.onload = function(){
+        URL.revokeObjectURL(url);
+        var MAKS_SISI = 1280;
+        var skala = Math.min(1, MAKS_SISI / Math.max(img.width, img.height));
+        var w = Math.max(1, Math.round(img.width * skala));
+        var h = Math.max(1, Math.round(img.height * skala));
+        var canvas = document.createElement("canvas");
+        canvas.width = w; canvas.height = h;
+        var ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, w, h);
+        canvas.toBlob(function(blob){
+          resolve(blob ? { blob: blob, mimeType: "image/jpeg" } : { blob: file, mimeType: file.type });
+        }, "image/jpeg", 0.7);
+      };
+      img.onerror = function(){
+        URL.revokeObjectURL(url);
+        resolve({ blob: file, mimeType: file.type }); // gagal baca sebagai gambar -- kirim aslinya, jangan gagal total
+      };
+      img.src = url;
+    });
+  }
+
   // Upload gambar bukti transfer (dipilih admin dari file lokal, mis. hasil
-  // screenshot bukti yang dikirim peserta via WA) -- dikonversi ke base64
-  // lalu dikirim ke action "upload_bukti_admin". Server simpan ke Drive dan
-  // isi kolom "Bukti Transfer URL", baru setelah itu tombol Lunas terbuka.
+  // screenshot bukti yang dikirim peserta via WA) -- dikompres dulu (lihat
+  // kompresGambar_), lalu dikonversi ke base64 dan dikirim ke action
+  // "upload_bukti_admin". Server simpan ke Drive dan isi kolom "Bukti
+  // Transfer URL", baru setelah itu tombol Lunas terbuka.
   function pasangUploadHandler(input, item, statusEl, onSuccess){
     input.addEventListener("change", function(){
       var file = input.files[0];
       if (!file) return;
-      if (statusEl) statusEl.textContent = "Mengupload...";
-      var reader = new FileReader();
-      reader.onload = function(){
-        var base64 = String(reader.result).split(",")[1];
-        var pw = sessionStorage.getItem(STORAGE_KEY);
-        fetch(WEBAPP_URL, {
-          method: "POST",
-          headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify({ action: "upload_bukti_admin", idPendaftaran: item.idPendaftaran, base64: base64, mimeType: file.type, pw: pw })
-        })
-          .then(function(r){ return r.json(); })
-          .then(function(res){
-            if (!res.ok) {
-              if (statusEl) statusEl.textContent = res.pesan || "Gagal upload.";
-              return;
-            }
-            item.buktiUrl = res.buktiUrl;
-            semuaItem.forEach(function(it){ if (it.idPendaftaran === item.idPendaftaran) it.buktiUrl = res.buktiUrl; });
-            onSuccess();
+      if (statusEl) statusEl.textContent = "Mengompres foto...";
+      kompresGambar_(file).then(function(hasil){
+        if (statusEl) statusEl.textContent = "Mengupload...";
+        var reader = new FileReader();
+        reader.onload = function(){
+          var base64 = String(reader.result).split(",")[1];
+          var pw = sessionStorage.getItem(STORAGE_KEY);
+          fetch(WEBAPP_URL, {
+            method: "POST",
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify({ action: "upload_bukti_admin", idPendaftaran: item.idPendaftaran, base64: base64, mimeType: hasil.mimeType, pw: pw })
           })
-          .catch(function(err){
-            if (statusEl) statusEl.textContent = "Gagal terhubung ke server: " + err;
-          });
-      };
-      reader.readAsDataURL(file);
+            .then(function(r){ return r.json(); })
+            .then(function(res){
+              if (!res.ok) {
+                if (statusEl) statusEl.textContent = res.pesan || "Gagal upload.";
+                return;
+              }
+              item.buktiUrl = res.buktiUrl;
+              semuaItem.forEach(function(it){ if (it.idPendaftaran === item.idPendaftaran) it.buktiUrl = res.buktiUrl; });
+              onSuccess();
+            })
+            .catch(function(err){
+              if (statusEl) statusEl.textContent = "Gagal terhubung ke server: " + err;
+            });
+        };
+        reader.onerror = function(){
+          if (statusEl) statusEl.textContent = "Gagal membaca file.";
+        };
+        reader.readAsDataURL(hasil.blob);
+      });
     });
   }
 
@@ -485,9 +529,17 @@
       .then(function(r){ return r.json(); })
       .then(function(res){
         if (!res.ok) { statusLunas.textContent = res.pesan || "Gagal mencari."; return; }
-        statusLunas.textContent = res.data.length
+        var teksJumlah = res.data.length
           ? res.data.length + " peserta ditemukan."
           : "Tidak ada peserta Lunas yang cocok dengan pencarian ini.";
+        // Hasil dibatasi maks 30 -- kalau masih ada yang kepotong, kata
+        // kunci ini kemungkinan terlalu umum (nama pasaran) dan peserta
+        // yang dicari bisa jadi tidak ikut tampil. Beri tahu supaya
+        // petugas tidak salah kira "tidak ketemu" -- coba persempit
+        // pencarian pakai NIK/email/HP yang lebih unik.
+        statusLunas.textContent = teksJumlah + (res.terpotong
+          ? " Masih ada hasil lain yang tidak ditampilkan -- persempit pencarian (pakai NIK/email/HP) kalau peserta yang dicari belum kelihatan."
+          : "");
         renderListLunas(res.data);
       })
       .catch(function(err){

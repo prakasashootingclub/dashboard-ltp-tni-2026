@@ -262,7 +262,12 @@
       .then(function(res){
         if (!res.ok) { statusEl.textContent = res.pesan || "Gagal mencari."; return; }
         if (!res.data.length) { statusEl.textContent = "Tidak ada peserta Lunas yang cocok."; return; }
-        statusEl.textContent = res.data.length + " hasil ditemukan.";
+        // Hasil dibatasi maks 30 -- kalau masih kepotong (nama pasaran,
+        // banyak peserta cocok sekaligus), beri tahu supaya petugas tidak
+        // salah kira orangnya belum lunas/tidak terdaftar.
+        statusEl.textContent = res.data.length + " hasil ditemukan." + (res.terpotong
+          ? " Masih ada hasil lain yang tidak ditampilkan -- coba cari pakai NIK kalau peserta belum kelihatan."
+          : "");
         res.data.forEach(function(p){
           var card = document.createElement("div");
           card.className = "hasil-card";
