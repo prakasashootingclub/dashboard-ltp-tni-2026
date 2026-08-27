@@ -167,7 +167,7 @@
     <div id="listLunas"></div>
   </div>
 
-  <div class="lbl" style="margin-top:24px; padding-top:18px; border-top:1px solid #2A322C;">Cek bukti transfer dulu sebelum tap "Lunas"</div>
+  <div class="lbl" style="margin-top:24px; padding-top:18px; border-top:1px solid #2A322C;">Cek/upload bukti pembayaran dulu sebelum tap "Lunas"</div>
   <input type="text" id="cariInput" placeholder="Cari nama atau NIK...">
   <button id="refreshBtn">Muat Ulang Daftar</button>
   <div id="status"></div>
@@ -271,20 +271,28 @@
       card.className = "card";
       card.dataset.id = item.idPendaftaran;
 
+      // Tunai JUGA wajib ada bukti (foto uang/serah terima tunai dari
+      // petugas), bukan cuma Transfer Bank -- permintaan Kang 27 Agustus
+      // 2026, supaya ada jejak untuk kedua metode, bukan cuma janji lisan
+      // petugas. Mekanismenya disamakan persis, cuma teks labelnya beda.
       var isTunai = (item.metodeBayar || "").indexOf("Tunai") === 0;
-      var bisaVerifikasi = isTunai || !!item.buktiUrl;
+      var bisaVerifikasi = !!item.buktiUrl;
+      var labelUpload = isTunai ? "Upload Foto Bukti Tunai" : "Upload Bukti Transfer";
+      var labelLihat = isTunai ? "Lihat Bukti Tunai" : "Lihat Bukti Transfer";
+      var labelKosong = isTunai
+        ? "Bukti tunai belum ada -- foto uang/serah terima dari peserta dulu. Tombol Lunas terkunci sampai ada bukti."
+        : "Bukti transfer belum ada -- upload dulu foto/screenshot yang dikirim peserta via WA. Tombol Lunas terkunci sampai ada bukti.";
+
       var buktiHtml;
-      if (isTunai) {
-        buktiHtml = '<div class="tunai">Bayar Tunai -- konfirmasi langsung dari petugas di venue, tidak ada bukti transfer.</div>';
-      } else if (item.buktiUrl) {
+      if (item.buktiUrl) {
         buktiHtml =
-          '<a class="bukti" href="' + escapeHtml(item.buktiUrl) + '" target="_blank" rel="noopener">Lihat Bukti Transfer &rarr;</a>' +
+          '<a class="bukti" href="' + escapeHtml(item.buktiUrl) + '" target="_blank" rel="noopener">' + labelLihat + ' &rarr;</a>' +
           '<label class="upload-lbl" data-role="reupload">Ganti/upload ulang</label><br>' +
           '<input type="file" accept="image/*,application/pdf" class="upload-input" data-role="input">';
       } else {
         buktiHtml =
-          '<div class="warn">Bukti transfer belum ada -- upload dulu foto/screenshot yang dikirim peserta via WA. Tombol Lunas terkunci sampai ada bukti.</div>' +
-          '<label class="upload-btn" data-role="upload">Upload Bukti Transfer</label>' +
+          '<div class="warn">' + labelKosong + '</div>' +
+          '<label class="upload-btn" data-role="upload">' + labelUpload + '</label>' +
           '<input type="file" accept="image/*,application/pdf" class="upload-input" data-role="input">' +
           '<div class="upload-status" data-role="status"></div>';
       }
