@@ -82,12 +82,34 @@
     display:inline-block; font-size:12px; color:#5b8fd6; text-decoration:none;
     border:1px solid #2A322C; padding:6px 10px; border-radius:6px; margin-bottom:10px;
   }
+  .card .upload-input{ display:none; }
+  .card label.upload-btn{
+    display:inline-block; font-size:12px; color:#0E1210; background:#c68a2e;
+    padding:8px 12px; border-radius:6px; font-weight:700; cursor:pointer; margin-bottom:6px;
+  }
+  .card label.upload-lbl{
+    display:inline-block; font-size:11px; color:#5b8fd6; text-decoration:underline;
+    cursor:pointer; margin-left:10px; margin-bottom:10px;
+  }
+  .card .upload-status{ font-size:11px; color:#9ba488; margin-bottom:8px; }
+  .card .confirm-recap{
+    font-size:12px; color:#c9cfc4; background:#0E1210; border:1px solid #2A322C;
+    border-radius:6px; padding:10px; line-height:1.6; margin-bottom:8px;
+  }
   .card .row-btn{display:flex; gap:8px;}
   .card button.lunas{
     flex:1; padding:11px; border-radius:6px; border:none;
     background:#5C7A3A; color:#0E1210; font-size:13px; font-weight:700;
   }
   .card button.lunas:disabled{background:#3a4a3a; color:#8C9A8A;}
+  .card button.batal{
+    flex:1; padding:11px; border-radius:6px; border:1px solid #2A322C;
+    background:#161B17; color:#9ba488; font-size:13px; font-weight:700;
+  }
+  .card button.ya-lunas{
+    flex:2; padding:11px; border-radius:6px; border:none;
+    background:#5C7A3A; color:#0E1210; font-size:13px; font-weight:700;
+  }
   .card a.wa-btn{
     display:block; text-align:center; margin-top:8px; padding:11px;
     border-radius:6px; background:#25D366; color:#0E1210; font-size:13px;
@@ -174,6 +196,66 @@
     });
   }
 
+  // Upload gambar bukti transfer (dipilih admin dari file lokal, mis. hasil
+  // screenshot bukti yang dikirim peserta via WA) -- dikonversi ke base64
+  // lalu dikirim ke action "upload_bukti_admin". Server simpan ke Drive dan
+  // isi kolom "Bukti Transfer URL", baru setelah itu tombol Lunas terbuka.
+  function pasangUploadHandler(input, item, statusEl){
+    input.addEventListener("change", function(){
+      var file = input.files[0];
+      if (!file) return;
+      if (statusEl) statusEl.textContent = "Mengupload...";
+      var reader = new FileReader();
+      reader.onload = function(){
+        var base64 = String(reader.result).split(",")[1];
+        var pw = sessionStorage.getItem(STORAGE_KEY);
+        fetch(WEBAPP_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({ action: "upload_bukti_admin", idPendaftaran: item.idPendaftaran, base64: base64, mimeType: file.type, pw: pw })
+        })
+          .then(function(r){ return r.json(); })
+          .then(function(res){
+            if (!res.ok) {
+              if (statusEl) statusEl.textContent = res.pesan || "Gagal upload.";
+              return;
+            }
+            item.buktiUrl = res.buktiUrl;
+            semuaItem.forEach(function(it){ if (it.idPendaftaran === item.idPendaftaran) it.buktiUrl = res.buktiUrl; });
+            terapkanFilter();
+          })
+          .catch(function(err){
+            if (statusEl) statusEl.textContent = "Gagal terhubung ke server: " + err;
+          });
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // Tombol "Tandai Lunas" TIDAK langsung eksekusi -- tampilkan dulu recap
+  // data peserta + tombol Ya/Batal, supaya petugas sempat cek ulang datanya
+  // benar sebelum verifikasi beneran jalan (permintaan Kang 27 Agustus 2026).
+  function tampilkanKonfirmasi(item, card){
+    var box = card.querySelector(".row-btn");
+    box.innerHTML =
+      '<div style="flex-direction:column; display:flex; width:100%;">' +
+        '<div class="confirm-recap">Cek ulang sebelum verifikasi:<br>' +
+          '<b>' + escapeHtml(item.nama) + '</b><br>' +
+          escapeHtml(namaTampilanMateri(item.kategori)) + ' &middot; ' + escapeHtml(item.item) + '<br>' +
+          'Golongan: ' + escapeHtml(item.golongan) + ' &middot; Metode: ' + escapeHtml(item.metodeBayar || "-") + '<br>' +
+          'Total: <b>' + fmtRupiah(item.biaya) + '</b>' +
+        '</div>' +
+        '<div class="row-btn">' +
+          '<button class="batal">Batal</button>' +
+          '<button class="ya-lunas">Ya, Data Benar -- Tandai Lunas</button>' +
+        '</div>' +
+      '</div>';
+    box.querySelector(".batal").onclick = function(){ terapkanFilter(); };
+    box.querySelector(".ya-lunas").onclick = function(){
+      tandaiLunas(item.idPendaftaran, card, box.querySelector(".ya-lunas"));
+    };
+  }
+
   function renderList(items){
     var list = document.getElementById("list");
     var empty = document.getElementById("empty");
@@ -189,13 +271,21 @@
       card.dataset.id = item.idPendaftaran;
 
       var isTunai = (item.metodeBayar || "").indexOf("Tunai") === 0;
+      var bisaVerifikasi = isTunai || !!item.buktiUrl;
       var buktiHtml;
       if (isTunai) {
         buktiHtml = '<div class="tunai">Bayar Tunai -- konfirmasi langsung dari petugas di venue, tidak ada bukti transfer.</div>';
       } else if (item.buktiUrl) {
-        buktiHtml = '<a class="bukti" href="' + escapeHtml(item.buktiUrl) + '" target="_blank" rel="noopener">Lihat Bukti Transfer &rarr;</a><br>';
+        buktiHtml =
+          '<a class="bukti" href="' + escapeHtml(item.buktiUrl) + '" target="_blank" rel="noopener">Lihat Bukti Transfer &rarr;</a>' +
+          '<label class="upload-lbl" data-role="reupload">Ganti/upload ulang</label><br>' +
+          '<input type="file" accept="image/*,application/pdf" class="upload-input" data-role="input">';
       } else {
-        buktiHtml = '<div class="warn">Belum ada bukti otomatis di form -- cek WA manual dulu sebelum tandai Lunas.</div>';
+        buktiHtml =
+          '<div class="warn">Bukti transfer belum ada -- upload dulu foto/screenshot yang dikirim peserta via WA. Tombol Lunas terkunci sampai ada bukti.</div>' +
+          '<label class="upload-btn" data-role="upload">Upload Bukti Transfer</label>' +
+          '<input type="file" accept="image/*,application/pdf" class="upload-input" data-role="input">' +
+          '<div class="upload-status" data-role="status"></div>';
       }
 
       card.innerHTML =
@@ -206,11 +296,23 @@
           'Metode: <b>' + escapeHtml(item.metodeBayar || "-") + '</b> &middot; Total: <b class="biaya">' + fmtRupiah(item.biaya) + '</b>' +
         '</div>' +
         buktiHtml +
-        '<div class="row-btn"><button class="lunas">Tandai Lunas</button></div>';
+        '<div class="row-btn"><button class="lunas"' + (bisaVerifikasi ? '' : ' disabled') + '>' +
+          (bisaVerifikasi ? 'Tandai Lunas' : 'Upload Bukti Dulu') + '</button></div>';
 
-      card.querySelector(".lunas").onclick = function(){
-        tandaiLunas(item.idPendaftaran, card, this);
-      };
+      var fileInput = card.querySelector('[data-role="input"]');
+      if (fileInput) {
+        var statusEl = card.querySelector('[data-role="status"]');
+        pasangUploadHandler(fileInput, item, statusEl);
+        var lbl = card.querySelector('[data-role="upload"], [data-role="reupload"]');
+        if (lbl) lbl.onclick = function(e){ e.preventDefault(); fileInput.click(); };
+      }
+
+      if (bisaVerifikasi) {
+        card.querySelector(".lunas").onclick = function(){
+          tampilkanKonfirmasi(item, card);
+        };
+      }
+
       list.appendChild(card);
     });
   }
@@ -271,9 +373,8 @@
       .then(function(r){ return r.json(); })
       .then(function(res){
         if (!res.ok) {
-          btn.disabled = false;
-          btn.textContent = "Tandai Lunas";
           alert(res.pesan || "Gagal menandai Lunas.");
+          terapkanFilter(); // reset kartu ke tampilan normal (batal konfirmasi)
           return;
         }
         if (res.waLink) {
@@ -321,6 +422,9 @@
           'NIK: ' + escapeHtml(item.nik) + ' &middot; HP: ' + escapeHtml(item.hp) + '<br>' +
           'Email: ' + escapeHtml(item.email || "-") +
         '</div>' +
+        (item.buktiUrl
+          ? '<a class="bukti" href="' + escapeHtml(item.buktiUrl) + '" target="_blank" rel="noopener">Lihat Bukti Transfer &rarr;</a><br>'
+          : '') +
         (item.waLink
           ? '<a class="wa-btn" href="' + item.waLink + '" target="_blank" rel="noopener">Kirim Ulang E-Tiket via WhatsApp</a>'
           : '<div class="warn">QR e-tiket belum tersedia untuk peserta ini -- cek manual di Spreadsheet.</div>');
