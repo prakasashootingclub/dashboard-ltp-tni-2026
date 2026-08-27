@@ -120,7 +120,6 @@
   }
   .card-head{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:14px;}
   .card-head h3{font-size:15px; font-weight:700;}
-  .card-head .coord{font-size:10.5px; color:var(--ink-faint); font-family:var(--mono);}
   .card-head .kat-total{font-family:var(--mono); font-size:13px; color:var(--ink-dim);}
 
   .funnel{display:flex; flex-direction:column; gap:7px;}
@@ -212,7 +211,6 @@
     margin-bottom:16px; padding-bottom:14px; border-bottom:1px solid var(--line);
   }
   .modal-head h3{ font-size:17px; color:var(--ink); }
-  .modal-head .coord{ font-size:11px; color:var(--ink-faint); font-family:var(--mono); margin-top:4px; }
   .modal-close{
     background:none; border:1px solid var(--line); border-radius:5px; color:var(--ink-dim);
     width:28px; height:28px; cursor:pointer; font-size:15px; line-height:1; flex-shrink:0;
@@ -344,7 +342,6 @@
     <div class="modal-head">
       <div>
         <h3 id="modalTitle"></h3>
-        <div class="coord" id="modalCoord"></div>
       </div>
       <button class="modal-close" id="modalClose">&times;</button>
     </div>
@@ -519,7 +516,6 @@ function render(){
         <div class="card-head">
           <div>
             <h3>${k.nama}</h3>
-            <div class="coord">${k.coord}</div>
           </div>
           <div class="kat-total">${fmt(t)} peserta</div>
         </div>
@@ -602,7 +598,6 @@ function bukaDetail(katKey){
 
   const daftarItem = itemCatalog[katKey] || Object.keys(byItem);
   document.getElementById("modalTitle").textContent = k.nama;
-  document.getElementById("modalCoord").textContent = k.coord;
   document.getElementById("modalBody").innerHTML = daftarItem.map(nama=>{
     const n = byItem[nama] || {terdaftar:0, verif:0, checkin:0};
     return `
