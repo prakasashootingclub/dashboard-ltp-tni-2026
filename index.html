@@ -539,38 +539,57 @@ function render(){
     `;
   }).join("");
 
-  // TABLE (desktop)
+  // TABLE (desktop) + DAFTAR VERTIKAL (mobile)
   const tbody = document.getElementById("tableBody");
   const sumberLabel = {online:"Online", ots:"OTS"};
   const golLabel = {sipil:"Sipil", tni:"TNI/Polri"};
-  tbody.innerHTML = fr.map(r=>{
+
+  // fr itu 1 baris per (kategori, ITEM, sumber, golongan) dari server --
+  // tapi tabel ini judulnya "PER KATEGORI x SUMBER x GOLONGAN" (bukan per
+  // item), jadi digabung dulu di sini. Tanpa digabung, kategori yang
+  // punya >1 item (mis. IPSC "Divisi Standard" & "Divisi PCC Optic")
+  // muncul sebagai baris "duplikat" yang kelihatan sama padahal itemnya
+  // beda -- rincian per item sendiri sudah ada di modal kartu kategori.
+  const gabung = {};
+  const urutanGabung = [];
+  fr.forEach(function(r){
     const katNama = kategoriList.find(k=>k.match(r)).nama;
+    const kunci = katNama + "|" + r.sumber + "|" + r.golongan;
+    if (!gabung[kunci]) {
+      gabung[kunci] = {katNama: katNama, sumber: r.sumber, golongan: r.golongan, terdaftar: 0, verif: 0, checkin: 0};
+      urutanGabung.push(kunci);
+    }
+    gabung[kunci].terdaftar += r.terdaftar;
+    gabung[kunci].verif += r.verif;
+    gabung[kunci].checkin += r.checkin;
+  });
+  const rekap = urutanGabung.map(function(k){ return gabung[k]; });
+
+  tbody.innerHTML = rekap.map(g=>{
     return `
       <tr>
-        <td class="katname">${katNama}</td>
-        <td><span class="tag ${r.sumber}">${sumberLabel[r.sumber]}</span></td>
-        <td>${golLabel[r.golongan]}</td>
-        <td class="num">${fmt(r.terdaftar)}</td>
-        <td class="num">${fmt(r.verif)}</td>
-        <td class="num">${fmt(r.checkin)}</td>
+        <td class="katname">${g.katNama}</td>
+        <td><span class="tag ${g.sumber}">${sumberLabel[g.sumber]}</span></td>
+        <td>${golLabel[g.golongan]}</td>
+        <td class="num">${fmt(g.terdaftar)}</td>
+        <td class="num">${fmt(g.verif)}</td>
+        <td class="num">${fmt(g.checkin)}</td>
       </tr>
     `;
   }).join("");
 
-  // DAFTAR VERTIKAL (mobile) — data sama, tampilan baris bukan tabel
   const mobilePanel = document.getElementById("breakdownMobile");
-  if (fr.length === 0) {
+  if (rekap.length === 0) {
     mobilePanel.innerHTML = `<div class="empty">Belum ada data untuk filter ini.</div>`;
   } else {
-    mobilePanel.innerHTML = fr.map(r=>{
-      const katNama = kategoriList.find(k=>k.match(r)).nama;
+    mobilePanel.innerHTML = rekap.map(g=>{
       return `
         <div class="item-row">
-          <div class="item-name">${katNama} <span class="tag ${r.sumber}">${sumberLabel[r.sumber]}</span> &middot; ${golLabel[r.golongan]}</div>
+          <div class="item-name">${g.katNama} <span class="tag ${g.sumber}">${sumberLabel[g.sumber]}</span> &middot; ${golLabel[g.golongan]}</div>
           <div class="item-nums">
-            <span class="lbl-terdaftar">Terdaftar <b>${fmt(r.terdaftar)}</b></span>
-            <span class="lbl-verif">Verif. Pusat <b>${fmt(r.verif)}</b></span>
-            <span class="lbl-checkin">Check In <b>${fmt(r.checkin)}</b></span>
+            <span class="lbl-terdaftar">Terdaftar <b>${fmt(g.terdaftar)}</b></span>
+            <span class="lbl-verif">Verif. Pusat <b>${fmt(g.verif)}</b></span>
+            <span class="lbl-checkin">Check In <b>${fmt(g.checkin)}</b></span>
           </div>
         </div>
       `;
