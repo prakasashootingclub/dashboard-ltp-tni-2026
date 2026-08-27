@@ -200,7 +200,7 @@
   // screenshot bukti yang dikirim peserta via WA) -- dikonversi ke base64
   // lalu dikirim ke action "upload_bukti_admin". Server simpan ke Drive dan
   // isi kolom "Bukti Transfer URL", baru setelah itu tombol Lunas terbuka.
-  function pasangUploadHandler(input, item, statusEl){
+  function pasangUploadHandler(input, item, statusEl, onSuccess){
     input.addEventListener("change", function(){
       var file = input.files[0];
       if (!file) return;
@@ -222,7 +222,7 @@
             }
             item.buktiUrl = res.buktiUrl;
             semuaItem.forEach(function(it){ if (it.idPendaftaran === item.idPendaftaran) it.buktiUrl = res.buktiUrl; });
-            terapkanFilter();
+            onSuccess();
           })
           .catch(function(err){
             if (statusEl) statusEl.textContent = "Gagal terhubung ke server: " + err;
@@ -302,7 +302,7 @@
       var fileInput = card.querySelector('[data-role="input"]');
       if (fileInput) {
         var statusEl = card.querySelector('[data-role="status"]');
-        pasangUploadHandler(fileInput, item, statusEl);
+        pasangUploadHandler(fileInput, item, statusEl, terapkanFilter);
         var lbl = card.querySelector('[data-role="upload"], [data-role="reupload"]');
         if (lbl) lbl.onclick = function(e){ e.preventDefault(); fileInput.click(); };
       }
@@ -409,12 +409,33 @@
   // pesan WA lama hilang/terhapus. Dicari langsung ke server tiap klik
   // Cari (bukan filter dari data yang sudah di-fetch), soalnya daftar
   // utama tidak pernah memuat peserta yang sudah Lunas sama sekali.
+  // Peserta yang sudah Lunas dari SEBELUM fitur upload bukti admin ada
+  // (27 Agustus 2026) kolom buktiUrl-nya kosong -- lewat pencarian ini
+  // adminnya bisa lampirkan belakangan (backfill) kalau masih punya
+  // simpanan foto bukti dari WA peserta itu. Sama sekali tidak wajib --
+  // status Lunas & e-tiket peserta lama TIDAK terpengaruh ada/tidaknya
+  // bukti ini, cuma pelengkap arsip.
   function renderListLunas(items){
     var list = document.getElementById("listLunas");
     list.innerHTML = "";
     items.forEach(function(item){
       var card = document.createElement("div");
       card.className = "card";
+
+      var buktiHtml;
+      if (item.buktiUrl) {
+        buktiHtml =
+          '<a class="bukti" href="' + escapeHtml(item.buktiUrl) + '" target="_blank" rel="noopener">Lihat Bukti Transfer &rarr;</a>' +
+          '<label class="upload-lbl" data-role="reupload">Ganti/upload ulang</label><br>' +
+          '<input type="file" accept="image/*,application/pdf" class="upload-input" data-role="input">';
+      } else {
+        buktiHtml =
+          '<div class="warn">Belum ada bukti transfer tersimpan (daftar sebelum fitur ini ada) -- upload kalau masih punya foto buktinya.</div>' +
+          '<label class="upload-btn" data-role="upload">Upload Bukti Transfer</label>' +
+          '<input type="file" accept="image/*,application/pdf" class="upload-input" data-role="input">' +
+          '<div class="upload-status" data-role="status"></div>';
+      }
+
       card.innerHTML =
         '<div class="nama">' + escapeHtml(item.nama) + '</div>' +
         '<div class="meta">' +
@@ -422,12 +443,19 @@
           'NIK: ' + escapeHtml(item.nik) + ' &middot; HP: ' + escapeHtml(item.hp) + '<br>' +
           'Email: ' + escapeHtml(item.email || "-") +
         '</div>' +
-        (item.buktiUrl
-          ? '<a class="bukti" href="' + escapeHtml(item.buktiUrl) + '" target="_blank" rel="noopener">Lihat Bukti Transfer &rarr;</a><br>'
-          : '') +
+        buktiHtml +
         (item.waLink
           ? '<a class="wa-btn" href="' + item.waLink + '" target="_blank" rel="noopener">Kirim Ulang E-Tiket via WhatsApp</a>'
           : '<div class="warn">QR e-tiket belum tersedia untuk peserta ini -- cek manual di Spreadsheet.</div>');
+
+      var fileInput = card.querySelector('[data-role="input"]');
+      if (fileInput) {
+        var statusEl = card.querySelector('[data-role="status"]');
+        pasangUploadHandler(fileInput, item, statusEl, function(){ renderListLunas(items); });
+        var lbl = card.querySelector('[data-role="upload"], [data-role="reupload"]');
+        if (lbl) lbl.onclick = function(e){ e.preventDefault(); fileInput.click(); };
+      }
+
       list.appendChild(card);
     });
   }
