@@ -178,16 +178,30 @@ function tagStatus(status, waktu){
   return `<span class="tag ${cls}">${escapeHtml(status)}</span>${waktuHtml(waktu)}`;
 }
 
-// Urutan materi TETAP (sama seperti KATEGORI_LIST di backend) -- supaya
-// tiap materi selalu tampil di section-nya sendiri, TIDAK PERNAH dicampur
-// jadi satu tabel gabungan (permintaan Kang, 18 Agustus 2026).
-const URUTAN_KATEGORI = ["Senapan", "Pistol", "Tembak Reaksi IPSC Level II", "Air Rifle"];
+// Pemisahan section besar -- 28 Agustus 2026, disamakan PERSIS dengan
+// index.html (Dashboard utama) supaya kedua halaman konsisten. SEBELUMNYA
+// halaman ini cuma mengelompokkan berdasarkan kolom "Kategori" mentah di
+// Sheet (4 nilai unik: Senapan/Pistol/Tembak Reaksi IPSC Level II/Air
+// Rifle) -- akibatnya Falling Plate ikut "menumpang" section Pistol dan
+// Non IPSC ikut menumpang section IPSC Level II (sama seperti Sheet-nya
+// menyimpan kategori, lihat KATEGORI_LIST di Code.gs), padahal Dashboard
+// utama SUDAH memecahnya jadi 6 kartu terpisah lewat pencocokan nama
+// ITEM, bukan cuma kategori. Sekarang dipakai logika pencocokan yang
+// sama persis di sini.
+const FALLING_PLATE_ITEMS = [
+  "Falling Plate Optic", "Falling Plate Non Optic",
+  "Falling Plate Optic (TNI/Polri)", "Falling Plate Non Optic (TNI/Polri)",
+];
+const NON_IPSC_ITEMS = ["Non IPSC Standard Putra", "Non IPSC Standard Putri"];
 
-// Nama tampilan SAJA (label lebih ringkas) -- nilai asli di data (kolom
-// Kategori Sheet) TETAP "Tembak Reaksi IPSC Level II", tidak diubah, supaya
-// tidak mempengaruhi pencocokan pos/data yang sudah tercatat.
-const NAMA_TAMPILAN_KATEGORI = { "Tembak Reaksi IPSC Level II": "IPSC Level II" };
-function namaTampilanKategori(kat){ return NAMA_TAMPILAN_KATEGORI[kat] || kat; }
+const kategoriList = [
+  {nama:"Senapan", match:r=>r.kategori==="Senapan"},
+  {nama:"Pistol", match:r=>r.kategori==="Pistol" && !FALLING_PLATE_ITEMS.includes(r.item)},
+  {nama:"Falling Plate", match:r=>r.kategori==="Pistol" && FALLING_PLATE_ITEMS.includes(r.item)},
+  {nama:"IPSC Level II", match:r=>r.kategori==="Tembak Reaksi IPSC Level II" && !NON_IPSC_ITEMS.includes(r.item)},
+  {nama:"Non IPSC", match:r=>r.kategori==="Tembak Reaksi IPSC Level II" && NON_IPSC_ITEMS.includes(r.item)},
+  {nama:"Air Rifle", match:r=>r.kategori==="Air Rifle"},
+];
 
 // showIpscExtra: true HANYA untuk sub-materi "Divisi ..." (IPSC asli) --
 // Non IPSC pakai form yang sama sekali tidak punya 3 pertanyaan ini
@@ -278,29 +292,33 @@ function render(){
     return;
   }
 
-  // Kelompokkan per kategori -- urutan tetap sesuai URUTAN_KATEGORI, materi
-  // di luar daftar itu (kalau ada) ditaruh di paling akhir.
-  const dipakai = new Set();
-  const grup = {};
-  rows.forEach(r => {
-    const k = r.kategori || "Lainnya";
-    if (!grup[k]) grup[k] = [];
-    grup[k].push(r);
+  // Kelompokkan pakai kategoriList (6 section tetap, urutan tetap sama
+  // dengan Dashboard utama) -- dipakai[i] menandai baris yang sudah
+  // kecocok di salah satu section, supaya baris yang TIDAK cocok section
+  // manapun (data tidak terduga, mis. kategori baru yang belum
+  // didaftarkan di sini) tetap ditampilkan di section "Lainnya" di akhir,
+  // bukan diam-diam hilang dari halaman.
+  const dipakai = new Array(rows.length).fill(false);
+  const sections = kategoriList.map(k => {
+    const krows = rows.filter((r, i) => {
+      const cocok = k.match(r);
+      if (cocok) dipakai[i] = true;
+      return cocok;
+    });
+    return { nama: k.nama, rows: krows };
   });
-  const urutanFinal = URUTAN_KATEGORI.concat(Object.keys(grup).filter(k => !URUTAN_KATEGORI.includes(k)));
+  const sisa = rows.filter((r, i) => !dipakai[i]);
+  if (sisa.length) sections.push({ nama: "Lainnya", rows: sisa });
 
-  container.innerHTML = urutanFinal.map(kat => {
-    const krows = grup[kat] || [];
-    return `
-      <div class="kat-section">
-        <div class="kat-head">
-          <h2>${escapeHtml(namaTampilanKategori(kat))}</h2>
-          <span class="kat-count">${krows.length} peserta</span>
-        </div>
-        ${tabelHtml(krows)}
+  container.innerHTML = sections.map(s => `
+    <div class="kat-section">
+      <div class="kat-head">
+        <h2>${escapeHtml(s.nama)}</h2>
+        <span class="kat-count">${s.rows.length} peserta</span>
       </div>
-    `;
-  }).join("");
+      ${tabelHtml(s.rows)}
+    </div>
+  `).join("");
 }
 
 async function muatData(){
