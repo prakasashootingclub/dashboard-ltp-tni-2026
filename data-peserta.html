@@ -195,13 +195,59 @@ const FALLING_PLATE_ITEMS = [
 const NON_IPSC_ITEMS = ["Non IPSC Standard Putra", "Non IPSC Standard Putri"];
 
 const kategoriList = [
-  {nama:"Senapan", match:r=>r.kategori==="Senapan"},
-  {nama:"Pistol", match:r=>r.kategori==="Pistol" && !FALLING_PLATE_ITEMS.includes(r.item)},
-  {nama:"Falling Plate", match:r=>r.kategori==="Pistol" && FALLING_PLATE_ITEMS.includes(r.item)},
-  {nama:"IPSC Level II", match:r=>r.kategori==="Tembak Reaksi IPSC Level II" && !NON_IPSC_ITEMS.includes(r.item)},
-  {nama:"Non IPSC", match:r=>r.kategori==="Tembak Reaksi IPSC Level II" && NON_IPSC_ITEMS.includes(r.item)},
-  {nama:"Air Rifle", match:r=>r.kategori==="Air Rifle"},
+  {key:"Senapan", nama:"Senapan", match:r=>r.kategori==="Senapan"},
+  {key:"Pistol", nama:"Pistol", match:r=>r.kategori==="Pistol" && !FALLING_PLATE_ITEMS.includes(r.item)},
+  {key:"FallingPlate", nama:"Falling Plate", match:r=>r.kategori==="Pistol" && FALLING_PLATE_ITEMS.includes(r.item)},
+  {key:"IPSC", nama:"IPSC Level II", match:r=>r.kategori==="Tembak Reaksi IPSC Level II" && !NON_IPSC_ITEMS.includes(r.item)},
+  {key:"NonIPSC", nama:"Non IPSC", match:r=>r.kategori==="Tembak Reaksi IPSC Level II" && NON_IPSC_ITEMS.includes(r.item)},
+  {key:"AirRifle", nama:"Air Rifle", match:r=>r.kategori==="Air Rifle"},
 ];
+
+// Katalog sub-materi TETAP per section -- 28 Agustus 2026, disalin dari
+// itemCatalog di index.html supaya urutan & kemunculan sub-materi 0
+// peserta SAMA PERSIS di kedua halaman (sebelumnya di sini sub-materi
+// diurutkan berdasarkan siapa daftar duluan, dan yang 0 peserta tidak
+// tampil sama sekali -- beda dengan Dashboard utama).
+const itemCatalog = {
+  Senapan: [
+    "100 M Plat Baja 3 Sikap Perorangan (Open)",
+    "100 M Plat Baja 3 Sikap Beregu (Open)",
+    "100 M Plat Baja 3 Sikap Perorangan (Standard/Pejera Logam)",
+    "100 M Plat Baja 3 Sikap Beregu (Standard/Pejera Logam)",
+    "300 M Plat Baja 3 Sikap Perorangan (Open)",
+    "300 M Plat Baja 3 Sikap Beregu (Open)",
+    "300 M Plat Baja 3 Sikap Perorangan (Standard/Pejera Logam)",
+    "300 M Plat Baja 3 Sikap Beregu (Standard/Pejera Logam)",
+    "600 M Tactical Prone Perorangan (TNI/Polri)",
+    "600 M Tactical Prone Perorangan (Sipil)",
+  ],
+  Pistol: [
+    "20 M Eksekutif Perorangan Putra",
+    "20 M Eksekutif Perorangan Putri",
+    "20 M Eksekutif Beregu Putra",
+    "20 M Eksekutif Perorangan Putra (TNI/Polri)",
+    "20 M Eksekutif Perorangan Putri (TNI/Polri)",
+    "20 M Eksekutif Beregu Putra (TNI/Polri)",
+  ],
+  FallingPlate: FALLING_PLATE_ITEMS,
+  IPSC: [
+    "Divisi Open",
+    "Divisi Standard",
+    "Divisi Optic",
+    "Divisi Production",
+    "Divisi Production Optic",
+    "Divisi PCC Optic",
+  ],
+  NonIPSC: NON_IPSC_ITEMS,
+  AirRifle: [
+    "WRABF HR 25 M (Junior)",
+    "WRABF HR 25 M (Senior)",
+    "WRABF LR 25 M (Junior)",
+    "WRABF LR 25 M (Senior)",
+    "IMSSU Multirange 18-41 M (Junior)",
+    "IMSSU Multirange 18-41 M (Senior)",
+  ],
+};
 
 // showIpscExtra: true HANYA untuk sub-materi "Divisi ..." (IPSC asli) --
 // Non IPSC pakai form yang sama sekali tidak punya 3 pertanyaan ini
@@ -250,30 +296,35 @@ function tabelSubMateriHtml(rows, showIpscExtra){
   `;
 }
 
-function tabelHtml(rows){
-  if (!rows.length){
-    return `<div class="table-wrap"><table><tbody><tr class="empty-row"><td>Belum ada peserta di materi ini.</td></tr></tbody></table></div>`;
-  }
-  // Kelompokkan lagi per sub-materi (Item/Divisi) di dalam materi ini --
-  // urutan sub-materi mengikuti urutan kemunculan pertama di data (bukan
-  // acak), supaya konsisten tiap refresh.
-  const urutanItem = [];
+// katalog: daftar tetap nama sub-materi untuk section ini (itemCatalog[key]).
+// Ditulis eksplisit (bukan cuma dari data) supaya sub-materi 0 peserta
+// tetap tampil -- konsisten dengan modal rincian di index.html.
+function tabelHtml(rows, katalog){
   const grupItem = {};
   rows.forEach(r => {
     const it = r.item || "Lainnya";
-    if (!grupItem[it]) { grupItem[it] = []; urutanItem.push(it); }
+    if (!grupItem[it]) grupItem[it] = [];
     grupItem[it].push(r);
   });
 
-  return urutanItem.map(item => `
+  // Kalau ada baris dengan item DI LUAR katalog (data tidak terduga),
+  // tetap ditampilkan di akhir -- jangan sampai diam-diam hilang.
+  const daftarItem = (katalog || Object.keys(grupItem)).concat(
+    Object.keys(grupItem).filter(it => !(katalog || []).includes(it))
+  );
+
+  return daftarItem.map(item => {
+    const irows = grupItem[item] || [];
+    return `
     <div class="sub-materi">
       <div class="sub-head">
         <h3>${escapeHtml(item)}</h3>
-        <span class="kat-count">${grupItem[item].length} peserta</span>
+        <span class="kat-count">${irows.length} peserta</span>
       </div>
-      ${tabelSubMateriHtml(grupItem[item], item.indexOf("Divisi ") === 0)}
+      ${tabelSubMateriHtml(irows, item.indexOf("Divisi ") === 0)}
     </div>
-  `).join("");
+  `;
+  }).join("");
 }
 
 function render(){
@@ -305,10 +356,10 @@ function render(){
       if (cocok) dipakai[i] = true;
       return cocok;
     });
-    return { nama: k.nama, rows: krows };
+    return { nama: k.nama, rows: krows, katalog: itemCatalog[k.key] };
   });
   const sisa = rows.filter((r, i) => !dipakai[i]);
-  if (sisa.length) sections.push({ nama: "Lainnya", rows: sisa });
+  if (sisa.length) sections.push({ nama: "Lainnya", rows: sisa, katalog: null });
 
   container.innerHTML = sections.map(s => `
     <div class="kat-section">
@@ -316,7 +367,7 @@ function render(){
         <h2>${escapeHtml(s.nama)}</h2>
         <span class="kat-count">${s.rows.length} peserta</span>
       </div>
-      ${tabelHtml(s.rows)}
+      ${tabelHtml(s.rows, s.katalog)}
     </div>
   `).join("");
 }
