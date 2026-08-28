@@ -189,7 +189,14 @@ const URUTAN_KATEGORI = ["Senapan", "Pistol", "Tembak Reaksi IPSC Level II", "Ai
 const NAMA_TAMPILAN_KATEGORI = { "Tembak Reaksi IPSC Level II": "IPSC Level II" };
 function namaTampilanKategori(kat){ return NAMA_TAMPILAN_KATEGORI[kat] || kat; }
 
-function tabelSubMateriHtml(rows){
+// showIpscExtra: true HANYA untuk sub-materi "Divisi ..." (IPSC asli) --
+// Non IPSC pakai form yang sama sekali tidak punya 3 pertanyaan ini
+// (lihat tambahPertanyaanIpscTambahan di GantiJadwal.js), jadi kolomnya
+// disembunyikan supaya tidak menampilkan "-" di semua baris tanpa arti.
+function tabelSubMateriHtml(rows, showIpscExtra){
+  const kolomExtra = showIpscExtra
+    ? `<th>Power Factor</th><th>Kategori</th><th>Waktu Pelaksanaan</th>`
+    : "";
   if (!rows.length){
     return `<div class="table-wrap"><table><tbody><tr class="empty-row"><td>Belum ada peserta di sub-materi ini.</td></tr></tbody></table></div>`;
   }
@@ -204,6 +211,7 @@ function tabelSubMateriHtml(rows){
             <th>Status Bayar</th>
             <th>Verif. Pusat</th>
             <th>Check In Materi</th>
+            ${kolomExtra}
           </tr>
         </thead>
         <tbody>
@@ -215,6 +223,11 @@ function tabelSubMateriHtml(rows){
               <td>${tagBayar(r.statusBayar, r.waktuLunas)}</td>
               <td>${tagStatus(r.verifPusat, r.waktuVerifPusat)}</td>
               <td>${tagStatus(r.checkinMateri, r.waktuCheckin)}</td>
+              ${showIpscExtra ? `
+              <td>${escapeHtml(r.powerFactor)}</td>
+              <td>${escapeHtml(r.kategoriIpsc)}</td>
+              <td>${escapeHtml(r.waktuPelaksanaan)}</td>
+              ` : ""}
             </tr>
           `).join("")}
         </tbody>
@@ -244,7 +257,7 @@ function tabelHtml(rows){
         <h3>${escapeHtml(item)}</h3>
         <span class="kat-count">${grupItem[item].length} peserta</span>
       </div>
-      ${tabelSubMateriHtml(grupItem[item])}
+      ${tabelSubMateriHtml(grupItem[item], item.indexOf("Divisi ") === 0)}
     </div>
   `).join("");
 }
