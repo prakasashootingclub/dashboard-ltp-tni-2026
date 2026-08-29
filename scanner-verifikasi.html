@@ -312,7 +312,7 @@
 
   // Hash SHA-256 dari password yang benar -- bukan password mentahnya --
   // supaya tidak kelihatan polos di kode sumber halaman ini.
-  var PW_HASH = "a5951b23bb95d2aa7476253883146fa23e2786e186a6ceabc8f3696ed9159b96";
+  var PW_HASH = "0ffe1abd1a08215353c233d6e009613e95eec4253832a761af28ff37ac5a150c";
   function sha256Hex(text){
     var data = new TextEncoder().encode(text);
     return crypto.subtle.digest("SHA-256", data).then(function(buf){

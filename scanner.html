@@ -179,8 +179,8 @@
   // gabungan 2 pos, jadi terima SALAH SATU dari dua password -- validasi
   // sebenarnya (password harus cocok dengan mode yang dipakai) tetap
   // dilakukan server saat scan, lewat doPost.
-  var PW_HASH_VERIFIKASI = "a5951b23bb95d2aa7476253883146fa23e2786e186a6ceabc8f3696ed9159b96";
-  var PW_HASH_CHECKIN = "5f3c989f7c088e0cd2f01d2192f72670544b3905cca1a1459ce73d415e01ac27";
+  var PW_HASH_VERIFIKASI = "0ffe1abd1a08215353c233d6e009613e95eec4253832a761af28ff37ac5a150c";
+  var PW_HASH_CHECKIN = "edee29f882543b956620b26d0ee0e7e950399b1c4222f5de05e06425b4c995e9";
   function sha256Hex(text){
     var data = new TextEncoder().encode(text);
     return crypto.subtle.digest("SHA-256", data).then(function(buf){
