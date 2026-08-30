@@ -318,7 +318,10 @@
         '<b>' + escapeHtml(item.nama) + '</b><br>' +
         escapeHtml(namaTampilanMateri(item.kategori)) + ' &middot; ' + escapeHtml(item.item) + '<br>' +
         'Golongan: ' + escapeHtml(item.golongan) + ' &middot; Metode: ' + escapeHtml(item.metodeBayar || "-") + '<br>' +
-        'Total: <b>' + fmtRupiah(item.biaya) + '</b>' +
+        'Total: <b>' + fmtRupiah(item.biaya) + '</b><br>' +
+        (item.fotoKtpUrl
+          ? '<a href="' + escapeHtml(item.fotoKtpUrl) + '" target="_blank" rel="noopener">Lihat Foto KTP &rarr;</a>'
+          : 'Tidak ada foto KTP') +
       '</div>' +
       '<div class="confirm-actions">' +
         '<button class="batal">Batal</button>' +
@@ -356,6 +359,16 @@
         ? "Bukti tunai belum ada -- foto uang/serah terima dari peserta dulu. Tombol Lunas terkunci sampai ada bukti."
         : "Bukti transfer belum ada -- upload dulu foto/screenshot yang dikirim peserta via WA. Tombol Lunas terkunci sampai ada bukti.";
 
+      // Link foto KTP -- supaya golongan bisa dicocokkan SEBELUM ditandai
+      // Lunas (kalau beda, selisih biaya masih bisa diurus sebelum uang
+      // cair, bukan baru ketahuan pas peserta sudah di venue hari-H).
+      // Kosong kalau peserta daftar sebelum pertanyaan Upload Foto KTP ada
+      // di form, atau memilih tidak upload (pertanyaannya opsional).
+      // Permintaan Kang, 31 Agustus 2026.
+      var fotoKtpHtml = item.fotoKtpUrl
+        ? '<a class="bukti" href="' + escapeHtml(item.fotoKtpUrl) + '" target="_blank" rel="noopener">Lihat Foto KTP &rarr;</a><br>'
+        : '<div class="warn" style="margin-bottom:0;">Tidak ada foto KTP -- cocokkan manual dengan KTP fisik saat check-in.</div>';
+
       var buktiHtml;
       if (item.buktiUrl) {
         buktiHtml =
@@ -377,6 +390,7 @@
           'HP: ' + escapeHtml(item.hp) + ' &middot; Golongan: ' + escapeHtml(item.golongan) + '<br>' +
           'Metode: <b>' + escapeHtml(item.metodeBayar || "-") + '</b> &middot; Total: <b class="biaya">' + fmtRupiah(item.biaya) + '</b>' +
         '</div>' +
+        fotoKtpHtml +
         buktiHtml +
         '<div class="row-btn"><button class="lunas"' + (bisaVerifikasi ? '' : ' disabled') + '>' +
           (bisaVerifikasi ? 'Tandai Lunas' : 'Upload Bukti Dulu') + '</button></div>';
