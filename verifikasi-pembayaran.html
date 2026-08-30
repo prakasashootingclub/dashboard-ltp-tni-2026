@@ -322,6 +322,9 @@
         (item.fotoKtpUrl
           ? '<a href="' + escapeHtml(item.fotoKtpUrl) + '" target="_blank" rel="noopener">Lihat Foto KTP &rarr;</a>'
           : 'Tidak ada foto KTP') +
+        (item.catatanKoreksi && item.catatanKoreksi !== "-"
+          ? '<br><span style="color:#E5A94A;">&#9888; ' + escapeHtml(item.catatanKoreksi) + '</span>'
+          : '') +
       '</div>' +
       '<div class="confirm-actions">' +
         '<button class="batal">Batal</button>' +
@@ -369,6 +372,13 @@
         ? '<a class="bukti" href="' + escapeHtml(item.fotoKtpUrl) + '" target="_blank" rel="noopener">Lihat Foto KTP &rarr;</a><br>'
         : '<div class="warn" style="margin-bottom:0;">Tidak ada foto KTP -- cocokkan manual dengan KTP fisik saat check-in.</div>';
 
+      // Catatan otomatis dari sistem (saat ini: cek umur Air Rifle Junior/
+      // Senior dari NIK) -- kosong ("-") untuk kategori lain. Permintaan
+      // Kang, 31 Agustus 2026.
+      var catatanHtml = (item.catatanKoreksi && item.catatanKoreksi !== "-")
+        ? '<div class="warn" style="margin-bottom:8px;">&#9888; ' + escapeHtml(item.catatanKoreksi) + '</div>'
+        : '';
+
       var buktiHtml;
       if (item.buktiUrl) {
         buktiHtml =
@@ -390,6 +400,7 @@
           'HP: ' + escapeHtml(item.hp) + ' &middot; Golongan: ' + escapeHtml(item.golongan) + '<br>' +
           'Metode: <b>' + escapeHtml(item.metodeBayar || "-") + '</b> &middot; Total: <b class="biaya">' + fmtRupiah(item.biaya) + '</b>' +
         '</div>' +
+        catatanHtml +
         fotoKtpHtml +
         buktiHtml +
         '<div class="row-btn"><button class="lunas"' + (bisaVerifikasi ? '' : ' disabled') + '>' +
