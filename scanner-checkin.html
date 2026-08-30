@@ -130,7 +130,9 @@
   <div class="lbl" style="margin-bottom:10px;">Pilih materi yang dijaga di pos ini</div>
   <button class="materi-btn" data-materi="Senapan">Senapan</button>
   <button class="materi-btn" data-materi="Pistol">Pistol</button>
+  <button class="materi-btn" data-materi="FallingPlate">Falling Plate</button>
   <button class="materi-btn" data-materi="Tembak Reaksi IPSC Level II">IPSC Level II</button>
+  <button class="materi-btn" data-materi="NonIPSC">Non IPSC</button>
   <button class="materi-btn" data-materi="Air Rifle">Air Rifle</button>
 </div>
 
@@ -161,7 +163,11 @@
   // Nama tampilan SAJA (label lebih ringkas) -- nilai data-materi/kategori
   // yang dikirim ke server TETAP "Tembak Reaksi IPSC Level II", tidak
   // diubah, supaya tetap cocok dengan data yang sudah tercatat di Sheet.
-  var NAMA_TAMPILAN_MATERI = { "Tembak Reaksi IPSC Level II": "IPSC Level II" };
+  var NAMA_TAMPILAN_MATERI = {
+    "Tembak Reaksi IPSC Level II": "IPSC Level II",
+    "FallingPlate": "Falling Plate",
+    "NonIPSC": "Non IPSC"
+  };
   function namaTampilanMateri(materi){ return NAMA_TAMPILAN_MATERI[materi] || materi; }
 
   function escapeHtml(s){

@@ -156,7 +156,9 @@
   <div class="lbl" style="margin-bottom:10px;">Pilih materi yang dijaga di pos ini</div>
   <button class="materi-btn" data-materi="Senapan">Senapan</button>
   <button class="materi-btn" data-materi="Pistol">Pistol</button>
+  <button class="materi-btn" data-materi="FallingPlate">Falling Plate</button>
   <button class="materi-btn" data-materi="Tembak Reaksi IPSC Level II">IPSC Level II</button>
+  <button class="materi-btn" data-materi="NonIPSC">Non IPSC</button>
   <button class="materi-btn" data-materi="Air Rifle">Air Rifle</button>
 </div>
 
@@ -188,8 +190,31 @@
   // Nama tampilan SAJA (label lebih ringkas) -- nilai materi/kategori yang
   // dipakai buat filter & dikirim ke server TETAP "Tembak Reaksi IPSC Level
   // II", tidak diubah.
-  var NAMA_TAMPILAN_MATERI = { "Tembak Reaksi IPSC Level II": "IPSC Level II" };
+  var NAMA_TAMPILAN_MATERI = {
+    "Tembak Reaksi IPSC Level II": "IPSC Level II",
+    "FallingPlate": "Falling Plate",
+    "NonIPSC": "Non IPSC"
+  };
   function namaTampilanMateri(materi){ return NAMA_TAMPILAN_MATERI[materi] || materi; }
+
+  // Falling Plate & Non IPSC menumpang form Pistol / IPSC Level II di
+  // Sheet (kolom kategori item.kategori sama persis dengan Pistol/IPSC),
+  // jadi TIDAK BISA dibedakan cuma dari item.kategori -- harus dicocokkan
+  // lewat nama item juga, sama seperti data-peserta.html. Permintaan Kang,
+  // 30 Agustus 2026 (pos ini tadinya cuma punya 4 pilihan, Falling Plate &
+  // Non IPSC belum ada).
+  var FALLING_PLATE_ITEMS = [
+    "Falling Plate Optic", "Falling Plate Non Optic",
+    "Falling Plate Optic (TNI/Polri)", "Falling Plate Non Optic (TNI/Polri)"
+  ];
+  var NON_IPSC_ITEMS = ["Non IPSC Standard Putra", "Non IPSC Standard Putri"];
+  function cocokMateri(item, materi){
+    if (materi === "FallingPlate") return item.kategori === "Pistol" && FALLING_PLATE_ITEMS.indexOf(item.item) !== -1;
+    if (materi === "Pistol") return item.kategori === "Pistol" && FALLING_PLATE_ITEMS.indexOf(item.item) === -1;
+    if (materi === "NonIPSC") return item.kategori === "Tembak Reaksi IPSC Level II" && NON_IPSC_ITEMS.indexOf(item.item) !== -1;
+    if (materi === "Tembak Reaksi IPSC Level II") return item.kategori === "Tembak Reaksi IPSC Level II" && NON_IPSC_ITEMS.indexOf(item.item) === -1;
+    return item.kategori === materi;
+  }
 
   function fmtRupiah(n){
     n = Number(n) || 0;
@@ -383,7 +408,7 @@
     var q = document.getElementById("cariInput").value.trim().toLowerCase();
 
     var hasil = semuaItem.filter(function(item){
-      return item.kategori === materi;
+      return cocokMateri(item, materi);
     });
     if (q) {
       hasil = hasil.filter(function(item){
