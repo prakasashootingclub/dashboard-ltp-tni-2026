@@ -129,7 +129,7 @@
   <h2>Pos Materi Mana?</h2>
   <div class="lbl" style="margin-bottom:10px;">Pilih materi yang dijaga di pos ini</div>
   <button class="materi-btn" data-materi="Senapan">Senapan</button>
-  <button class="materi-btn" data-materi="Pistol">Pistol</button>
+  <button class="materi-btn" data-materi="Pistol">Eksekutif</button>
   <button class="materi-btn" data-materi="FallingPlate">Falling Plate</button>
   <button class="materi-btn" data-materi="Tembak Reaksi IPSC Level II">IPSC Level II</button>
   <button class="materi-btn" data-materi="NonIPSC">Non IPSC</button>
@@ -356,7 +356,12 @@
   function bukaApp(materi){
     sessionStorage.setItem(MATERI_KEY, materi);
     document.getElementById("pilihMateri").classList.add("hidden");
-    document.getElementById("posAktifLabel").textContent = namaTampilanMateri(materi);
+    // "Pistol" (nilai kategori mentah) sengaja ditampilkan "Eksekutif" DI
+    // SINI SAJA (label pos) -- TIDAK lewat NAMA_TAMPILAN_MATERI, karena
+    // map itu juga dipakai tampilkan kategori hasil scan yang nilainya
+    // "Pistol" untuk Falling Plate juga (item beda pos tapi kategori mentah
+    // sama), jadi kalau diganti di situ, Falling Plate ikut salah kelabel.
+    document.getElementById("posAktifLabel").textContent = materi === "Pistol" ? "Eksekutif" : namaTampilanMateri(materi);
     document.getElementById("app").classList.remove("hidden");
     if (!scanner) startScanner();
   }

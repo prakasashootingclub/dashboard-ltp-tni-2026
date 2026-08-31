@@ -200,7 +200,7 @@ const NON_IPSC_ITEMS = ["Non IPSC Standard Putra", "Non IPSC Standard Putri"];
 
 const kategoriList = [
   {key:"Senapan", nama:"Senapan", match:r=>r.kategori==="Senapan"},
-  {key:"Pistol", nama:"Pistol", match:r=>r.kategori==="Pistol" && !FALLING_PLATE_ITEMS.includes(r.item)},
+  {key:"Pistol", nama:"Eksekutif", match:r=>r.kategori==="Pistol" && !FALLING_PLATE_ITEMS.includes(r.item)},
   {key:"FallingPlate", nama:"Falling Plate", match:r=>r.kategori==="Pistol" && FALLING_PLATE_ITEMS.includes(r.item)},
   {key:"IPSC", nama:"IPSC Level II", match:r=>r.kategori==="Tembak Reaksi IPSC Level II" && !NON_IPSC_ITEMS.includes(r.item)},
   {key:"NonIPSC", nama:"Non IPSC", match:r=>r.kategori==="Tembak Reaksi IPSC Level II" && NON_IPSC_ITEMS.includes(r.item)},
