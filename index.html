@@ -315,25 +315,6 @@
   <!-- FUNNEL CARDS -->
   <div class="grid" id="cardGrid"></div>
 
-  <!-- BREAKDOWN TABLE -->
-  <div class="section-title">Rincian per Kategori &times; Sumber &times; Golongan</div>
-  <div class="table-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th>Kategori</th>
-          <th>Sumber</th>
-          <th>Golongan</th>
-          <th class="num">Terdaftar (Lunas)</th>
-          <th class="num">Verif. Pusat</th>
-          <th class="num">Check In Materi</th>
-        </tr>
-      </thead>
-      <tbody id="tableBody"></tbody>
-    </table>
-  </div>
-  <div class="mobile-panel" id="breakdownMobile"></div>
-
   <footer>
     <span>Sumber data: Google Sheets (auto-sync Apps Script)</span>
     <span id="lastSync">Terakhir diperbarui: —</span>
@@ -544,63 +525,6 @@ function render(){
       </div>
     `;
   }).join("");
-
-  // TABLE (desktop) + DAFTAR VERTIKAL (mobile)
-  const tbody = document.getElementById("tableBody");
-  const sumberLabel = {online:"Online", ots:"OTS"};
-  const golLabel = {sipil:"Sipil", tni:"TNI/Polri"};
-
-  // fr itu 1 baris per (kategori, ITEM, sumber, golongan) dari server --
-  // tapi tabel ini judulnya "PER KATEGORI x SUMBER x GOLONGAN" (bukan per
-  // item), jadi digabung dulu di sini. Tanpa digabung, kategori yang
-  // punya >1 item (mis. IPSC "Divisi Standard" & "Divisi PCC Optic")
-  // muncul sebagai baris "duplikat" yang kelihatan sama padahal itemnya
-  // beda -- rincian per item sendiri sudah ada di modal kartu kategori.
-  const gabung = {};
-  const urutanGabung = [];
-  fr.forEach(function(r){
-    const katNama = kategoriList.find(k=>k.match(r)).nama;
-    const kunci = katNama + "|" + r.sumber + "|" + r.golongan;
-    if (!gabung[kunci]) {
-      gabung[kunci] = {katNama: katNama, sumber: r.sumber, golongan: r.golongan, terdaftar: 0, verif: 0, checkin: 0};
-      urutanGabung.push(kunci);
-    }
-    gabung[kunci].terdaftar += r.terdaftar;
-    gabung[kunci].verif += r.verif;
-    gabung[kunci].checkin += r.checkin;
-  });
-  const rekap = urutanGabung.map(function(k){ return gabung[k]; });
-
-  tbody.innerHTML = rekap.map(g=>{
-    return `
-      <tr>
-        <td class="katname">${g.katNama}</td>
-        <td><span class="tag ${g.sumber}">${sumberLabel[g.sumber]}</span></td>
-        <td>${golLabel[g.golongan]}</td>
-        <td class="num">${fmt(g.terdaftar)}</td>
-        <td class="num">${fmt(g.verif)}</td>
-        <td class="num">${fmt(g.checkin)}</td>
-      </tr>
-    `;
-  }).join("");
-
-  const mobilePanel = document.getElementById("breakdownMobile");
-  if (rekap.length === 0) {
-    mobilePanel.innerHTML = `<div class="empty">Belum ada data untuk filter ini.</div>`;
-  } else {
-    mobilePanel.innerHTML = rekap.map(g=>{
-      return `
-        <div class="item-row">
-          <div class="item-name">${g.katNama} <span class="tag ${g.sumber}">${sumberLabel[g.sumber]}</span> &middot; ${golLabel[g.golongan]}</div>
-          <div class="item-nums">
-            <span class="lbl-terdaftar">Terdaftar <b>${fmt(g.terdaftar)}</b></span>
-            <span class="lbl-verif">Verif. Pusat <b>${fmt(g.verif)}</b></span>
-            <span class="lbl-checkin">Check In <b>${fmt(g.checkin)}</b></span>
-          </div>
-        </div>
-      `;
-    }).join("");
-  }
 }
 
 // ---------- MODAL RINCIAN PER SUB-MATERI ----------
