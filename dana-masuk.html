@@ -117,6 +117,15 @@
   .rincian-row .jumlah{font-size:11px; color:var(--ink-faint); margin-top:2px;}
   .empty{text-align:center; color:var(--ink-faint); padding:16px 0; font-size:12.5px;}
 
+  /* ---------- rincian sejajar kiri-kanan (dipakai Per Golongan) ---------- */
+  .rincian-side{display:flex; gap:12px;}
+  .rincian-side .rincian-row{
+    flex:1; flex-direction:column; align-items:flex-start; gap:6px;
+    border-bottom:none; padding:0; border-right:1px solid var(--line); padding-right:12px;
+  }
+  .rincian-side .rincian-row:last-child{border-right:none; padding-right:0;}
+  .rincian-side .rincian-row .kanan{text-align:left;}
+
   footer{
     margin-top:30px; padding-top:16px; border-top:1px solid var(--line);
     font-size:11px; color:var(--ink-faint); font-family:var(--mono);
@@ -182,7 +191,7 @@
 
       <div class="rincian-block">
         <div class="section-title">Per Golongan</div>
-        <div id="rincianGolongan"></div>
+        <div id="rincianGolongan" class="rincian-side"></div>
       </div>
     </div>
 
