@@ -107,6 +107,9 @@
 
   <div class="section-title">Per Sumber Pendaftaran</div>
   <div id="rincianSumber"></div>
+
+  <div class="section-title">Per Golongan</div>
+  <div id="rincianGolongan"></div>
 </div>
 
 <script>
@@ -120,6 +123,7 @@
   function namaTampilanMateri(materi){ return NAMA_TAMPILAN_MATERI[materi] || materi; }
 
   var SUMBER_LABEL = { online: "Online", ots: "OTS" };
+  var GOLONGAN_LABEL = { tni: "TNI/Polri", sipil: "Sipil" };
 
   function fmtRupiah(n){
     n = Number(n) || 0;
@@ -170,6 +174,8 @@
         renderRincian("rincianMetode", d.perMetode, function(r){ return r.metode; }, "peserta");
 
         renderRincian("rincianSumber", d.perSumber, function(r){ return SUMBER_LABEL[r.sumber] || r.sumber; }, "peserta");
+
+        renderRincian("rincianGolongan", d.perGolongan, function(r){ return GOLONGAN_LABEL[r.golongan] || r.golongan; }, "peserta");
       })
       .catch(function(err){
         document.getElementById("lastSync").textContent = "Gagal terhubung ke server: " + err;
