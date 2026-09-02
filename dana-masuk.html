@@ -301,7 +301,7 @@
   // Password sama dengan halaman Verifikasi Pembayaran (PEMBAYARAN_PASSWORD)
   // -- data uang, sengaja tidak dipisah password baru supaya admin yang
   // sudah pegang password itu otomatis bisa akses ini juga.
-  var PW_HASH = "cbfad02f9ed2a8d1e08d8f74f5303e9eb93637d47f82ab6f1c15871cf8dd0481";
+  var PW_HASH = "07334386287751ba02a4588c1a0875dbd074a61bd9e6ab7c48d244eacd0c99e0";
   function sha256Hex(text){
     var data = new TextEncoder().encode(text);
     return crypto.subtle.digest("SHA-256", data).then(function(buf){
