@@ -298,9 +298,10 @@
     setInterval(muatData, 30000);
   }
 
-  // Password sama dengan halaman Verifikasi Pembayaran (PEMBAYARAN_PASSWORD)
-  // -- data uang, sengaja tidak dipisah password baru supaya admin yang
-  // sudah pegang password itu otomatis bisa akses ini juga.
+  // Password TERPISAH dari halaman Verifikasi Pembayaran (permintaan Kang,
+  // 2 September 2026) -- Dana Masuk cuma tampilkan rekap, tidak ada aksi
+  // ubah data, jadi bisa dibagikan ke orang yang perlu lihat rekap uang
+  // tanpa ikut dapat akses Tandai Lunas/upload bukti.
   var PW_HASH = "07334386287751ba02a4588c1a0875dbd074a61bd9e6ab7c48d244eacd0c99e0";
   function sha256Hex(text){
     var data = new TextEncoder().encode(text);
