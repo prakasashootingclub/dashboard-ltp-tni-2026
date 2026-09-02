@@ -236,6 +236,19 @@
     });
   }
 
+  // Lengkapi daftar dengan kategori yang belum ada datanya (Rp0/0 peserta)
+  // -- supaya kartu Per Metode/Per Sumber/Per Golongan selalu tampil semua
+  // pilihan yang mungkin, tidak cuma yang sudah ada transaksinya. Permintaan
+  // Kang, 2 September 2026.
+  function lengkapiKategori(rows, daftarKunci, keyFn, buatBaris){
+    var ada = {};
+    rows.forEach(function(r){ ada[keyFn(r)] = true; });
+    daftarKunci.forEach(function(k){
+      if (!ada[k]) rows.push(buatBaris(k));
+    });
+    return rows;
+  }
+
   function renderRincian(elId, rows, namaFn, jumlahLabel, urutFn){
     var el = document.getElementById(elId);
     if (!rows.length) { el.innerHTML = '<div class="empty">Belum ada data.</div>'; return; }
@@ -277,11 +290,20 @@
           return a.golongan < b.golongan ? -1 : 1;
         });
 
-        renderRincian("rincianMetode", d.perMetode, function(r){ return r.metode; }, "peserta");
+        var metodeLengkap = lengkapiKategori(d.perMetode, ["Transfer Bank", "Tunai"], function(r){ return r.metode; },
+          function(k){ return { metode: k, dana: 0, jumlah: 0 }; });
+        renderRincian("rincianMetode", metodeLengkap, function(r){ return r.metode; }, "peserta",
+          function(a, b){ return ["Transfer Bank", "Tunai"].indexOf(a.metode) - ["Transfer Bank", "Tunai"].indexOf(b.metode); });
 
-        renderRincian("rincianSumber", d.perSumber, function(r){ return SUMBER_LABEL[r.sumber] || r.sumber; }, "peserta");
+        var sumberLengkap = lengkapiKategori(d.perSumber, ["online", "ots"], function(r){ return r.sumber; },
+          function(k){ return { sumber: k, dana: 0, jumlah: 0 }; });
+        renderRincian("rincianSumber", sumberLengkap, function(r){ return SUMBER_LABEL[r.sumber] || r.sumber; }, "peserta",
+          function(a, b){ return ["online", "ots"].indexOf(a.sumber) - ["online", "ots"].indexOf(b.sumber); });
 
-        renderRincian("rincianGolongan", d.perGolongan, function(r){ return GOLONGAN_LABEL[r.golongan] || r.golongan; }, "peserta");
+        var golonganLengkap = lengkapiKategori(d.perGolongan, ["sipil", "tni"], function(r){ return r.golongan; },
+          function(k){ return { golongan: k, dana: 0, jumlah: 0 }; });
+        renderRincian("rincianGolongan", golonganLengkap, function(r){ return GOLONGAN_LABEL[r.golongan] || r.golongan; }, "peserta",
+          function(a, b){ return ["sipil", "tni"].indexOf(a.golongan) - ["sipil", "tni"].indexOf(b.golongan); });
       })
       .catch(function(err){
         document.getElementById("lastSync").textContent = "Gagal terhubung ke server: " + err;
