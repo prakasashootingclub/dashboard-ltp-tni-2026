@@ -168,7 +168,7 @@
         document.getElementById("lastSync").textContent = "Terakhir diperbarui: " + new Date(d.diperbarui).toLocaleTimeString("id-ID");
 
         renderRincian("rincianKategori", d.perKategori, function(r){
-          return namaTampilanMateri(r.kategori) + " · " + r.item;
+          return namaTampilanMateri(r.kategori) + " · " + r.item + " · " + (GOLONGAN_LABEL[r.golongan] || r.golongan);
         }, "peserta");
 
         renderRincian("rincianMetode", d.perMetode, function(r){ return r.metode; }, "peserta");
