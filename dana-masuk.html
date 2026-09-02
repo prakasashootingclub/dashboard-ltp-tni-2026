@@ -116,11 +116,26 @@
   var WEBAPP_URL = "https://script.google.com/macros/s/AKfycbyGY8Pi3gBALM8GVP6XCB04P_eebPw2thlP_ShQR6IVC31vuCZcWXxQK677crIgHysu/exec";
   var STORAGE_KEY = "pembayaranPw";
 
-  var NAMA_TAMPILAN_MATERI = {
-    "Tembak Reaksi IPSC Level II": "IPSC Level II",
-    "Pistol": "Eksekutif"
-  };
-  function namaTampilanMateri(materi){ return NAMA_TAMPILAN_MATERI[materi] || materi; }
+  // Falling Plate & Non IPSC menumpang kolom kategori "Pistol"/"Tembak
+  // Reaksi IPSC Level II" di Sheet (sama seperti Pistol/IPSC), jadi HARUS
+  // dibedakan lewat nama item juga, bukan cuma kategori -- sama persis
+  // logika yang sudah dipakai di data-peserta.html & index.html. Bug
+  // sebelumnya: "Falling Plate Non Optic (TNI/Polri)" ke-label "Eksekutif"
+  // karena cuma baca kategori mentahnya. Permintaan Kang, 2 September 2026.
+  var FALLING_PLATE_ITEMS = [
+    "Falling Plate Optic", "Falling Plate Non Optic",
+    "Falling Plate Optic (TNI/Polri)", "Falling Plate Non Optic (TNI/Polri)"
+  ];
+  var NON_IPSC_ITEMS = ["Non IPSC Standard Putra", "Non IPSC Standard Putri"];
+
+  function namaMateriTampil(kategori, item){
+    if (kategori === "Pistol") return FALLING_PLATE_ITEMS.indexOf(item) !== -1 ? "Falling Plate" : "Eksekutif";
+    if (kategori === "Tembak Reaksi IPSC Level II") return NON_IPSC_ITEMS.indexOf(item) !== -1 ? "Non IPSC" : "IPSC Level II";
+    return kategori;
+  }
+
+  // Urutan tetap materi -- sama seperti Dashboard Panitia & Data Peserta.
+  var URUTAN_MATERI = ["Senapan", "Eksekutif", "Falling Plate", "IPSC Level II", "Non IPSC", "Air Rifle"];
 
   var SUMBER_LABEL = { online: "Online", ots: "OTS" };
   var GOLONGAN_LABEL = { tni: "TNI/Polri", sipil: "Sipil" };
@@ -136,10 +151,10 @@
     });
   }
 
-  function renderRincian(elId, rows, namaFn, jumlahLabel){
+  function renderRincian(elId, rows, namaFn, jumlahLabel, urutFn){
     var el = document.getElementById(elId);
     if (!rows.length) { el.innerHTML = '<div id="empty">Belum ada data.</div>'; return; }
-    rows.sort(function(a, b){ return b.dana - a.dana; });
+    rows.sort(urutFn || function(a, b){ return b.dana - a.dana; });
     el.innerHTML = rows.map(function(r){
       return '<div class="rincian-row">' +
         '<div><div class="nama">' + escapeHtml(namaFn(r)) + '</div></div>' +
@@ -168,8 +183,14 @@
         document.getElementById("lastSync").textContent = "Terakhir diperbarui: " + new Date(d.diperbarui).toLocaleTimeString("id-ID");
 
         renderRincian("rincianKategori", d.perKategori, function(r){
-          return namaTampilanMateri(r.kategori) + " · " + r.item + " · " + (GOLONGAN_LABEL[r.golongan] || r.golongan);
-        }, "peserta");
+          return namaMateriTampil(r.kategori, r.item) + " · " + r.item + " · " + (GOLONGAN_LABEL[r.golongan] || r.golongan);
+        }, "peserta", function(a, b){
+          var ia = URUTAN_MATERI.indexOf(namaMateriTampil(a.kategori, a.item));
+          var ib = URUTAN_MATERI.indexOf(namaMateriTampil(b.kategori, b.item));
+          if (ia !== ib) return ia - ib;
+          if (a.item !== b.item) return a.item < b.item ? -1 : 1;
+          return a.golongan < b.golongan ? -1 : 1;
+        });
 
         renderRincian("rincianMetode", d.perMetode, function(r){ return r.metode; }, "peserta");
 
