@@ -222,6 +222,67 @@
   // Urutan tetap materi -- sama seperti Dashboard Panitia & Data Peserta.
   var URUTAN_MATERI = ["Senapan", "Eksekutif", "Falling Plate", "IPSC Level II", "Non IPSC", "Air Rifle"];
 
+  // Katalog LENGKAP kategori x item x golongan -- disalin dari KATEGORI_LIST
+  // di Code.js, supaya "Per Kategori" selalu tampilkan semua kombinasi yang
+  // MUNGKIN ada (termasuk yang belum ada pesertanya, Rp0), bukan cuma yang
+  // sudah ada transaksinya. "kategori" di sini nilai MENTAH kolom Sheet
+  // (sama seperti field r.kategori dari backend), "golongan" daftar
+  // golongan yang berlaku untuk item itu (item ber-golonganWajib cuma 1).
+  // Permintaan Kang, 2 September 2026.
+  var KEDUA_GOLONGAN = ["sipil", "tni"];
+  var KATALOG_LENGKAP = [
+    // Senapan
+    { kategori: "Senapan", item: "100 M Plat Baja 3 Sikap Perorangan (Open)", golongan: KEDUA_GOLONGAN },
+    { kategori: "Senapan", item: "100 M Plat Baja 3 Sikap Beregu (Open)", golongan: KEDUA_GOLONGAN },
+    { kategori: "Senapan", item: "100 M Plat Baja 3 Sikap Perorangan (Standard/Pejera Logam)", golongan: KEDUA_GOLONGAN },
+    { kategori: "Senapan", item: "100 M Plat Baja 3 Sikap Beregu (Standard/Pejera Logam)", golongan: KEDUA_GOLONGAN },
+    { kategori: "Senapan", item: "300 M Plat Baja 3 Sikap Perorangan (Open)", golongan: KEDUA_GOLONGAN },
+    { kategori: "Senapan", item: "300 M Plat Baja 3 Sikap Beregu (Open)", golongan: KEDUA_GOLONGAN },
+    { kategori: "Senapan", item: "300 M Plat Baja 3 Sikap Perorangan (Standard/Pejera Logam)", golongan: KEDUA_GOLONGAN },
+    { kategori: "Senapan", item: "300 M Plat Baja 3 Sikap Beregu (Standard/Pejera Logam)", golongan: KEDUA_GOLONGAN },
+    { kategori: "Senapan", item: "600 M Tactical Prone Perorangan (TNI/Polri)", golongan: ["tni"] },
+    { kategori: "Senapan", item: "600 M Tactical Prone Perorangan (Sipil)", golongan: ["sipil"] },
+    // Eksekutif (kategori mentah "Pistol")
+    { kategori: "Pistol", item: "20 M Eksekutif Perorangan", golongan: KEDUA_GOLONGAN },
+    { kategori: "Pistol", item: "20 M Eksekutif Beregu", golongan: KEDUA_GOLONGAN },
+    { kategori: "Pistol", item: "20 M Eksekutif Perorangan (TNI/Polri)", golongan: ["tni"] },
+    { kategori: "Pistol", item: "20 M Eksekutif Beregu (TNI/Polri)", golongan: ["tni"] },
+    // Falling Plate (kategori mentah "Pistol" juga)
+    { kategori: "Pistol", item: "Falling Plate Optic", golongan: KEDUA_GOLONGAN },
+    { kategori: "Pistol", item: "Falling Plate Non Optic", golongan: KEDUA_GOLONGAN },
+    { kategori: "Pistol", item: "Falling Plate Optic (TNI/Polri)", golongan: ["tni"] },
+    { kategori: "Pistol", item: "Falling Plate Non Optic (TNI/Polri)", golongan: ["tni"] },
+    // IPSC Level II (kategori mentah "Tembak Reaksi IPSC Level II")
+    { kategori: "Tembak Reaksi IPSC Level II", item: "Divisi Open", golongan: KEDUA_GOLONGAN },
+    { kategori: "Tembak Reaksi IPSC Level II", item: "Divisi Standard", golongan: KEDUA_GOLONGAN },
+    { kategori: "Tembak Reaksi IPSC Level II", item: "Divisi Optic", golongan: KEDUA_GOLONGAN },
+    { kategori: "Tembak Reaksi IPSC Level II", item: "Divisi Production", golongan: KEDUA_GOLONGAN },
+    { kategori: "Tembak Reaksi IPSC Level II", item: "Divisi Production Optic", golongan: KEDUA_GOLONGAN },
+    { kategori: "Tembak Reaksi IPSC Level II", item: "Divisi PCC Optic", golongan: KEDUA_GOLONGAN },
+    // Non IPSC (kategori mentah sama dengan IPSC)
+    { kategori: "Tembak Reaksi IPSC Level II", item: "Non IPSC Standard Putra", golongan: KEDUA_GOLONGAN },
+    { kategori: "Tembak Reaksi IPSC Level II", item: "Non IPSC Standard Putri", golongan: KEDUA_GOLONGAN },
+    // Air Rifle
+    { kategori: "Air Rifle", item: "WRABF HR 25 M (Junior)", golongan: KEDUA_GOLONGAN },
+    { kategori: "Air Rifle", item: "WRABF HR 25 M (Senior)", golongan: KEDUA_GOLONGAN },
+    { kategori: "Air Rifle", item: "WRABF LR 25 M (Junior)", golongan: KEDUA_GOLONGAN },
+    { kategori: "Air Rifle", item: "WRABF LR 25 M (Senior)", golongan: KEDUA_GOLONGAN },
+    { kategori: "Air Rifle", item: "IMSSU Multirange 18-41 M (Junior)", golongan: KEDUA_GOLONGAN },
+    { kategori: "Air Rifle", item: "IMSSU Multirange 18-41 M (Senior)", golongan: KEDUA_GOLONGAN }
+  ];
+
+  function lengkapiKategoriPenuh(rows){
+    var ada = {};
+    rows.forEach(function(r){ ada[r.kategori + "|" + r.item + "|" + r.golongan] = true; });
+    KATALOG_LENGKAP.forEach(function(k){
+      k.golongan.forEach(function(g){
+        var kunci = k.kategori + "|" + k.item + "|" + g;
+        if (!ada[kunci]) rows.push({ kategori: k.kategori, item: k.item, golongan: g, dana: 0, jumlah: 0 });
+      });
+    });
+    return rows;
+  }
+
   var SUMBER_LABEL = { online: "Online", ots: "OTS" };
   var GOLONGAN_LABEL = { tni: "TNI/Polri", sipil: "Sipil" };
 
@@ -280,7 +341,7 @@
         document.getElementById("totalAngka").textContent = fmtRupiah(d.total);
         document.getElementById("lastSync").textContent = "Terakhir diperbarui: " + new Date(d.diperbarui).toLocaleTimeString("id-ID");
 
-        renderRincian("rincianKategori", d.perKategori, function(r){
+        renderRincian("rincianKategori", lengkapiKategoriPenuh(d.perKategori), function(r){
           return namaMateriTampil(r.kategori, r.item) + " · " + r.item + " · " + (GOLONGAN_LABEL[r.golongan] || r.golongan);
         }, "peserta", function(a, b){
           var ia = URUTAN_MATERI.indexOf(namaMateriTampil(a.kategori, a.item));
