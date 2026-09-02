@@ -9,6 +9,7 @@
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-512.png">
 <title>Dana Masuk — LTP TNI 2026</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
 <script>
   window.onerror = function(msg, src, line, col, err){
     var d = document.createElement("div");
@@ -171,7 +172,7 @@
       </div>
       <div>
         <button id="refreshBtn">&#8635; Muat Ulang</button>
-        <button id="downloadBtn">&#8681; Download CSV</button>
+        <button id="downloadBtn">&#8681; Download Excel</button>
         <div id="lastSync">Terakhir diperbarui: &mdash;</div>
       </div>
     </header>
@@ -388,56 +389,53 @@
 
   document.getElementById("refreshBtn").onclick = muatData;
 
-  // Download CSV -- 4 bagian (Kategori/Metode/Sumber/Golongan) ditulis
-  // berurutan dalam 1 file, dipisah baris judul section supaya tetap jelas
-  // dibuka di Excel. Permintaan Kang, 2 September 2026.
-  function downloadCsv(){
+  // Download Excel (.xlsx) -- 5 sheet terpisah (Ringkasan/Kategori/
+  // Metode/Sumber/Golongan) dalam 1 file, pakai library SheetJS (CDN).
+  // File .xlsx asli lebih aman dibuka di Excel mana pun dibanding CSV,
+  // yang bisa berantakan kalau region komputer pakai titik koma sebagai
+  // pemisah kolom. Permintaan Kang, 2 September 2026.
+  function downloadXlsx(){
+    if (typeof XLSX === "undefined") { alert("Library Excel belum selesai dimuat, coba lagi sebentar lagi."); return; }
     if (!dataTerakhir) { alert("Data belum dimuat, tunggu sebentar lalu coba lagi."); return; }
-    var escCsv = function(v){ return '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"'; };
-    var baris = [];
-    baris.push([escCsv("Total Dana Masuk (Lunas)"), escCsv(dataTerakhir.total)].join(","));
-    baris.push("");
 
-    baris.push(escCsv("PER KATEGORI"));
-    baris.push([escCsv("Kategori"), escCsv("Item"), escCsv("Golongan"), escCsv("Dana"), escCsv("Jumlah Peserta")].join(","));
-    dataTerakhir.perKategori.forEach(function(r){
-      baris.push([escCsv(namaMateriTampil(r.kategori, r.item)), escCsv(r.item), escCsv(GOLONGAN_LABEL[r.golongan] || r.golongan), escCsv(r.dana), escCsv(r.jumlah)].join(","));
+    const wb = XLSX.utils.book_new();
+
+    const wsRingkasan = XLSX.utils.aoa_to_sheet([
+      ["Total Dana Masuk (Lunas)", dataTerakhir.total]
+    ]);
+    wsRingkasan["!cols"] = [{ wch: 28 }, { wch: 16 }];
+    XLSX.utils.book_append_sheet(wb, wsRingkasan, "Ringkasan");
+
+    const aoaKategori = [["Kategori", "Item", "Golongan", "Dana", "Jumlah Peserta"]];
+    dataTerakhir.perKategori.forEach(r => {
+      aoaKategori.push([namaMateriTampil(r.kategori, r.item), r.item, GOLONGAN_LABEL[r.golongan] || r.golongan, r.dana, r.jumlah]);
     });
-    baris.push("");
+    const wsKategori = XLSX.utils.aoa_to_sheet(aoaKategori);
+    wsKategori["!cols"] = [{ wch: 16 }, { wch: 42 }, { wch: 12 }, { wch: 14 }, { wch: 14 }];
+    XLSX.utils.book_append_sheet(wb, wsKategori, "Per Kategori");
 
-    baris.push(escCsv("PER METODE PEMBAYARAN"));
-    baris.push([escCsv("Metode"), escCsv("Dana"), escCsv("Jumlah Peserta")].join(","));
-    dataTerakhir.perMetode.forEach(function(r){
-      baris.push([escCsv(r.metode), escCsv(r.dana), escCsv(r.jumlah)].join(","));
-    });
-    baris.push("");
+    const aoaMetode = [["Metode", "Dana", "Jumlah Peserta"]];
+    dataTerakhir.perMetode.forEach(r => { aoaMetode.push([r.metode, r.dana, r.jumlah]); });
+    const wsMetode = XLSX.utils.aoa_to_sheet(aoaMetode);
+    wsMetode["!cols"] = [{ wch: 16 }, { wch: 14 }, { wch: 14 }];
+    XLSX.utils.book_append_sheet(wb, wsMetode, "Per Metode");
 
-    baris.push(escCsv("PER SUMBER PENDAFTARAN"));
-    baris.push([escCsv("Sumber"), escCsv("Dana"), escCsv("Jumlah Peserta")].join(","));
-    dataTerakhir.perSumber.forEach(function(r){
-      baris.push([escCsv(SUMBER_LABEL[r.sumber] || r.sumber), escCsv(r.dana), escCsv(r.jumlah)].join(","));
-    });
-    baris.push("");
+    const aoaSumber = [["Sumber", "Dana", "Jumlah Peserta"]];
+    dataTerakhir.perSumber.forEach(r => { aoaSumber.push([SUMBER_LABEL[r.sumber] || r.sumber, r.dana, r.jumlah]); });
+    const wsSumber = XLSX.utils.aoa_to_sheet(aoaSumber);
+    wsSumber["!cols"] = [{ wch: 16 }, { wch: 14 }, { wch: 14 }];
+    XLSX.utils.book_append_sheet(wb, wsSumber, "Per Sumber");
 
-    baris.push(escCsv("PER GOLONGAN"));
-    baris.push([escCsv("Golongan"), escCsv("Dana"), escCsv("Jumlah Peserta")].join(","));
-    dataTerakhir.perGolongan.forEach(function(r){
-      baris.push([escCsv(GOLONGAN_LABEL[r.golongan] || r.golongan), escCsv(r.dana), escCsv(r.jumlah)].join(","));
-    });
+    const aoaGolongan = [["Golongan", "Dana", "Jumlah Peserta"]];
+    dataTerakhir.perGolongan.forEach(r => { aoaGolongan.push([GOLONGAN_LABEL[r.golongan] || r.golongan, r.dana, r.jumlah]); });
+    const wsGolongan = XLSX.utils.aoa_to_sheet(aoaGolongan);
+    wsGolongan["!cols"] = [{ wch: 16 }, { wch: 14 }, { wch: 14 }];
+    XLSX.utils.book_append_sheet(wb, wsGolongan, "Per Golongan");
 
-    var csv = "﻿" + baris.join("\r\n"); // BOM supaya Excel baca UTF-8 dengan benar
-    var blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement("a");
-    var tanggal = new Date().toISOString().slice(0, 10);
-    a.href = url;
-    a.download = "dana-masuk-ltp-tni-2026-" + tanggal + ".csv";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    const tanggal = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(wb, "dana-masuk-ltp-tni-2026-" + tanggal + ".xlsx");
   }
-  document.getElementById("downloadBtn").onclick = downloadCsv;
+  document.getElementById("downloadBtn").onclick = downloadXlsx;
 
   function unlock(pw){
     document.getElementById("gate").classList.add("hidden");

@@ -9,6 +9,7 @@
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-512.png">
 <title>LTP TNI 2026 — Data Peserta</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
 <style>
   :root{
     --bg:#0E1210;
@@ -150,7 +151,7 @@
   <div class="toolbar">
     <input type="text" id="searchInput" placeholder="Cari nama atau item...">
     <div class="count-badge" id="countBadge">memuat…</div>
-    <button id="downloadBtn">&#8681; Download CSV</button>
+    <button id="downloadBtn">&#8681; Download Excel</button>
   </div>
 
   <div id="katSections">Memuat data…</div>
@@ -345,11 +346,13 @@ function filteredRows(){
     : allRows;
 }
 
-// Download CSV -- ikut filter pencarian yang sedang aktif (kalau lagi
-// cari, yang di-download cuma hasil cari itu). Escape ganda-kutip sesuai
-// aturan CSV standar, dan kolom uang/HP di-quote supaya Excel tidak salah
-// baca angka depan nol atau koma ribuan. Permintaan Kang, 2 September 2026.
-function downloadCsv(){
+// Download Excel (.xlsx) -- ikut filter pencarian yang sedang aktif (kalau
+// lagi cari, yang di-download cuma hasil cari itu). Pakai library SheetJS
+// (dimuat via CDN) supaya hasilnya file .xlsx asli -- rapi per kolom di
+// Excel mana pun, tidak tergantung setting region/pemisah desimal komputer
+// seperti CSV. Permintaan Kang, 2 September 2026.
+function downloadXlsx(){
+  if (typeof XLSX === "undefined") { alert("Library Excel belum selesai dimuat, coba lagi sebentar lagi."); return; }
   const rows = filteredRows();
   const kolom = [
     ["nama", "Nama"], ["hp", "No HP"], ["kategori", "Kategori"], ["item", "Item"],
@@ -360,24 +363,16 @@ function downloadCsv(){
     ["powerFactor", "Power Factor (IPSC)"], ["kategoriIpsc", "Kategori (IPSC)"],
     ["waktuPelaksanaan", "Waktu Pelaksanaan (IPSC)"]
   ];
-  const escCsv = v => '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"';
-  const lines = [kolom.map(k => escCsv(k[1])).join(",")];
-  rows.forEach(r => {
-    lines.push(kolom.map(k => escCsv(r[k[0]])).join(","));
-  });
-  const csv = "﻿" + lines.join("\r\n"); // BOM supaya Excel baca UTF-8 (nama pakai karakter non-ASCII) dengan benar
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
+  const aoa = [kolom.map(k => k[1])];
+  rows.forEach(r => { aoa.push(kolom.map(k => r[k[0]] == null ? "" : r[k[0]])); });
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws["!cols"] = kolom.map(() => ({ wch: 20 }));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Data Peserta");
   const tanggal = new Date().toISOString().slice(0, 10);
-  a.href = url;
-  a.download = "data-peserta-ltp-tni-2026-" + tanggal + ".csv";
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  XLSX.writeFile(wb, "data-peserta-ltp-tni-2026-" + tanggal + ".xlsx");
 }
-document.getElementById("downloadBtn").onclick = downloadCsv;
+document.getElementById("downloadBtn").onclick = downloadXlsx;
 
 function render(){
   const rows = filteredRows();
