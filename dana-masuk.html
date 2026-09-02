@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0E1210">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-512.png">
+<title>Dana Masuk — LTP TNI 2026</title>
+<script>
+  window.onerror = function(msg, src, line, col, err){
+    var d = document.createElement("div");
+    d.style.cssText = "position:fixed;top:0;left:0;right:0;z-index:99;background:#B4483A;color:#fff;padding:10px;font-size:12px;font-family:monospace;word-break:break-word;";
+    d.textContent = "JS ERROR: " + msg + " (baris " + line + ")";
+    document.body ? document.body.prepend(d) : window.addEventListener("DOMContentLoaded", function(){ document.body.prepend(d); });
+  };
+</script>
+<style>
+  *{box-sizing:border-box;}
+  body{
+    font-family:-apple-system,'Segoe UI',sans-serif;
+    background:#0E1210; color:#E9EAE3; margin:0; padding:16px;
+    max-width:560px; margin-left:auto; margin-right:auto;
+  }
+  h2{font-size:18px; margin:0 0 4px;}
+  .lbl{font-size:11px; text-transform:uppercase; color:#5B6660; letter-spacing:.08em; margin-bottom:14px;}
+
+  /* ---------- gerbang password ---------- */
+  #gate{
+    min-height:80vh; background:#0E1210; display:flex;
+    flex-direction:column; align-items:center; justify-content:center;
+    gap:14px; padding:20px;
+  }
+  #gate input{
+    width:100%; max-width:280px; padding:12px 14px; border-radius:6px;
+    border:1px solid #2A322C; background:#161B17; color:#E9EAE3; font-size:15px;
+  }
+  #gate button{
+    width:100%; max-width:280px; padding:12px; border-radius:6px; border:none;
+    background:#5C7A3A; color:#0E1210; font-size:14px; font-weight:700;
+  }
+  #gate .err{color:#E58B7A; font-size:13px; min-height:16px;}
+  .hidden{display:none !important;}
+
+  /* ---------- total besar ---------- */
+  .total-box{
+    background:#161B17; border:1px solid #2A322C; border-radius:10px;
+    padding:24px 18px; text-align:center; margin-bottom:18px;
+  }
+  .total-box .angka{
+    font-family:monospace; font-size:34px; font-weight:700; color:#8FB35A;
+    word-break:break-all;
+  }
+  .total-box .ket{font-size:11px; color:#8C9A8A; text-transform:uppercase; letter-spacing:.08em; margin-top:6px;}
+
+  /* ---------- section rincian ---------- */
+  .section-title{
+    font-size:12px; text-transform:uppercase; letter-spacing:.06em; color:#8C9A8A;
+    margin:22px 0 10px;
+  }
+  .rincian-row{
+    display:flex; justify-content:space-between; align-items:center;
+    background:#161B17; border:1px solid #2A322C; border-radius:8px;
+    padding:12px 14px; margin-bottom:8px;
+  }
+  .rincian-row .nama{font-size:13px; font-weight:600;}
+  .rincian-row .sub{font-size:11px; color:#8C9A8A; margin-top:2px;}
+  .rincian-row .kanan{text-align:right;}
+  .rincian-row .dana{font-family:monospace; font-size:14px; font-weight:700; color:#8FB35A;}
+  .rincian-row .jumlah{font-size:11px; color:#8C9A8A; margin-top:2px;}
+
+  #refreshBtn{
+    width:100%; padding:10px; border-radius:6px; border:1px solid #2A322C;
+    background:#161B17; color:#c68a2e; font-size:13px; font-weight:600; margin-bottom:4px;
+  }
+  #lastSync{font-size:11px; color:#5B6660; text-align:center; margin-top:6px; margin-bottom:10px;}
+  #empty{text-align:center; color:#5B6660; padding:20px; font-size:13px;}
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <h2>Dana Masuk</h2>
+  <input type="password" id="pwInput" placeholder="Password petugas" autocomplete="off">
+  <button id="pwBtn">Masuk</button>
+  <div class="err" id="pwErr"></div>
+</div>
+
+<div id="app" class="hidden">
+  <h2>Dana Masuk</h2>
+  <div class="lbl">Total uang yang sudah terverifikasi Lunas</div>
+
+  <button id="refreshBtn">Muat Ulang</button>
+  <div id="lastSync">Terakhir diperbarui: —</div>
+
+  <div class="total-box">
+    <div class="angka" id="totalAngka">Rp0</div>
+    <div class="ket">Total Dana Masuk (Lunas)</div>
+  </div>
+
+  <div class="section-title">Per Kategori</div>
+  <div id="rincianKategori"></div>
+
+  <div class="section-title">Per Metode Pembayaran</div>
+  <div id="rincianMetode"></div>
+
+  <div class="section-title">Per Sumber Pendaftaran</div>
+  <div id="rincianSumber"></div>
+</div>
+
+<script>
+  var WEBAPP_URL = "https://script.google.com/macros/s/AKfycbyGY8Pi3gBALM8GVP6XCB04P_eebPw2thlP_ShQR6IVC31vuCZcWXxQK677crIgHysu/exec";
+  var STORAGE_KEY = "pembayaranPw";
+
+  var NAMA_TAMPILAN_MATERI = {
+    "Tembak Reaksi IPSC Level II": "IPSC Level II",
+    "Pistol": "Eksekutif"
+  };
+  function namaTampilanMateri(materi){ return NAMA_TAMPILAN_MATERI[materi] || materi; }
+
+  var SUMBER_LABEL = { online: "Online", ots: "OTS" };
+
+  function fmtRupiah(n){
+    n = Number(n) || 0;
+    return "Rp" + n.toLocaleString("id-ID");
+  }
+
+  function escapeHtml(s){
+    return String(s || "").replace(/[&<>"']/g, function(c){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+    });
+  }
+
+  function renderRincian(elId, rows, namaFn, jumlahLabel){
+    var el = document.getElementById(elId);
+    if (!rows.length) { el.innerHTML = '<div id="empty">Belum ada data.</div>'; return; }
+    rows.sort(function(a, b){ return b.dana - a.dana; });
+    el.innerHTML = rows.map(function(r){
+      return '<div class="rincian-row">' +
+        '<div><div class="nama">' + escapeHtml(namaFn(r)) + '</div></div>' +
+        '<div class="kanan"><div class="dana">' + fmtRupiah(r.dana) + '</div>' +
+          '<div class="jumlah">' + r.jumlah + ' ' + jumlahLabel + '</div></div>' +
+      '</div>';
+    }).join("");
+  }
+
+  function muatData(){
+    var pw = sessionStorage.getItem(STORAGE_KEY);
+    document.getElementById("lastSync").textContent = "Memuat...";
+    fetch(WEBAPP_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "ringkasan_dana", pw: pw })
+    })
+      .then(function(r){ return r.json(); })
+      .then(function(res){
+        if (!res.ok) {
+          document.getElementById("lastSync").textContent = res.pesan || "Gagal memuat.";
+          return;
+        }
+        var d = res.data;
+        document.getElementById("totalAngka").textContent = fmtRupiah(d.total);
+        document.getElementById("lastSync").textContent = "Terakhir diperbarui: " + new Date(d.diperbarui).toLocaleTimeString("id-ID");
+
+        renderRincian("rincianKategori", d.perKategori, function(r){
+          return namaTampilanMateri(r.kategori) + " · " + r.item;
+        }, "peserta");
+
+        renderRincian("rincianMetode", d.perMetode, function(r){ return r.metode; }, "peserta");
+
+        renderRincian("rincianSumber", d.perSumber, function(r){ return SUMBER_LABEL[r.sumber] || r.sumber; }, "peserta");
+      })
+      .catch(function(err){
+        document.getElementById("lastSync").textContent = "Gagal terhubung ke server: " + err;
+      });
+  }
+
+  document.getElementById("refreshBtn").onclick = muatData;
+
+  function unlock(pw){
+    document.getElementById("gate").classList.add("hidden");
+    document.getElementById("app").classList.remove("hidden");
+    sessionStorage.setItem(STORAGE_KEY, pw);
+    muatData();
+    setInterval(muatData, 30000);
+  }
+
+  // Password sama dengan halaman Verifikasi Pembayaran (PEMBAYARAN_PASSWORD)
+  // -- data uang, sengaja tidak dipisah password baru supaya admin yang
+  // sudah pegang password itu otomatis bisa akses ini juga.
+  var PW_HASH = "cbfad02f9ed2a8d1e08d8f74f5303e9eb93637d47f82ab6f1c15871cf8dd0481";
+  function sha256Hex(text){
+    var data = new TextEncoder().encode(text);
+    return crypto.subtle.digest("SHA-256", data).then(function(buf){
+      return Array.prototype.map.call(new Uint8Array(buf), function(b){
+        return b.toString(16).padStart(2, "0");
+      }).join("");
+    });
+  }
+
+  document.getElementById("pwBtn").onclick = function(){
+    var pw = document.getElementById("pwInput").value.trim();
+    if (!pw) { document.getElementById("pwErr").textContent = "Isi password dulu."; return; }
+    document.getElementById("pwErr").textContent = "";
+    sha256Hex(pw).then(function(hash){
+      if (hash !== PW_HASH) {
+        document.getElementById("pwErr").textContent = "Password salah.";
+        return;
+      }
+      unlock(pw);
+    });
+  };
+  document.getElementById("pwInput").addEventListener("keydown", function(e){
+    if (e.key === "Enter") document.getElementById("pwBtn").click();
+  });
+
+  var saved = sessionStorage.getItem(STORAGE_KEY);
+  if (saved) unlock(saved);
+</script>
+
+</body>
+</html>
