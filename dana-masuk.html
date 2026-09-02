@@ -81,6 +81,12 @@
     cursor:pointer; transition:.15s;
   }
   #refreshBtn:hover{border-color:var(--amber);}
+  #downloadBtn{
+    font-family:var(--mono); font-size:12px; padding:9px 16px; border-radius:6px;
+    border:1px solid var(--line); background:var(--panel); color:var(--olive-bright);
+    cursor:pointer; transition:.15s; margin-left:8px;
+  }
+  #downloadBtn:hover{border-color:var(--olive);}
   #lastSync{font-size:11px; color:var(--ink-faint); font-family:var(--mono); text-align:right; margin-top:6px;}
 
   /* ---------- total besar ---------- */
@@ -137,6 +143,7 @@
     header{flex-direction:column; align-items:flex-start; gap:10px;}
     h1{font-size:20px;}
     #refreshBtn{width:100%;}
+    #downloadBtn{width:100%; margin-left:0; margin-top:8px;}
     #lastSync{text-align:left;}
     .total-box{padding:22px 16px;}
     .total-box .angka{font-size:32px;}
@@ -164,6 +171,7 @@
       </div>
       <div>
         <button id="refreshBtn">&#8635; Muat Ulang</button>
+        <button id="downloadBtn">&#8681; Download CSV</button>
         <div id="lastSync">Terakhir diperbarui: &mdash;</div>
       </div>
     </header>
@@ -323,6 +331,11 @@
     }).join("");
   }
 
+  // Disimpan tiap kali data berhasil dimuat -- dipakai downloadCsv()
+  // supaya isi CSV persis sama dengan yang lagi tampil di layar (termasuk
+  // baris Rp0 yang dilengkapi lengkapiKategori/lengkapiKategoriPenuh).
+  var dataTerakhir = null;
+
   function muatData(){
     var pw = sessionStorage.getItem(STORAGE_KEY);
     document.getElementById("lastSync").textContent = "Memuat...";
@@ -365,6 +378,8 @@
           function(k){ return { golongan: k, dana: 0, jumlah: 0 }; });
         renderRincian("rincianGolongan", golonganLengkap, function(r){ return GOLONGAN_LABEL[r.golongan] || r.golongan; }, "peserta",
           function(a, b){ return ["sipil", "tni"].indexOf(a.golongan) - ["sipil", "tni"].indexOf(b.golongan); });
+
+        dataTerakhir = { total: d.total, perKategori: d.perKategori, perMetode: metodeLengkap, perSumber: sumberLengkap, perGolongan: golonganLengkap };
       })
       .catch(function(err){
         document.getElementById("lastSync").textContent = "Gagal terhubung ke server: " + err;
@@ -372,6 +387,57 @@
   }
 
   document.getElementById("refreshBtn").onclick = muatData;
+
+  // Download CSV -- 4 bagian (Kategori/Metode/Sumber/Golongan) ditulis
+  // berurutan dalam 1 file, dipisah baris judul section supaya tetap jelas
+  // dibuka di Excel. Permintaan Kang, 2 September 2026.
+  function downloadCsv(){
+    if (!dataTerakhir) { alert("Data belum dimuat, tunggu sebentar lalu coba lagi."); return; }
+    var escCsv = function(v){ return '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"'; };
+    var baris = [];
+    baris.push([escCsv("Total Dana Masuk (Lunas)"), escCsv(dataTerakhir.total)].join(","));
+    baris.push("");
+
+    baris.push(escCsv("PER KATEGORI"));
+    baris.push([escCsv("Kategori"), escCsv("Item"), escCsv("Golongan"), escCsv("Dana"), escCsv("Jumlah Peserta")].join(","));
+    dataTerakhir.perKategori.forEach(function(r){
+      baris.push([escCsv(namaMateriTampil(r.kategori, r.item)), escCsv(r.item), escCsv(GOLONGAN_LABEL[r.golongan] || r.golongan), escCsv(r.dana), escCsv(r.jumlah)].join(","));
+    });
+    baris.push("");
+
+    baris.push(escCsv("PER METODE PEMBAYARAN"));
+    baris.push([escCsv("Metode"), escCsv("Dana"), escCsv("Jumlah Peserta")].join(","));
+    dataTerakhir.perMetode.forEach(function(r){
+      baris.push([escCsv(r.metode), escCsv(r.dana), escCsv(r.jumlah)].join(","));
+    });
+    baris.push("");
+
+    baris.push(escCsv("PER SUMBER PENDAFTARAN"));
+    baris.push([escCsv("Sumber"), escCsv("Dana"), escCsv("Jumlah Peserta")].join(","));
+    dataTerakhir.perSumber.forEach(function(r){
+      baris.push([escCsv(SUMBER_LABEL[r.sumber] || r.sumber), escCsv(r.dana), escCsv(r.jumlah)].join(","));
+    });
+    baris.push("");
+
+    baris.push(escCsv("PER GOLONGAN"));
+    baris.push([escCsv("Golongan"), escCsv("Dana"), escCsv("Jumlah Peserta")].join(","));
+    dataTerakhir.perGolongan.forEach(function(r){
+      baris.push([escCsv(GOLONGAN_LABEL[r.golongan] || r.golongan), escCsv(r.dana), escCsv(r.jumlah)].join(","));
+    });
+
+    var csv = "﻿" + baris.join("\r\n"); // BOM supaya Excel baca UTF-8 dengan benar
+    var blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    var tanggal = new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = "dana-masuk-ltp-tni-2026-" + tanggal + ".csv";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+  document.getElementById("downloadBtn").onclick = downloadCsv;
 
   function unlock(pw){
     document.getElementById("gate").classList.add("hidden");
