@@ -195,14 +195,27 @@
   // perlu ngetik manual -- sama pola dengan pesan siap kirim di halaman
   // lain (blokPesanSiapKirim_ di Code.js). Permintaan Kang, 4 September
   // 2026.
+  // Format PERSIS sama dengan pesanTolak_() di Code.js (yang dipakai email
+  // ke peserta & blok "siap kirim" di email admin), bukan format baru --
+  // supaya konsisten di semua kanal. Cuma baris instruksi terakhir yang
+  // beda (arahan OTS: balik ke meja pendaftaran, bukan link daftar ulang
+  // online -- karena dashboard ini memang khusus dipakai pas OTS).
+  // Permintaan Kang, 4 September 2026.
+  var NAMA_EVENT = "Lomba Tembak Piala Panglima TNI Tahun 2026";
   function waLinkSiapKirim(r){
     var hp = String(r.hp || "").split("/")[0].trim().replace(/[^0-9]/g, "");
     if (!hp) return null;
     if (hp.charAt(0) === "0") hp = "62" + hp.substring(1);
-    var pesan = "Halo " + r.nama + ", pendaftaran Anda untuk *" + r.kategori + " - " + r.item +
-      "* di Lomba Tembak Piala Panglima TNI 2026 ditolak sistem.\n\n" +
-      "Alasan: " + r.alasan + "\n\n" +
-      "Silakan kembali ke meja pendaftaran untuk perbaiki data dan daftar ulang. Terima kasih.";
+    var pesan = [
+      "*PENDAFTARAN DITOLAK - " + NAMA_EVENT + "*",
+      "",
+      "Alasan: " + r.alasan,
+      "",
+      "Nama: " + r.nama,
+      "Kategori: " + r.kategori + " - " + r.item,
+      "",
+      "Silakan kembali ke meja pendaftaran (petugas OTS) untuk perbaiki data dan daftar ulang."
+    ].join("\n");
     return "https://wa.me/" + hp + "?text=" + encodeURIComponent(pesan);
   }
 
