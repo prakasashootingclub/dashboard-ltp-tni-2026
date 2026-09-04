@@ -188,13 +188,22 @@
     } catch(e){ return iso; }
   }
 
-  // Nomor HP kadang berisi "0813... / 0814..." (kasus 2 HP beda) --
-  // link WA cuma diambil dari nomor pertama yang valid.
-  function nomorWaLink(hpRaw){
-    var hp = String(hpRaw || "").split("/")[0].trim().replace(/[^0-9]/g, "");
+  // Nomor HP kadang berisi "0813... / 0814..." (kasus 2 HP beda) -- link
+  // WA cuma diambil dari nomor pertama yang valid. "?text=" diisi pesan
+  // siap kirim (nama, kategori/item, alasan, arahan balik ke meja
+  // pendaftaran) supaya petugas TINGGAL TEKAN KIRIM di WhatsApp, tidak
+  // perlu ngetik manual -- sama pola dengan pesan siap kirim di halaman
+  // lain (blokPesanSiapKirim_ di Code.js). Permintaan Kang, 4 September
+  // 2026.
+  function waLinkSiapKirim(r){
+    var hp = String(r.hp || "").split("/")[0].trim().replace(/[^0-9]/g, "");
     if (!hp) return null;
     if (hp.charAt(0) === "0") hp = "62" + hp.substring(1);
-    return "https://wa.me/" + hp;
+    var pesan = "Halo " + r.nama + ", pendaftaran Anda untuk *" + r.kategori + " - " + r.item +
+      "* di Lomba Tembak Piala Panglima TNI 2026 ditolak sistem.\n\n" +
+      "Alasan: " + r.alasan + "\n\n" +
+      "Silakan kembali ke meja pendaftaran untuk perbaiki data dan daftar ulang. Terima kasih.";
+    return "https://wa.me/" + hp + "?text=" + encodeURIComponent(pesan);
   }
 
   var terakhirDilihat = null;
@@ -215,7 +224,7 @@
     }
     el.innerHTML = list.map(function(r){
       var baru = terakhirDilihat && new Date(r.waktu) > terakhirDilihat;
-      var waLink = nomorWaLink(r.hp);
+      var waLink = waLinkSiapKirim(r);
       return '<div class="kartu' + (baru ? ' baru' : '') + '">' +
         '<div class="baris-atas">' +
           '<div class="nama">' + escapeHtml(r.nama) + '</div>' +
