@@ -95,6 +95,13 @@
     padding:40px 20px; text-align:center; color:var(--ink-dim); font-size:14px;
   }
 
+  .cari-input{
+    width:100%; padding:12px 14px; margin-bottom:16px; border-radius:6px;
+    border:1px solid var(--line); background:var(--panel); color:var(--ink); font-size:14px;
+  }
+  .cari-input:focus{ outline:none; border-color:var(--amber); }
+  .cari-input::placeholder{ color:var(--ink-faint); }
+
   /* ---------- kartu penolakan ---------- */
   .kartu{
     background:var(--panel); border:1px solid var(--line); border-left:3px solid var(--red);
@@ -156,6 +163,8 @@
       </div>
     </header>
 
+    <input type="text" id="cariInput" placeholder="Cari nama, HP, kategori/item, atau alasan..." class="cari-input">
+
     <div id="daftar"></div>
 
     <footer>Auto-refresh tiap 10 detik &middot; Sumber data: Sheet "Ditolak" (auto-sync Apps Script)</footer>
@@ -189,11 +198,19 @@
   }
 
   var terakhirDilihat = null;
+  // Disimpan tiap kali data berhasil dimuat -- dipakai terapkanFilter()
+  // supaya kotak pencarian filter LANGSUNG tanpa perlu tombol (sama
+  // seperti kotak "Cek/Upload Bukti Pembayaran" di halaman Verifikasi
+  // Pembayaran, dikonfirmasi Kang ini pola yang disukai). Permintaan
+  // Kang, 4 September 2026.
+  var dataTerakhir = [];
 
   function renderDaftar(list){
     var el = document.getElementById("daftar");
     if (!list.length) {
-      el.innerHTML = '<div class="kosong">Belum ada penolakan. Aman.</div>';
+      el.innerHTML = dataTerakhir.length
+        ? '<div class="kosong">Tidak ada yang cocok dengan pencarian.</div>'
+        : '<div class="kosong">Belum ada penolakan. Aman.</div>';
       return;
     }
     el.innerHTML = list.map(function(r){
@@ -209,8 +226,19 @@
         (waLink ? '<div class="aksi"><a class="wa-btn" href="' + waLink + '" target="_blank" rel="noopener">Chat WA &rarr;</a></div>' : '') +
       '</div>';
     }).join("");
-    terakhirDilihat = new Date(list[0].waktu);
   }
+
+  function terapkanFilter(){
+    var kata = document.getElementById("cariInput").value.trim().toLowerCase();
+    if (dataTerakhir.length) terakhirDilihat = new Date(dataTerakhir[0].waktu);
+    if (!kata) { renderDaftar(dataTerakhir); return; }
+    var hasil = dataTerakhir.filter(function(r){
+      return (r.nama + " " + r.hp + " " + r.kategori + " " + r.item + " " + r.alasan)
+        .toLowerCase().indexOf(kata) !== -1;
+    });
+    renderDaftar(hasil);
+  }
+  document.getElementById("cariInput").addEventListener("input", terapkanFilter);
 
   function muatData(){
     var pw = sessionStorage.getItem(STORAGE_KEY);
@@ -226,7 +254,8 @@
           document.getElementById("lastSync").textContent = res.pesan || "Gagal memuat.";
           return;
         }
-        renderDaftar(res.data);
+        dataTerakhir = res.data;
+        terapkanFilter();
         document.getElementById("lastSync").textContent = "Terakhir diperbarui: " + new Date().toLocaleTimeString("id-ID");
       })
       .catch(function(err){
