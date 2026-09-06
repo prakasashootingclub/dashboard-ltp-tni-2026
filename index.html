@@ -76,6 +76,24 @@
   .portal-btn .tag{
     font-size:10px; color:var(--ink-faint); text-transform:uppercase; letter-spacing:.08em;
   }
+
+  /* Tombol "Data Daftar Ulang" -- satu tombol, klik baru muncul pilihan
+     6 materi (dulu 6 tombol terpisah langsung di baris ini). Permintaan
+     Kang, 7 September 2026. */
+  .portal-dropdown-wrap{ position:relative; display:inline-flex; }
+  .portal-btn.dropdown-trigger{ cursor:pointer; font:inherit; }
+  .dropdown-menu{
+    position:absolute; top:calc(100% + 6px); left:0; z-index:50;
+    background:var(--panel); border:1px solid var(--line); border-radius:8px;
+    min-width:190px; padding:6px; display:flex; flex-direction:column; gap:2px;
+    box-shadow:0 10px 28px rgba(0,0,0,0.4);
+  }
+  .dropdown-menu.hidden{ display:none; }
+  .dropdown-menu a{
+    display:block; padding:8px 10px; border-radius:5px; color:var(--ink);
+    text-decoration:none; font-family:var(--mono); font-size:12px;
+  }
+  .dropdown-menu a:hover{ background:var(--panel-2); color:var(--olive-bright); }
   .live-dot{
     display:inline-block; width:7px; height:7px; border-radius:50%;
     background:var(--olive-bright); margin-right:6px;
@@ -291,12 +309,17 @@
     <a class="portal-btn" href="dana-masuk.html">Dana Masuk →</a>
     <a class="portal-btn" href="data-peserta.html">Data Peserta →</a>
     <a class="portal-btn" href="ots-ditolak.html">Penolakan OTS →</a>
-    <a class="portal-btn" href="checkin-senapan.html">Daftar Ulang Senapan →</a>
-    <a class="portal-btn" href="checkin-eksekutif.html">Daftar Ulang Eksekutif →</a>
-    <a class="portal-btn" href="checkin-fallingplate.html">Daftar Ulang Falling Plate →</a>
-    <a class="portal-btn" href="checkin-ipsc.html">Daftar Ulang IPSC →</a>
-    <a class="portal-btn" href="checkin-nonipsc.html">Daftar Ulang Non IPSC →</a>
-    <a class="portal-btn" href="checkin-airrifle.html">Daftar Ulang Air Rifle →</a>
+    <div class="portal-dropdown-wrap">
+      <button class="portal-btn dropdown-trigger" id="daftarUlangTrigger" type="button">Data Daftar Ulang ▾</button>
+      <div class="dropdown-menu hidden" id="daftarUlangMenu">
+        <a href="checkin-senapan.html">Senapan</a>
+        <a href="checkin-eksekutif.html">Eksekutif</a>
+        <a href="checkin-fallingplate.html">Falling Plate</a>
+        <a href="checkin-ipsc.html">IPSC</a>
+        <a href="checkin-nonipsc.html">Non IPSC</a>
+        <a href="checkin-airrifle.html">Air Rifle</a>
+      </div>
+    </div>
     <!-- Landing Page Publik TETAP target="_blank" -- ini domain LAIN (situs
          publik peserta, bukan dashboard admin), sengaja tetap buka tab baru
          supaya tidak nyampur histori dengan halaman internal dashboard. -->
@@ -600,6 +623,23 @@ function mulaiDashboard(){
 }
 
 mulaiDashboard();
+
+// ---------- DROPDOWN "Data Daftar Ulang" ----------
+// Satu tombol, klik baru muncul pilihan 6 materi (dulu 6 tombol terpisah
+// langsung di baris nav). Permintaan Kang, 7 September 2026.
+(function(){
+  var trigger = document.getElementById("daftarUlangTrigger");
+  var menu = document.getElementById("daftarUlangMenu");
+  trigger.addEventListener("click", function(e){
+    e.stopPropagation();
+    menu.classList.toggle("hidden");
+  });
+  document.addEventListener("click", function(e){
+    if (!menu.classList.contains("hidden") && !menu.contains(e.target)) {
+      menu.classList.add("hidden");
+    }
+  });
+})();
 </script>
 </body>
 </html>
