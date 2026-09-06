@@ -279,8 +279,7 @@ function tabelSubMateriHtml(rows, showIpscExtra){
             <th>No HP</th>
             <th>Golongan</th>
             <th>Status Bayar</th>
-            <th>Verif. Pusat</th>
-            <th>Check In Materi</th>
+            <th>Daftar Ulang</th>
             ${kolomExtra}
           </tr>
         </thead>
@@ -291,7 +290,6 @@ function tabelSubMateriHtml(rows, showIpscExtra){
               <td class="hp">${waLink(r.hp)}</td>
               <td>${escapeHtml(r.golongan)}</td>
               <td>${tagBayar(r.statusBayar, r.waktuLunas)}</td>
-              <td>${tagStatus(r.verifPusat, r.waktuVerifPusat)}</td>
               <td>${tagStatus(r.checkinMateri, r.waktuCheckin)}</td>
               ${showIpscExtra ? `
               <td>${escapeHtml(r.powerFactor)}</td>
@@ -357,9 +355,9 @@ function downloadXlsx(){
   const kolom = [
     ["nama", "Nama"], ["hp", "No HP"], ["kategori", "Kategori"], ["item", "Item"],
     ["golongan", "Golongan"], ["statusBayar", "Status Bayar"],
-    ["verifPusat", "Verifikasi Pusat"], ["checkinMateri", "Check In Materi"],
-    ["waktuLunas", "Waktu Lunas"], ["waktuVerifPusat", "Waktu Verifikasi Pusat"],
-    ["waktuCheckin", "Waktu Check In"],
+    ["checkinMateri", "Daftar Ulang"],
+    ["waktuLunas", "Waktu Lunas"],
+    ["waktuCheckin", "Waktu Daftar Ulang"],
     ["powerFactor", "Power Factor (IPSC)"], ["kategoriIpsc", "Kategori (IPSC)"],
     ["waktuPelaksanaan", "Waktu Pelaksanaan (IPSC)"]
   ];

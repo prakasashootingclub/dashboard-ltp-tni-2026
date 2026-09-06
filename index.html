@@ -90,7 +90,7 @@
 
   /* TOTALS STRIP */
   .totals{
-    display:grid; grid-template-columns:repeat(3,1fr); gap:1px;
+    display:grid; grid-template-columns:repeat(2,1fr); gap:1px;
     background:var(--line); border:1px solid var(--line);
     margin-bottom:24px; border-radius:6px; overflow:hidden;
   }
@@ -286,18 +286,17 @@
   </header>
 
   <nav class="portal-nav">
-    <a class="portal-btn" href="scanner-verifikasi.html">Scan Verifikasi Pusat →</a>
-    <a class="portal-btn" href="scanner-checkin.html">Scan Check-in Materi →</a>
+    <a class="portal-btn" href="scanner-checkin.html">Scan Daftar Ulang →</a>
     <a class="portal-btn" href="verifikasi-pembayaran.html">Verifikasi Pembayaran →</a>
     <a class="portal-btn" href="dana-masuk.html">Dana Masuk →</a>
     <a class="portal-btn" href="data-peserta.html">Data Peserta →</a>
     <a class="portal-btn" href="ots-ditolak.html">Penolakan OTS →</a>
-    <a class="portal-btn" href="checkin-senapan.html">Check In Senapan →</a>
-    <a class="portal-btn" href="checkin-eksekutif.html">Check In Eksekutif →</a>
-    <a class="portal-btn" href="checkin-fallingplate.html">Check In Falling Plate →</a>
-    <a class="portal-btn" href="checkin-ipsc.html">Check In IPSC →</a>
-    <a class="portal-btn" href="checkin-nonipsc.html">Check In Non IPSC →</a>
-    <a class="portal-btn" href="checkin-airrifle.html">Check In Air Rifle →</a>
+    <a class="portal-btn" href="checkin-senapan.html">Daftar Ulang Senapan →</a>
+    <a class="portal-btn" href="checkin-eksekutif.html">Daftar Ulang Eksekutif →</a>
+    <a class="portal-btn" href="checkin-fallingplate.html">Daftar Ulang Falling Plate →</a>
+    <a class="portal-btn" href="checkin-ipsc.html">Daftar Ulang IPSC →</a>
+    <a class="portal-btn" href="checkin-nonipsc.html">Daftar Ulang Non IPSC →</a>
+    <a class="portal-btn" href="checkin-airrifle.html">Daftar Ulang Air Rifle →</a>
     <!-- Landing Page Publik TETAP target="_blank" -- ini domain LAIN (situs
          publik peserta, bukan dashboard admin), sengaja tetap buka tab baru
          supaya tidak nyampur histori dengan halaman internal dashboard. -->
@@ -478,19 +477,17 @@ function fmt(n){ return n.toLocaleString("id-ID"); }
 function render(){
   const fr = filteredRows();
 
-  // TOTALS STRIP — 3 kotak. Persentase ditaruh MENYATU di dalam kotak
-  // Verifikasi/Check In (bukan kotak terpisah seperti sebelumnya, itu yang
-  // bikin grid ganjil 5 kotak & membingungkan). "—" dipakai kalau belum
+  // TOTALS STRIP — 2 kotak (Verifikasi Pusat DIHAPUS dari tampilan --
+  // permintaan Kang, 7 September 2026: langkah itu sudah tidak ada lagi
+  // di alur, cuma Terdaftar -> Daftar Ulang). "—" dipakai kalau belum
   // ada yang Terdaftar sama sekali, supaya tidak menyesatkan seolah 0%.
   const sum = (field)=> fr.reduce((a,r)=>a+r[field],0);
   const terdaftarSum = sum("terdaftar");
-  const verifSum = sum("verif");
   const checkinSum = sum("checkin");
   const pct = (num)=> terdaftarSum > 0 ? Math.round(num/terdaftarSum*100)+"%" : "—";
   const totals = [
     {n:terdaftarSum, l:"Terdaftar", cls:"", sub:null},
-    {n:verifSum, l:"Verifikasi Pusat", cls:"accent", sub:pct(verifSum)+" dari terdaftar"},
-    {n:checkinSum, l:"Check In Materi", cls:"amber", sub:pct(checkinSum)+" dari terdaftar"},
+    {n:checkinSum, l:"Daftar Ulang", cls:"amber", sub:pct(checkinSum)+" dari terdaftar"},
   ];
   document.getElementById("totalsStrip").innerHTML = totals.map(t=>`
     <div class="total-cell ${t.cls}">
@@ -505,7 +502,6 @@ function render(){
   grid.innerHTML = kategoriList.map(k=>{
     const kr = fr.filter(r=>k.match(r));
     const t = kr.reduce((a,r)=>a+r.terdaftar,0);
-    const v = kr.reduce((a,r)=>a+r.verif,0);
     const c = kr.reduce((a,r)=>a+r.checkin,0);
     const max = Math.max(t,1);
     const bar = (val)=> Math.max(4, Math.round(val/max*100));
@@ -521,16 +517,12 @@ function render(){
           <div class="frow"><span class="flab">Terdaftar (Lunas)</span>
             <div class="fbar-track"><div class="fbar-fill s1" style="width:${bar(t)}%"></div></div>
             <span class="fval">${fmt(t)}</span></div>
-          <div class="frow"><span class="flab">Verif. Pusat</span>
-            <div class="fbar-track"><div class="fbar-fill s3" style="width:${bar(v)}%"></div></div>
-            <span class="fval">${fmt(v)}</span></div>
-          <div class="frow"><span class="flab">Check In Materi</span>
+          <div class="frow"><span class="flab">Daftar Ulang</span>
             <div class="fbar-track"><div class="fbar-fill s4" style="width:${bar(c)}%"></div></div>
             <span class="fval">${fmt(c)}</span></div>
         </div>
         <div class="card-foot">
-          <span>Belum check in: <b>${fmt(v-c)}</b></span>
-          <span>Belum verif. pusat: <b>${fmt(t-v)}</b></span>
+          <span>Belum daftar ulang: <b>${fmt(t-c)}</b></span>
         </div>
         <div class="card-hint">Klik untuk rincian per sub-materi &rarr;</div>
       </div>
@@ -550,23 +542,21 @@ function bukaDetail(katKey){
   const kr = filteredRows().filter(r=>k.match(r));
   const byItem = {};
   kr.forEach(r=>{
-    if (!byItem[r.item]) byItem[r.item] = {terdaftar:0, verif:0, checkin:0};
+    if (!byItem[r.item]) byItem[r.item] = {terdaftar:0, checkin:0};
     byItem[r.item].terdaftar += r.terdaftar;
-    byItem[r.item].verif += r.verif;
     byItem[r.item].checkin += r.checkin;
   });
 
   const daftarItem = itemCatalog[katKey] || Object.keys(byItem);
   document.getElementById("modalTitle").textContent = k.nama;
   document.getElementById("modalBody").innerHTML = daftarItem.map(nama=>{
-    const n = byItem[nama] || {terdaftar:0, verif:0, checkin:0};
+    const n = byItem[nama] || {terdaftar:0, checkin:0};
     return `
       <div class="item-row">
         <div class="item-name">${nama}</div>
         <div class="item-nums">
           <span class="lbl-terdaftar">Terdaftar <b>${fmt(n.terdaftar)}</b></span>
-          <span class="lbl-verif">Verif. Pusat <b>${fmt(n.verif)}</b></span>
-          <span class="lbl-checkin">Check In <b>${fmt(n.checkin)}</b></span>
+          <span class="lbl-checkin">Daftar Ulang <b>${fmt(n.checkin)}</b></span>
         </div>
       </div>
     `;

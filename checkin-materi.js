@@ -1,18 +1,23 @@
 // checkin-materi.js
 //
-// Logika bersama untuk 6 halaman "Check-in <Materi>" (Senapan, Eksekutif,
-// Falling Plate, IPSC, Non IPSC, Air Rifle). Tiap halaman HTML tinggal
+// Logika bersama untuk 6 halaman "Daftar Ulang <Materi>" (Senapan,
+// Eksekutif, Falling Plate, IPSC, Non IPSC, Air Rifle) -- nama tampilan
+// diganti dari "Check In Materi" ke "Daftar Ulang" (permintaan Kang, 7
+// September 2026, bersamaan dengan dihapusnya pos Verifikasi Pusat dari
+// alur). Nama variabel/field INTERNAL (checkinMateri, waktuCheckin, dst)
+// SENGAJA tetap tidak diubah -- itu cuma nama teknis di kode & field JSON
+// dari backend, tidak pernah tampil ke pengguna. Tiap halaman HTML tinggal
 // set `const MATERI_KEY = "senapan";` (dst) SEBELUM memuat file ini.
 //
 // Baris peserta HANYA muncul di sini kalau QR e-tiketnya SUDAH discan di
-// Check-in Materi (checkinMateri === "Sudah") -- beda dengan data-
+// pos Daftar Ulang (checkinMateri === "Sudah") -- beda dengan data-
 // peserta.html yang menampilkan SEMUA peserta terdaftar. Halaman ini
 // dipakai operator penentu gelombang & lajur di venue, jadi yang relevan
-// cuma siapa yang SUDAH datang dan check-in, bukan siapa yang baru
+// cuma siapa yang SUDAH datang dan daftar ulang, bukan siapa yang baru
 // terdaftar online. Permintaan Kang, 5 September 2026.
 //
-// Diurutkan ASCENDING berdasarkan Waktu Check In (siapa yang check-in
-// duluan tampil duluan) supaya operator gampang bagi gelombang/lajur
+// Diurutkan ASCENDING berdasarkan Waktu Daftar Ulang (siapa yang daftar
+// ulang duluan tampil duluan) supaya operator gampang bagi gelombang/lajur
 // berurutan sesuai kedatangan.
 
 const FALLING_PLATE_ITEMS = [
@@ -112,9 +117,9 @@ function tabelSubMateriHtml(rows) {
     ? `<th>Power Factor</th><th>Kategori</th><th>Waktu Pelaksanaan</th>`
     : "";
   if (!rows.length) {
-    return `<div class="table-wrap"><table><tbody><tr class="empty-row"><td colspan="6">Belum ada peserta check-in di sub-materi ini.</td></tr></tbody></table></div>`;
+    return `<div class="table-wrap"><table><tbody><tr class="empty-row"><td colspan="6">Belum ada peserta daftar ulang di sub-materi ini.</td></tr></tbody></table></div>`;
   }
-  // Urut ASCENDING waktu check-in (siapa datang duluan tampil duluan).
+  // Urut ASCENDING waktu daftar ulang (siapa datang duluan tampil duluan).
   const sorted = rows.slice().sort((a, b) => (a.waktuCheckinRaw || "").localeCompare(b.waktuCheckinRaw || ""));
   return `
     <div class="table-wrap">
@@ -125,7 +130,7 @@ function tabelSubMateriHtml(rows) {
             <th>Nama</th>
             <th>No HP</th>
             <th>Golongan</th>
-            <th>Waktu Check In</th>
+            <th>Waktu Daftar Ulang</th>
             ${kolomExtra}
           </tr>
         </thead>
@@ -168,7 +173,7 @@ function tabelHtml(rows) {
     <div class="sub-materi">
       <div class="sub-head">
         <h3>${escapeHtml(item)}</h3>
-        <span class="kat-count">${irows.length} sudah check-in</span>
+        <span class="kat-count">${irows.length} sudah daftar ulang</span>
       </div>
       ${tabelSubMateriHtml(irows)}
     </div>
@@ -181,7 +186,7 @@ function downloadXlsx() {
   const rows = filteredRows().slice().sort((a, b) => (a.waktuCheckinRaw || "").localeCompare(b.waktuCheckinRaw || ""));
   const kolom = [
     ["no", "No."], ["nama", "Nama"], ["hp", "No HP"], ["item", "Item"], ["golongan", "Golongan"],
-    ["waktuCheckin", "Waktu Check In"],
+    ["waktuCheckin", "Waktu Daftar Ulang"],
     ["powerFactor", "Power Factor (IPSC)"], ["kategoriIpsc", "Kategori (IPSC)"], ["waktuPelaksanaan", "Waktu Pelaksanaan (IPSC)"]
   ];
   const aoa = [kolom.map(k => k[1])];
@@ -189,14 +194,14 @@ function downloadXlsx() {
   const ws = XLSX.utils.aoa_to_sheet(aoa);
   ws["!cols"] = kolom.map(() => ({ wch: 20 }));
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Check In " + materi.judul);
+  XLSX.utils.book_append_sheet(wb, ws, "Daftar Ulang " + materi.judul);
   const tanggal = new Date().toISOString().slice(0, 10);
   XLSX.writeFile(wb, "checkin-" + MATERI_KEY + "-ltp-tni-2026-" + tanggal + ".xlsx");
 }
 
 function render() {
   const rows = filteredRows();
-  document.getElementById("countBadge").textContent = rows.length + " sudah check-in";
+  document.getElementById("countBadge").textContent = rows.length + " sudah daftar ulang";
   document.getElementById("katSections").innerHTML = tabelHtml(rows);
 }
 
@@ -215,8 +220,8 @@ async function muatData() {
   }
 }
 
-document.title = "LTP TNI 2026 — Check In " + materi.judul;
-document.getElementById("pageTitle").textContent = "Check In — " + materi.judul;
+document.title = "LTP TNI 2026 — Daftar Ulang " + materi.judul;
+document.getElementById("pageTitle").textContent = "Daftar Ulang — " + materi.judul;
 document.getElementById("searchInput").addEventListener("input", render);
 document.getElementById("downloadBtn").addEventListener("click", downloadXlsx);
 
