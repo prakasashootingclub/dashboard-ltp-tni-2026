@@ -411,10 +411,16 @@
           return a.golongan < b.golongan ? -1 : 1;
         });
 
-        var metodeLengkap = lengkapiKategori(d.perMetode, ["Transfer Bank", "Tunai"], function(r){ return r.metode; },
+        // Label "Transfer Bank"/"Tunai" (lama) diganti "Transfer"/"Tunai
+        // (OTS)" -- permintaan Kang, 7 September 2026. Data historis yang
+        // masih pakai label lama tetap tampil apa adanya (lengkapiKategori
+        // cuma MENAMBAH baris kosong untuk label yang belum ada, tidak
+        // pernah menyembunyikan data asli), cuma urutannya taruh label
+        // baru duluan.
+        var metodeLengkap = lengkapiKategori(d.perMetode, ["Transfer", "Tunai (OTS)"], function(r){ return r.metode; },
           function(k){ return { metode: k, dana: 0, jumlah: 0 }; });
         renderRincian("rincianMetode", metodeLengkap, function(r){ return r.metode; }, "peserta",
-          function(a, b){ return ["Transfer Bank", "Tunai"].indexOf(a.metode) - ["Transfer Bank", "Tunai"].indexOf(b.metode); });
+          function(a, b){ return ["Transfer", "Tunai (OTS)"].indexOf(a.metode) - ["Transfer", "Tunai (OTS)"].indexOf(b.metode); });
 
         var sumberLengkap = lengkapiKategori(d.perSumber, ["online", "ots"], function(r){ return r.sumber; },
           function(k){ return { sumber: k, dana: 0, jumlah: 0 }; });
