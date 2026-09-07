@@ -158,6 +158,21 @@
   }
   #statusLunas{font-size:12px; color:#5B6660; margin-bottom:10px;}
   #listLunas{display:flex; flex-direction:column; gap:10px;}
+
+  /* ---------- tab ---------- */
+  .tab-bar{
+    display:flex; gap:6px; margin:16px 0 18px; border-bottom:1px solid #2A322C;
+  }
+  .tab-btn{
+    flex:1; padding:10px 6px; background:none; border:none; border-bottom:2px solid transparent;
+    color:#8C9A8A; font-size:12.5px; font-weight:600; cursor:pointer;
+  }
+  .tab-btn.active{ color:#8FB35A; border-bottom-color:#8FB35A; }
+  .tab-panel.hidden{ display:none; }
+  .toggle-row{
+    display:flex; align-items:center; gap:8px; font-size:12px; color:#8C9A8A; margin-bottom:12px;
+  }
+  .toggle-row input{ width:auto; margin:0; }
 </style>
 </head>
 <body>
@@ -183,7 +198,22 @@
 <div id="app" class="hidden">
   <h2>Verifikasi Pembayaran</h2>
   <div class="pos-aktif">Pos: <b id="posAktifLabel"></b><button id="gantiPosBtn">Ganti</button></div>
-  <div class="resend-section" style="margin-top:0; padding-top:0; border-top:none;">
+
+  <div class="tab-bar">
+    <button class="tab-btn active" data-tab="bayar">Verifikasi Bayar</button>
+    <button class="tab-btn" data-tab="resend">Kirim Ulang E-Tiket</button>
+    <button class="tab-btn" data-tab="tolak">Penolakan</button>
+  </div>
+
+  <div class="tab-panel" data-panel="bayar">
+    <input type="text" id="cariInput" placeholder="Cari nama, NIK, atau No HP...">
+    <button id="refreshBtn">Muat Ulang Daftar</button>
+    <div id="status"></div>
+    <div id="list"></div>
+    <div id="empty" class="hidden">Tidak ada peserta yang menunggu verifikasi saat ini.</div>
+  </div>
+
+  <div class="tab-panel hidden" data-panel="resend">
     <div class="lbl">Peserta sudah Lunas minta dikirim ulang e-tiket?</div>
     <input type="text" id="cariLunasInput" placeholder="Cari Nama, NIK, Email, atau No HP...">
     <button id="cariLunasBtn">Cari Peserta</button>
@@ -191,15 +221,12 @@
     <div id="listLunas"></div>
   </div>
 
-  <div class="lbl" style="margin-top:24px; padding-top:18px; border-top:1px solid #2A322C;">Cek/upload bukti pembayaran dulu sebelum tap "Lunas"</div>
-  <input type="text" id="cariInput" placeholder="Cari nama, NIK, atau No HP...">
-  <button id="refreshBtn">Muat Ulang Daftar</button>
-  <div id="status"></div>
-  <div id="list"></div>
-  <div id="empty" class="hidden">Tidak ada peserta yang menunggu verifikasi saat ini.</div>
-
-  <div class="tolak-section">
-    <div class="lbl">Pendaftaran yang ditolak sistem (semua materi, terbaru duluan)</div>
+  <div class="tab-panel hidden" data-panel="tolak">
+    <div class="lbl">Pendaftaran yang ditolak sistem, terbaru duluan</div>
+    <div class="toggle-row">
+      <input type="checkbox" id="tolakSemuaMateri">
+      <label for="tolakSemuaMateri">Lihat semua materi (bukan cuma pos ini)</label>
+    </div>
     <input type="text" id="cariTolakInput" placeholder="Cari nama, HP, kategori/item, atau alasan...">
     <button id="refreshTolakBtn">Muat Ulang Daftar Penolakan</button>
     <div id="statusTolak"></div>
@@ -689,11 +716,22 @@
 
   function terapkanFilterTolak(){
     var kata = document.getElementById("cariTolakInput").value.trim().toLowerCase();
-    if (!kata) { renderListTolak(dataTolakTerakhir); return; }
-    var hasil = dataTolakTerakhir.filter(function(r){
-      return (r.nama + " " + r.hp + " " + r.kategori + " " + r.item + " " + r.alasan)
-        .toLowerCase().indexOf(kata) !== -1;
-    });
+    var semuaMateri = document.getElementById("tolakSemuaMateri").checked;
+    var materi = sessionStorage.getItem(MATERI_KEY);
+
+    var hasil = semuaMateri
+      ? dataTolakTerakhir
+      : dataTolakTerakhir.filter(function(r){ return cocokMateri({ kategori: r.kategori, item: r.item }, materi); });
+
+    document.getElementById("statusTolak").textContent = hasil.length + " penolakan" +
+      (semuaMateri ? " (semua materi)" : " -- " + materi) + (kata ? " (hasil cari)" : "") + ".";
+
+    if (kata) {
+      hasil = hasil.filter(function(r){
+        return (r.nama + " " + r.hp + " " + r.kategori + " " + r.item + " " + r.alasan)
+          .toLowerCase().indexOf(kata) !== -1;
+      });
+    }
     renderListTolak(hasil);
   }
 
@@ -710,7 +748,6 @@
       .then(function(res){
         if (!res.ok) { statusTolak.textContent = res.pesan || "Gagal memuat."; return; }
         dataTolakTerakhir = res.data;
-        statusTolak.textContent = dataTolakTerakhir.length + " penolakan tercatat.";
         terapkanFilterTolak();
       })
       .catch(function(err){
@@ -720,6 +757,17 @@
 
   document.getElementById("refreshTolakBtn").onclick = muatDaftarTolak;
   document.getElementById("cariTolakInput").addEventListener("input", terapkanFilterTolak);
+  document.getElementById("tolakSemuaMateri").addEventListener("change", terapkanFilterTolak);
+
+  // ---------- Tab (Verifikasi Bayar / Kirim Ulang E-Tiket / Penolakan) ----------
+  document.querySelectorAll(".tab-btn").forEach(function(btn){
+    btn.onclick = function(){
+      document.querySelectorAll(".tab-btn").forEach(function(b){ b.classList.remove("active"); });
+      document.querySelectorAll(".tab-panel").forEach(function(p){ p.classList.add("hidden"); });
+      btn.classList.add("active");
+      document.querySelector('.tab-panel[data-panel="' + btn.getAttribute("data-tab") + '"]').classList.remove("hidden");
+    };
+  });
 
   // Hash SHA-256 dari password yang benar -- bukan password mentahnya --
   // supaya tidak kelihatan polos di kode sumber halaman ini.
