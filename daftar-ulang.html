@@ -8,103 +8,48 @@
 <meta name="theme-color" content="#0E1210">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-512.png">
-<title>LTP TNI 2026 — Data Daftar Ulang</title>
+<title>Data Daftar Ulang — LTP TNI 2026</title>
 <style>
-  :root{
-    --bg:#0E1210;
-    --panel:#161B17;
-    --panel-2:#1D2420;
-    --line:#2A322C;
-    --ink:#E9EAE3;
-    --ink-dim:#8C9A8A;
-    --ink-faint:#5B6660;
-    --olive:#5C7A3A;
-    --olive-bright:#8FB35A;
-    --amber:#C7852E;
-    --amber-bright:#E5A94A;
-    --mono: ui-monospace, "SF Mono", "Cascadia Mono", "Roboto Mono", Consolas, monospace;
-    --sans: -apple-system, "Segoe UI", "Inter", Helvetica, Arial, sans-serif;
-  }
-  *{box-sizing:border-box; margin:0; padding:0;}
+  *{box-sizing:border-box;}
   body{
-    background:
-      radial-gradient(1200px 600px at 15% -10%, rgba(92,122,58,0.09), transparent 60%),
-      var(--bg);
-    color:var(--ink);
-    font-family:var(--sans);
-    padding:24px 16px 50px;
-    min-height:100vh;
+    font-family:-apple-system,'Segoe UI',sans-serif;
+    background:#0E1210; color:#E9EAE3; margin:0; padding:16px;
+    max-width:560px; margin-left:auto; margin-right:auto;
   }
-  .wrap{max-width:760px; margin:0 auto;}
-
-  header{
-    border-bottom:1px solid var(--line);
-    padding-bottom:16px; margin-bottom:22px;
-  }
-  .brand-eyebrow{
-    font-family:var(--mono); font-size:11px; letter-spacing:.18em;
-    color:var(--olive-bright); text-transform:uppercase; margin-bottom:6px;
-  }
-  h1{font-size:22px; font-weight:700; letter-spacing:-0.01em;}
-  .subtitle{font-size:12.5px; color:var(--ink-dim); margin-top:4px;}
+  h2{font-size:18px; margin:0 0 4px;}
+  .lbl{font-size:11px; text-transform:uppercase; color:#5B6660; letter-spacing:.08em; margin-bottom:14px;}
   .back-link{
-    display:inline-block; margin-top:10px; font-family:var(--mono); font-size:11px;
-    color:var(--olive-bright); text-decoration:none;
+    display:inline-block; margin-bottom:16px; font-size:12px;
+    color:#8FB35A; text-decoration:none;
   }
   .back-link:hover{text-decoration:underline;}
 
-  .materi-grid{
-    display:grid; grid-template-columns:1fr 1fr; gap:12px;
+  #pilihMateri{
+    display:flex; flex-direction:column; align-items:center; gap:12px; padding:20px 0;
   }
-  @media(max-width:520px){ .materi-grid{ grid-template-columns:1fr; } }
-
-  .materi-card{
-    display:block; padding:18px 18px 16px; border:1px solid var(--line); border-radius:8px;
-    background:var(--panel); color:var(--ink); text-decoration:none; transition:.15s;
+  #pilihMateri .materi-btn{
+    display:block; width:100%; max-width:280px; padding:16px; border-radius:8px;
+    border:1px solid #2A322C; background:#161B17; color:#E9EAE3;
+    font-size:15px; font-weight:700; text-align:center; text-decoration:none;
   }
-  .materi-card:hover{ border-color:var(--olive); background:var(--panel-2); }
-  .materi-card .nama{ font-size:16px; font-weight:700; margin-bottom:6px; }
-  .materi-card .hint{ font-family:var(--mono); font-size:11px; color:var(--ink-faint); }
+  #pilihMateri .materi-btn:active,
+  #pilihMateri .materi-btn:hover{background:#5C7A3A; color:#0E1210;}
 </style>
 </head>
 <body>
 
-<div class="wrap">
+<a class="back-link" href="index.html">&larr; Kembali ke Dashboard</a>
 
-  <header>
-    <div class="brand-eyebrow">Bag Pendaftaran &middot; Prakasa Shooting Club</div>
-    <h1>Data Daftar Ulang</h1>
-    <div class="subtitle">Lomba Tembak Piala Panglima TNI 2026 — pilih materi untuk lihat siapa yang sudah daftar ulang</div>
-    <a class="back-link" href="index.html">&larr; Kembali ke Dashboard</a>
-  </header>
+<h2>Data Daftar Ulang</h2>
+<div class="lbl">Pilih materi</div>
 
-  <div class="materi-grid">
-    <a class="materi-card" href="checkin-senapan.html">
-      <div class="nama">Senapan</div>
-      <div class="hint">Lihat data daftar ulang &rarr;</div>
-    </a>
-    <a class="materi-card" href="checkin-eksekutif.html">
-      <div class="nama">Eksekutif</div>
-      <div class="hint">Lihat data daftar ulang &rarr;</div>
-    </a>
-    <a class="materi-card" href="checkin-fallingplate.html">
-      <div class="nama">Falling Plate</div>
-      <div class="hint">Lihat data daftar ulang &rarr;</div>
-    </a>
-    <a class="materi-card" href="checkin-ipsc.html">
-      <div class="nama">IPSC Level II</div>
-      <div class="hint">Lihat data daftar ulang &rarr;</div>
-    </a>
-    <a class="materi-card" href="checkin-nonipsc.html">
-      <div class="nama">Non IPSC</div>
-      <div class="hint">Lihat data daftar ulang &rarr;</div>
-    </a>
-    <a class="materi-card" href="checkin-airrifle.html">
-      <div class="nama">Air Rifle</div>
-      <div class="hint">Lihat data daftar ulang &rarr;</div>
-    </a>
-  </div>
-
+<div id="pilihMateri">
+  <a class="materi-btn" href="checkin-senapan.html">Senapan</a>
+  <a class="materi-btn" href="checkin-eksekutif.html">Eksekutif</a>
+  <a class="materi-btn" href="checkin-fallingplate.html">Falling Plate</a>
+  <a class="materi-btn" href="checkin-ipsc.html">IPSC Level II</a>
+  <a class="materi-btn" href="checkin-nonipsc.html">Non IPSC</a>
+  <a class="materi-btn" href="checkin-airrifle.html">Air Rifle</a>
 </div>
 
 </body>
