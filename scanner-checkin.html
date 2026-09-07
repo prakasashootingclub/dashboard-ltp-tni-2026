@@ -150,7 +150,7 @@
 
   <button class="cari-toggle" id="cariToggle">Peserta tidak punya QR? Cari manual by nama/NIK</button>
   <div id="cariBox" class="hidden">
-    <input type="text" id="cariInput" placeholder="Ketik nama atau NIK...">
+    <input type="text" id="cariInput" placeholder="Ketik nama, NIK, atau No HP...">
     <button class="cari-btn" id="cariBtn">Cari</button>
     <div id="cariStatus" style="font-size:12px;color:#5B6660;margin-bottom:8px;"></div>
     <div id="cariHasil"></div>
@@ -202,7 +202,9 @@
         '<div class="meta">NIK: ' + escapeHtml(res.ktp) + '<br>' +
         'HP: ' + hpHtml + '<br>' +
         escapeHtml(namaTampilanMateri(res.kategori)) + ' &middot; ' + escapeHtml(res.item) + '<br>' +
-        'Golongan: ' + escapeHtml(res.golongan) + '</div>' +
+        'Golongan: ' + escapeHtml(res.golongan) +
+        (res.instansiClub && res.instansiClub !== "-" ? '<br>Instansi/Club: ' + escapeHtml(res.instansiClub) : '') +
+        '</div>' +
         fotoHtml
       ) : '');
     // Golongan di data beda dengan KTP fisik peserta? Tombol ini CUMA
@@ -338,7 +340,7 @@
     var q = document.getElementById("cariInput").value.trim();
     var statusEl = document.getElementById("cariStatus");
     var hasilEl = document.getElementById("cariHasil");
-    if (!q) { statusEl.textContent = "Ketik nama atau NIK dulu."; return; }
+    if (!q) { statusEl.textContent = "Ketik nama, NIK, atau No HP dulu."; return; }
     statusEl.textContent = "Mencari...";
     hasilEl.innerHTML = "";
     var pw = sessionStorage.getItem(STORAGE_KEY);
@@ -364,10 +366,16 @@
           var fotoHtml = p.fotoKtpUrl
             ? '<a href="' + escapeHtml(p.fotoKtpUrl) + '" target="_blank" rel="noopener" style="display:inline-block;font-size:12px;color:#5b8fd6;margin-bottom:8px;">Lihat Foto KTP &rarr;</a><br>'
             : '<div style="font-size:11px;color:#E5A94A;margin-bottom:8px;">Tidak ada foto KTP -- cocokkan manual dengan KTP fisik.</div>';
+          var hpDigits = String(p.hp || "").replace(/[^0-9]/g, "");
+          var hpHtml = hpDigits
+            ? '<a href="https://wa.me/' + hpDigits + '" target="_blank" rel="noopener">' + escapeHtml(p.hp) + '</a>'
+            : escapeHtml(p.hp);
           card.innerHTML =
             '<div class="nama">' + escapeHtml(p.nama) + '</div>' +
             '<div class="meta">NIK: ' + escapeHtml(p.ktp) + '<br>' +
+            'HP: ' + hpHtml + '<br>' +
             escapeHtml(namaTampilanMateri(p.kategori)) + ' &middot; ' + escapeHtml(p.item) + '<br>' +
+            (p.instansiClub && p.instansiClub !== "-" ? 'Instansi/Club: ' + escapeHtml(p.instansiClub) + '<br>' : '') +
             'Status: ' + (sudahVerif ? 'Sudah daftar ulang' : 'Belum daftar ulang') + '</div>' +
             fotoHtml +
             '<button class="verif-manual">' + (sudahVerif ? 'Sudah pernah daftar ulang' : 'Daftar Ulang Manual') + '</button>';

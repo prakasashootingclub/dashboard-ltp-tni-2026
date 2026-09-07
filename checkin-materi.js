@@ -117,7 +117,7 @@ function tabelSubMateriHtml(rows) {
     ? `<th>Power Factor</th><th>Kategori</th><th>Waktu Pelaksanaan</th>`
     : "";
   if (!rows.length) {
-    return `<div class="table-wrap"><table><tbody><tr class="empty-row"><td colspan="6">Belum ada peserta daftar ulang di sub-materi ini.</td></tr></tbody></table></div>`;
+    return `<div class="table-wrap"><table><tbody><tr class="empty-row"><td colspan="7">Belum ada peserta daftar ulang di sub-materi ini.</td></tr></tbody></table></div>`;
   }
   // Urut ASCENDING waktu daftar ulang (siapa datang duluan tampil duluan).
   const sorted = rows.slice().sort((a, b) => (a.waktuCheckinRaw || "").localeCompare(b.waktuCheckinRaw || ""));
@@ -130,6 +130,7 @@ function tabelSubMateriHtml(rows) {
             <th>Nama</th>
             <th>No HP</th>
             <th>Golongan</th>
+            <th>Instansi/Club</th>
             <th>Waktu Daftar Ulang</th>
             ${kolomExtra}
           </tr>
@@ -141,6 +142,7 @@ function tabelSubMateriHtml(rows) {
               <td class="nama">${escapeHtml(r.nama)}</td>
               <td class="hp">${waLink(r.hp)}</td>
               <td>${escapeHtml(r.golongan)}</td>
+              <td>${escapeHtml(r.instansiClub)}</td>
               <td class="waktu-cell">${escapeHtml(r.waktuCheckin)}</td>
               ${materi.showIpscExtra ? `
               <td>${escapeHtml(r.powerFactor)}</td>
@@ -186,6 +188,7 @@ function downloadXlsx() {
   const rows = filteredRows().slice().sort((a, b) => (a.waktuCheckinRaw || "").localeCompare(b.waktuCheckinRaw || ""));
   const kolom = [
     ["no", "No."], ["nama", "Nama"], ["hp", "No HP"], ["item", "Item"], ["golongan", "Golongan"],
+    ["instansiClub", "Instansi/Club"],
     ["waktuCheckin", "Waktu Daftar Ulang"],
     ["powerFactor", "Power Factor (IPSC)"], ["kategoriIpsc", "Kategori (IPSC)"], ["waktuPelaksanaan", "Waktu Pelaksanaan (IPSC)"]
   ];

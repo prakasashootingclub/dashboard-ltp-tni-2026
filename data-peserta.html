@@ -149,7 +149,7 @@
   </div>
 
   <div class="toolbar">
-    <input type="text" id="searchInput" placeholder="Cari nama atau item...">
+    <input type="text" id="searchInput" placeholder="Cari nama, No HP, atau item...">
     <div class="count-badge" id="countBadge">memuat…</div>
     <button id="downloadBtn">&#8681; Download Excel</button>
   </div>
@@ -278,6 +278,7 @@ function tabelSubMateriHtml(rows, showIpscExtra){
             <th>Nama</th>
             <th>No HP</th>
             <th>Golongan</th>
+            <th>Instansi/Club</th>
             <th>Status Bayar</th>
             <th>Daftar Ulang</th>
             ${kolomExtra}
@@ -289,6 +290,7 @@ function tabelSubMateriHtml(rows, showIpscExtra){
               <td class="nama">${escapeHtml(r.nama)}</td>
               <td class="hp">${waLink(r.hp)}</td>
               <td>${escapeHtml(r.golongan)}</td>
+              <td>${escapeHtml(r.instansiClub)}</td>
               <td>${tagBayar(r.statusBayar, r.waktuLunas)}</td>
               <td>${tagStatus(r.checkinMateri, r.waktuCheckin)}</td>
               ${showIpscExtra ? `
@@ -335,11 +337,19 @@ function tabelHtml(rows, katalog){
   }).join("");
 }
 
+// NIK SENGAJA tidak ikut dicari di sini -- halaman ini publik tanpa
+// password (lihat catatan endpoint dataPesertaRingkas_ di Code.gs), NIK
+// tidak pernah dikirim ke browser supaya tidak bisa dilihat siapa pun
+// yang buka link ini. Permintaan Kang, 7 September 2026: pencarian di
+// semua halaman harus bisa Nama/NIK/No HP -- di sini cuma Nama & No HP
+// yang memungkinkan, NIK tetap eksklusif ke halaman yang pakai password
+// (Verifikasi Pembayaran, Daftar Ulang scanner, dst).
 function filteredRows(){
   const q = document.getElementById("searchInput").value.trim().toLowerCase();
   return q
     ? allRows.filter(r =>
         (r.nama || "").toLowerCase().includes(q) ||
+        (r.hp || "").toLowerCase().includes(q) ||
         (r.item || "").toLowerCase().includes(q))
     : allRows;
 }
@@ -354,7 +364,7 @@ function downloadXlsx(){
   const rows = filteredRows();
   const kolom = [
     ["nama", "Nama"], ["hp", "No HP"], ["kategori", "Kategori"], ["item", "Item"],
-    ["golongan", "Golongan"], ["statusBayar", "Status Bayar"],
+    ["golongan", "Golongan"], ["instansiClub", "Instansi/Club"], ["statusBayar", "Status Bayar"],
     ["checkinMateri", "Daftar Ulang"],
     ["waktuLunas", "Waktu Lunas"],
     ["waktuCheckin", "Waktu Daftar Ulang"],

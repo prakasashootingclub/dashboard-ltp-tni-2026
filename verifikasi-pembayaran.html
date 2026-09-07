@@ -174,7 +174,7 @@
   </div>
 
   <div class="lbl" style="margin-top:24px; padding-top:18px; border-top:1px solid #2A322C;">Cek/upload bukti pembayaran dulu sebelum tap "Lunas"</div>
-  <input type="text" id="cariInput" placeholder="Cari nama atau NIK...">
+  <input type="text" id="cariInput" placeholder="Cari nama, NIK, atau No HP...">
   <button id="refreshBtn">Muat Ulang Daftar</button>
   <div id="status"></div>
   <div id="list"></div>
@@ -398,6 +398,7 @@
         '<div class="meta">' +
           escapeHtml(namaTampilanMateri(item.kategori)) + ' &middot; ' + escapeHtml(item.item) + '<br>' +
           'HP: ' + escapeHtml(item.hp) + ' &middot; Golongan: ' + escapeHtml(item.golongan) + '<br>' +
+          (item.instansiClub && item.instansiClub !== "-" ? 'Instansi/Club: ' + escapeHtml(item.instansiClub) + '<br>' : '') +
           'Metode: <b>' + escapeHtml(item.metodeBayar || "-") + '</b> &middot; Total: <b class="biaya">' + fmtRupiah(item.biaya) + '</b>' +
         '</div>' +
         catatanHtml +
@@ -438,7 +439,8 @@
     if (q) {
       hasil = hasil.filter(function(item){
         return String(item.nama || "").toLowerCase().indexOf(q) !== -1 ||
-          String(item.nik || "").toLowerCase().indexOf(q) !== -1;
+          String(item.nik || "").toLowerCase().indexOf(q) !== -1 ||
+          String(item.hp || "").toLowerCase().indexOf(q) !== -1;
       });
     }
     status.textContent = hasil.length + " peserta menunggu verifikasi" + (q ? " (hasil cari)" : " -- " + materi) + ".";
