@@ -126,6 +126,24 @@
   }
   #status{font-size:12px; color:#5B6660; margin-bottom:10px;}
 
+  /* ---------- penolakan (dipindah dari ots-ditolak.html) ---------- */
+  .tolak-section{
+    margin-top:28px; padding-top:18px; border-top:1px solid #2A322C;
+  }
+  .kartu-tolak{
+    background:#161B17; border:1px solid #2A322C; border-left:3px solid #B4483A;
+    border-radius:8px; padding:14px 16px; margin-bottom:10px;
+  }
+  .kartu-tolak .baris-atas{ display:flex; justify-content:space-between; align-items:flex-start; gap:12px; }
+  .kartu-tolak .nama{ font-size:14px; font-weight:700; }
+  .kartu-tolak .waktu{ font-family:monospace; font-size:11px; color:#5B6660; white-space:nowrap; }
+  .kartu-tolak .meta{ font-size:12px; color:#9ba488; margin-top:4px; }
+  .kartu-tolak .alasan{
+    font-size:12.5px; color:#E58B7A; margin-top:8px; padding-top:8px;
+    border-top:1px solid #2A322C;
+  }
+  #statusTolak{font-size:12px; color:#5B6660; margin-bottom:10px;}
+
   /* ---------- kirim ulang e-tiket (peserta sudah Lunas) ---------- */
   .resend-section{
     margin-top:28px; padding-top:18px; border-top:1px solid #2A322C;
@@ -179,6 +197,14 @@
   <div id="status"></div>
   <div id="list"></div>
   <div id="empty" class="hidden">Tidak ada peserta yang menunggu verifikasi saat ini.</div>
+
+  <div class="tolak-section">
+    <div class="lbl">Pendaftaran yang ditolak sistem (semua materi, terbaru duluan)</div>
+    <input type="text" id="cariTolakInput" placeholder="Cari nama, HP, kategori/item, atau alasan...">
+    <button id="refreshTolakBtn">Muat Ulang Daftar Penolakan</button>
+    <div id="statusTolak"></div>
+    <div id="listTolak"></div>
+  </div>
 </div>
 
 <script>
@@ -608,6 +634,93 @@
     if (e.key === "Enter") cariLunas();
   });
 
+  // ---------- Penolakan (dipindah dari ots-ditolak.html, 7 September 2026) ----------
+  // Sama sekali tidak difilter per pos materi -- semua pos yang pegang
+  // password Verifikasi Pembayaran bisa lihat SEMUA penolakan lintas
+  // materi, sama seperti perilaku halaman lama.
+  var NAMA_EVENT = "Lomba Tembak Piala Panglima TNI Tahun 2026";
+  var dataTolakTerakhir = [];
+
+  function fmtWaktuTolak(iso){
+    try {
+      var d = new Date(iso);
+      return d.toLocaleString("id-ID", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+    } catch(e){ return iso; }
+  }
+
+  function waLinkPenolakan(r){
+    var hp = String(r.hp || "").split("/")[0].trim().replace(/[^0-9]/g, "");
+    if (!hp) return null;
+    if (hp.charAt(0) === "0") hp = "62" + hp.substring(1);
+    var pesan = [
+      "*PENDAFTARAN DITOLAK - " + NAMA_EVENT + "*",
+      "",
+      "Alasan: " + r.alasan,
+      "",
+      "Nama: " + r.nama,
+      "Kategori: " + r.kategori + " - " + r.item,
+      "",
+      "Silakan kembali ke meja pendaftaran (petugas OTS) untuk perbaiki data dan daftar ulang."
+    ].join("\n");
+    return "https://wa.me/" + hp + "?text=" + encodeURIComponent(pesan);
+  }
+
+  function renderListTolak(list){
+    var el = document.getElementById("listTolak");
+    if (!list.length) {
+      el.innerHTML = dataTolakTerakhir.length
+        ? '<div style="text-align:center;color:#5B6660;padding:20px;font-size:13px;">Tidak ada yang cocok dengan pencarian.</div>'
+        : '<div style="text-align:center;color:#5B6660;padding:20px;font-size:13px;">Belum ada penolakan. Aman.</div>';
+      return;
+    }
+    el.innerHTML = list.map(function(r){
+      var waLink = waLinkPenolakan(r);
+      return '<div class="kartu-tolak">' +
+        '<div class="baris-atas">' +
+          '<div class="nama">' + escapeHtml(r.nama) + '</div>' +
+          '<div class="waktu">' + fmtWaktuTolak(r.waktu) + '</div>' +
+        '</div>' +
+        '<div class="meta">' + escapeHtml(r.kategori) + ' &middot; ' + escapeHtml(r.item) + ' &middot; HP: ' + escapeHtml(r.hp) + '</div>' +
+        '<div class="alasan">' + escapeHtml(r.alasan) + '</div>' +
+        (waLink ? '<a class="wa-btn" href="' + waLink + '" target="_blank" rel="noopener">Chat WA &rarr;</a>' : '') +
+      '</div>';
+    }).join("");
+  }
+
+  function terapkanFilterTolak(){
+    var kata = document.getElementById("cariTolakInput").value.trim().toLowerCase();
+    if (!kata) { renderListTolak(dataTolakTerakhir); return; }
+    var hasil = dataTolakTerakhir.filter(function(r){
+      return (r.nama + " " + r.hp + " " + r.kategori + " " + r.item + " " + r.alasan)
+        .toLowerCase().indexOf(kata) !== -1;
+    });
+    renderListTolak(hasil);
+  }
+
+  function muatDaftarTolak(){
+    var statusTolak = document.getElementById("statusTolak");
+    statusTolak.textContent = "Memuat...";
+    var pw = sessionStorage.getItem(STORAGE_KEY);
+    fetch(WEBAPP_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "list_ditolak_terbaru", pw: pw })
+    })
+      .then(function(r){ return r.json(); })
+      .then(function(res){
+        if (!res.ok) { statusTolak.textContent = res.pesan || "Gagal memuat."; return; }
+        dataTolakTerakhir = res.data;
+        statusTolak.textContent = dataTolakTerakhir.length + " penolakan tercatat.";
+        terapkanFilterTolak();
+      })
+      .catch(function(err){
+        statusTolak.textContent = "Gagal terhubung ke server: " + err;
+      });
+  }
+
+  document.getElementById("refreshTolakBtn").onclick = muatDaftarTolak;
+  document.getElementById("cariTolakInput").addEventListener("input", terapkanFilterTolak);
+
   // Hash SHA-256 dari password yang benar -- bukan password mentahnya --
   // supaya tidak kelihatan polos di kode sumber halaman ini.
   var PW_HASH = "cbfad02f9ed2a8d1e08d8f74f5303e9eb93637d47f82ab6f1c15871cf8dd0481";
@@ -642,6 +755,7 @@
     document.getElementById("posAktifLabel").textContent = materi === "Pistol" ? "Eksekutif" : namaTampilanMateri(materi);
     document.getElementById("app").classList.remove("hidden");
     muatDaftar();
+    muatDaftarTolak();
   }
 
   document.querySelectorAll(".materi-btn").forEach(function(btn){
