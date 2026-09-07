@@ -379,16 +379,6 @@
         ? '<div class="warn" style="margin-bottom:8px;">&#9888; ' + escapeHtml(item.catatanKoreksi) + '</div>'
         : '';
 
-      // Peserta pilih Tunai (OTS) untuk materi yang SUDAH TIDAK ADA sesi
-      // OTS-nya (Air Rifle/IPSC/Non-IPSC) -- mereka "nyangkut", tidak akan
-      // bisa bayar tunai di venue. Ditandai merah/tegas supaya tidak
-      // ketiban lupa di antara kartu "Menunggu Verifikasi" biasa.
-      // Permintaan Kang, 7 September 2026.
-      var flagOtsTidakBerlakuHtml = (item.statusBayar === "Perlu Diarahkan ke Transfer (OTS Tidak Berlaku)")
-        ? '<div class="warn" style="margin-bottom:8px; padding:6px 8px; border-radius:4px; background:rgba(224,90,90,0.15); border:1px solid #e07a7a; color:#e07a7a; font-weight:700;">' +
-          '&#9888; OTS TIDAK BERLAKU untuk materi ini -- hubungi peserta, arahkan bayar via Transfer.</div>'
-        : '';
-
       var buktiHtml;
       if (item.buktiUrl) {
         buktiHtml =
@@ -412,7 +402,6 @@
           'Metode: <b>' + escapeHtml(item.metodeBayar || "-") + '</b> &middot; Total: <b class="biaya">' + fmtRupiah(item.biaya) + '</b>' +
         '</div>' +
         catatanHtml +
-        flagOtsTidakBerlakuHtml +
         fotoKtpHtml +
         buktiHtml +
         '<div class="row-btn"><button class="lunas"' + (bisaVerifikasi ? '' : ' disabled') + '>' +

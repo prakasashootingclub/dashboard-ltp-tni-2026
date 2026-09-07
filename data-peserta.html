@@ -97,7 +97,6 @@
   .tag.pending{background:rgba(229,169,74,0.18); color:var(--amber-bright);}
   .tag.sudah{background:rgba(143,179,90,0.18); color:var(--olive-bright);}
   .tag.belum{background:rgba(91,102,96,0.25); color:var(--ink-faint);}
-  .tag.flagged{background:rgba(224,90,90,0.2); color:#e07a7a; font-weight:700;}
   .waktu{font-family:var(--mono); font-size:10px; color:var(--ink-faint); margin-top:3px;}
 
   .empty-row td{text-align:center; padding:30px 12px; color:var(--ink-faint);}
@@ -182,7 +181,7 @@ function waktuHtml(waktu){
 }
 
 function tagBayar(status, waktu){
-  const cls = status === "Lunas" ? "lunas" : (status.indexOf("Perlu Diarahkan") === 0 ? "flagged" : "pending");
+  const cls = status === "Lunas" ? "lunas" : "pending";
   return `<span class="tag ${cls}">${escapeHtml(status)}</span>${waktuHtml(waktu)}`;
 }
 
