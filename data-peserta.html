@@ -78,8 +78,6 @@
   tbody td{padding:9px 12px; border-bottom:1px solid var(--line); color:var(--ink-dim); vertical-align:top;}
   tbody tr:hover{background:rgba(143,179,90,0.04);}
   tbody td.nama{color:var(--ink); font-weight:600;}
-  tbody td.hp a{color:var(--olive-bright); text-decoration:none; font-family:var(--mono); font-size:12px;}
-  tbody td.hp a:hover{text-decoration:underline;}
 
   .tag{
     font-family:var(--mono); font-size:10.5px; padding:3px 8px; border-radius:4px;
@@ -135,13 +133,13 @@
   </header>
 
   <div class="note">
-    Halaman ini <b>tidak menampilkan NIK atau data sensitif lain</b> — cuma nama, No HP,
-    kategori, dan status. Untuk data lengkap (NIK, bukti transfer, dsb), buka Spreadsheet asli
-    (akses dibatasi admin).
+    Halaman ini <b>tidak menampilkan NIK, No HP, atau data sensitif lain</b> — cuma nama,
+    kategori, dan status. Untuk data lengkap (NIK, No HP, bukti transfer, dsb), buka Spreadsheet
+    asli (akses dibatasi admin).
   </div>
 
   <div class="toolbar">
-    <input type="text" id="searchInput" placeholder="Cari nama, No HP, atau item...">
+    <input type="text" id="searchInput" placeholder="Cari nama atau item...">
     <div class="count-badge" id="countBadge">memuat…</div>
   </div>
 
@@ -160,11 +158,6 @@ let allRows = [];
 
 function escapeHtml(s){
   return String(s || "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-}
-
-function waLink(hp){
-  const digits = String(hp || "").replace(/[^0-9]/g, "");
-  return digits ? `<a href="https://wa.me/${digits}" target="_blank" rel="noopener">${escapeHtml(hp)}</a>` : "-";
 }
 
 function waktuHtml(waktu){
@@ -267,7 +260,6 @@ function tabelSubMateriHtml(rows, showIpscExtra){
         <thead>
           <tr>
             <th>Nama</th>
-            <th>No HP</th>
             <th>Golongan</th>
             <th>Instansi/Club</th>
             <th>Status Bayar</th>
@@ -279,7 +271,6 @@ function tabelSubMateriHtml(rows, showIpscExtra){
           ${rows.map(r => `
             <tr>
               <td class="nama">${escapeHtml(r.nama)}</td>
-              <td class="hp">${waLink(r.hp)}</td>
               <td>${escapeHtml(r.golongan)}</td>
               <td>${escapeHtml(r.instansiClub)}</td>
               <td>${tagBayar(r.statusBayar, r.waktuLunas)}</td>
@@ -328,19 +319,19 @@ function tabelHtml(rows, katalog){
   }).join("");
 }
 
-// NIK SENGAJA tidak ikut dicari di sini -- halaman ini publik tanpa
-// password (lihat catatan endpoint dataPesertaRingkas_ di Code.gs), NIK
-// tidak pernah dikirim ke browser supaya tidak bisa dilihat siapa pun
-// yang buka link ini. Permintaan Kang, 7 September 2026: pencarian di
-// semua halaman harus bisa Nama/NIK/No HP -- di sini cuma Nama & No HP
-// yang memungkinkan, NIK tetap eksklusif ke halaman yang pakai password
-// (Verifikasi Pembayaran, Daftar Ulang scanner, dst).
+// NIK & No HP SENGAJA tidak ikut ditampilkan/dicari di sini -- halaman
+// ini publik tanpa password. NIK memang tidak pernah dikirim endpoint-nya
+// sama sekali (lihat catatan dataPesertaRingkas_ di Code.gs). No HP
+// SEBELUMNYA ikut ditampilkan, tapi disembunyikan dari tampilan halaman
+// ini atas permintaan Kang, 8 September 2026 (endpoint-nya sendiri masih
+// mengirim No HP untuk halaman lain yang butuh, seperti Check-in Materi).
+// Kalau perlu No HP/NIK lengkap, itu tetap harus lewat halaman yang pakai
+// password (Verifikasi Pembayaran, Daftar Ulang scanner, dst).
 function filteredRows(){
   const q = document.getElementById("searchInput").value.trim().toLowerCase();
   return q
     ? allRows.filter(r =>
         (r.nama || "").toLowerCase().includes(q) ||
-        (r.hp || "").toLowerCase().includes(q) ||
         (r.item || "").toLowerCase().includes(q))
     : allRows;
 }
