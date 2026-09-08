@@ -9,7 +9,6 @@
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-512.png">
 <title>LTP TNI 2026 — Data Peserta</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
 <style>
   :root{
     --bg:#0E1210;
@@ -68,13 +67,6 @@
     font-family:var(--mono); font-size:11px; color:var(--ink-faint);
     white-space:nowrap;
   }
-  #downloadBtn{
-    font-family:var(--mono); font-size:12px; padding:9px 14px; border-radius:6px;
-    border:1px solid var(--line); background:var(--panel); color:var(--amber-bright);
-    cursor:pointer; white-space:nowrap;
-  }
-  #downloadBtn:hover{border-color:var(--amber);}
-
   .table-wrap{ width:100%; overflow-x:auto; border:1px solid var(--line); border-radius:8px; }
   table{width:100%; min-width:600px; border-collapse:collapse; font-size:12.5px; background:var(--panel);}
   thead th{
@@ -151,7 +143,6 @@
   <div class="toolbar">
     <input type="text" id="searchInput" placeholder="Cari nama, No HP, atau item...">
     <div class="count-badge" id="countBadge">memuat…</div>
-    <button id="downloadBtn">&#8681; Download Excel</button>
   </div>
 
   <div id="katSections">Memuat data…</div>
@@ -353,34 +344,6 @@ function filteredRows(){
         (r.item || "").toLowerCase().includes(q))
     : allRows;
 }
-
-// Download Excel (.xlsx) -- ikut filter pencarian yang sedang aktif (kalau
-// lagi cari, yang di-download cuma hasil cari itu). Pakai library SheetJS
-// (dimuat via CDN) supaya hasilnya file .xlsx asli -- rapi per kolom di
-// Excel mana pun, tidak tergantung setting region/pemisah desimal komputer
-// seperti CSV. Permintaan Kang, 2 September 2026.
-function downloadXlsx(){
-  if (typeof XLSX === "undefined") { alert("Library Excel belum selesai dimuat, coba lagi sebentar lagi."); return; }
-  const rows = filteredRows();
-  const kolom = [
-    ["nama", "Nama"], ["hp", "No HP"], ["kategori", "Kategori"], ["item", "Item"],
-    ["golongan", "Golongan"], ["instansiClub", "Instansi/Club"], ["statusBayar", "Status Bayar"],
-    ["checkinMateri", "Daftar Ulang"],
-    ["waktuLunas", "Waktu Lunas"],
-    ["waktuCheckin", "Waktu Daftar Ulang"],
-    ["powerFactor", "Power Factor (IPSC)"], ["kategoriIpsc", "Kategori (IPSC)"],
-    ["waktuPelaksanaan", "Waktu Pelaksanaan (IPSC)"]
-  ];
-  const aoa = [kolom.map(k => k[1])];
-  rows.forEach(r => { aoa.push(kolom.map(k => r[k[0]] == null ? "" : r[k[0]])); });
-  const ws = XLSX.utils.aoa_to_sheet(aoa);
-  ws["!cols"] = kolom.map(() => ({ wch: 20 }));
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Data Peserta");
-  const tanggal = new Date().toISOString().slice(0, 10);
-  XLSX.writeFile(wb, "data-peserta-ltp-tni-2026-" + tanggal + ".xlsx");
-}
-document.getElementById("downloadBtn").onclick = downloadXlsx;
 
 function render(){
   const rows = filteredRows();
