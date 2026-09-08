@@ -96,6 +96,11 @@
     cursor:pointer; margin-left:10px; margin-bottom:10px;
   }
   .card .upload-status{ font-size:11px; color:#9ba488; margin-bottom:8px; }
+  .card a.wa-ingat{
+    display:inline-block; font-size:12px; color:#0E1210; background:#25D366;
+    padding:7px 12px; border-radius:6px; font-weight:700; text-decoration:none;
+    margin-bottom:10px;
+  }
   .card .confirm-recap{
     font-size:12px; color:#c9cfc4; background:#0E1210; border:1px solid #2A322C;
     border-radius:6px; padding:10px; line-height:1.6; margin-bottom:8px;
@@ -441,6 +446,15 @@
       } else {
         buktiHtml =
           '<div class="warn">' + labelKosong + '</div>' +
+          // Kirim WA pengingat -- CUMA muncul untuk peserta Transfer yang
+          // belum kirim bukti (bukan Tunai, itu bukti diambil langsung di
+          // venue bukan lewat WA). Link + isi pesan sudah disiapkan
+          // backend (listPendingPembayaran_), formatnya SAMA PERSIS dengan
+          // yang dikirim via email saat submit. Permintaan Kang, 8
+          // September 2026.
+          (item.waLinkPengingat
+            ? '<a class="wa-ingat" href="' + escapeHtml(item.waLinkPengingat) + '" target="_blank" rel="noopener">Kirim WA Pengingat &rarr;</a><br>'
+            : '') +
           '<label class="upload-btn" data-role="upload">' + labelUpload + '</label>' +
           '<input type="file" accept="image/*,application/pdf" class="upload-input" data-role="input">' +
           '<div class="upload-status" data-role="status"></div>';
