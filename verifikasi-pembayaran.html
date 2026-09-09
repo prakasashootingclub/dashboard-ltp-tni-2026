@@ -680,7 +680,19 @@
   // password Verifikasi Pembayaran bisa lihat SEMUA penolakan lintas
   // materi, sama seperti perilaku halaman lama.
   var NAMA_EVENT = "Lomba Tembak Piala Panglima TNI Tahun 2026";
+  var LANDING_PAGE_URL = "https://prakasashootingclub.github.io/ltp-tni-2026/";
   var dataTolakTerakhir = [];
+
+  // Air Rifle, IPSC, dan Non-IPSC SENGAJA tidak punya sesi OTS sama
+  // sekali (lihat KATEGORI_DENGAN_OTS_ di Code.gs -- cuma Senapan/Pistol/
+  // Falling Plate). Pesan penolakan sebelumnya SELALU bilang "kembali ke
+  // meja pendaftaran (petugas OTS)" untuk SEMUA kategori, padahal untuk
+  // ke-3 materi ini tidak ada meja OTS untuk didatangi -- peserta harus
+  // isi ulang form online. Ditemukan Kang, 9 September 2026.
+  function adaOtsUntukPenolakan_(r){
+    var item = { kategori: r.kategori, item: r.item };
+    return cocokMateri(item, "Senapan") || cocokMateri(item, "Pistol") || cocokMateri(item, "FallingPlate");
+  }
 
   function fmtWaktuTolak(iso){
     try {
@@ -693,6 +705,9 @@
     var hp = String(r.hp || "").split("/")[0].trim().replace(/[^0-9]/g, "");
     if (!hp) return null;
     if (hp.charAt(0) === "0") hp = "62" + hp.substring(1);
+    var instruksi = adaOtsUntukPenolakan_(r)
+      ? "Silakan kembali ke meja pendaftaran (petugas OTS) untuk perbaiki data dan daftar ulang."
+      : "Materi ini tidak ada pendaftaran di tempat (OTS) -- silakan perbaiki data dan daftar ulang lewat form online:\n" + LANDING_PAGE_URL;
     var pesan = [
       "*PENDAFTARAN DITOLAK - " + NAMA_EVENT + "*",
       "",
@@ -701,7 +716,7 @@
       "Nama: " + r.nama,
       "Kategori: " + r.kategori + " - " + r.item,
       "",
-      "Silakan kembali ke meja pendaftaran (petugas OTS) untuk perbaiki data dan daftar ulang."
+      instruksi
     ].join("\n");
     return "https://wa.me/" + hp + "?text=" + encodeURIComponent(pesan);
   }
