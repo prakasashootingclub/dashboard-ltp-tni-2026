@@ -221,7 +221,16 @@
 
 <script>
   var WEBAPP_URL = "https://script.google.com/macros/s/AKfycbyGY8Pi3gBALM8GVP6XCB04P_eebPw2thlP_ShQR6IVC31vuCZcWXxQK677crIgHysu/exec";
-  var STORAGE_KEY = "pembayaranPw";
+  // Key sessionStorage SENGAJA beda dari "pembayaranPw" (dipakai
+  // verifikasi-pembayaran.html) -- password Dana Masuk memang berbeda
+  // (CONFIG.DANA_MASUK_PASSWORD, bukan PEMBAYARAN_PASSWORD). Sebelumnya
+  // key-nya SAMA ("pembayaranPw") -- sessionStorage itu satu per tab per
+  // origin (bukan per halaman), jadi begitu admin login ke Verifikasi
+  // Pembayaran lalu pindah ke Dana Masuk, halaman ini otomatis anggap
+  // sudah login (skip gate) pakai password YANG SALAH tanpa divalidasi
+  // ulang -- makanya langsung "masuk" tapi datanya gagal dimuat
+  // ("Password salah" dari server). Ditemukan Kang, 9 September 2026.
+  var STORAGE_KEY = "danaMasukPw";
 
   // Falling Plate & Non IPSC menumpang kolom kategori "Pistol"/"Tembak
   // Reaksi IPSC Level II" di Sheet (sama seperti Pistol/IPSC), jadi HARUS
@@ -405,7 +414,13 @@
       .then(function(r){ return r.json(); })
       .then(function(res){
         if (!res.ok) {
-          document.getElementById("lastSync").textContent = res.pesan || "Gagal memuat.";
+          // Password tersimpan ternyata sudah tidak valid (kadaluarsa,
+          // diganti admin, atau -- kasus yang ditemukan Kang, 9 September
+          // 2026 -- collision key sessionStorage dengan halaman lain).
+          // Jangan biarkan diam nyangkut kosong dengan cuma pesan error;
+          // paksa kembali ke gerbang password supaya jelas harus login
+          // ulang, bukan dikira aplikasinya rusak/kosong datanya.
+          kunciUlang_(res.pesan || "Gagal memuat.");
           return;
         }
         var d = res.data;
@@ -513,12 +528,28 @@
   }
   document.getElementById("downloadBtn").onclick = downloadXlsx;
 
+  var intervalMuatData = null;
+
   function unlock(pw){
     document.getElementById("gate").classList.add("hidden");
     document.getElementById("app").classList.remove("hidden");
     sessionStorage.setItem(STORAGE_KEY, pw);
     muatData();
-    setInterval(muatData, 30000);
+    if (intervalMuatData) clearInterval(intervalMuatData);
+    intervalMuatData = setInterval(muatData, 30000);
+  }
+
+  // Balik ke gerbang password -- dipanggil muatData() begitu server bilang
+  // password salah (lihat komentar di pemanggilnya). Hapus juga password
+  // tersimpan supaya reload berikutnya tidak auto-coba password salah yang
+  // sama lagi, dan hentikan auto-refresh 30 detik supaya tidak spam gagal.
+  function kunciUlang_(pesan){
+    if (intervalMuatData) { clearInterval(intervalMuatData); intervalMuatData = null; }
+    sessionStorage.removeItem(STORAGE_KEY);
+    document.getElementById("app").classList.add("hidden");
+    document.getElementById("gate").classList.remove("hidden");
+    document.getElementById("pwErr").textContent = pesan + " Silakan masukkan password lagi.";
+    document.getElementById("pwInput").value = "";
   }
 
   // Password TERPISAH dari halaman Verifikasi Pembayaran (permintaan Kang,
