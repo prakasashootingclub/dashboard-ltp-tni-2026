@@ -148,6 +148,20 @@
     border-top:1px solid #2A322C;
   }
   #statusTolak{font-size:12px; color:#5B6660; margin-bottom:10px;}
+  /* #cariTolakInput sebelumnya TIDAK punya style sendiri sama sekali,
+     jadi tampil beda (bentuk default browser, bukan gelap seperti
+     #cariInput/#cariLunasInput) -- disamakan di sini. Ditemukan Kang,
+     9 September 2026. */
+  #cariTolakInput{
+    width:100%; padding:10px 12px; border-radius:6px; border:1px solid #2A322C;
+    background:#161B17; color:#E9EAE3; font-size:14px; margin-bottom:10px;
+  }
+  /* #refreshTolakBtn juga tidak punya style sendiri -- sama seperti
+     #cariTolakInput di atas, disamakan ke gaya #refreshBtn/#cariLunasBtn. */
+  #refreshTolakBtn{
+    width:100%; padding:10px; border-radius:6px; border:1px solid #2A322C;
+    background:#161B17; color:#c68a2e; font-size:13px; font-weight:600; margin-bottom:14px;
+  }
 
   /* ---------- kirim ulang e-tiket (peserta sudah Lunas) ---------- */
   .resend-section{
@@ -812,13 +826,28 @@
   document.getElementById("tolakSemuaMateri").addEventListener("change", terapkanFilterTolak);
 
   // ---------- Tab (Verifikasi Bayar / Kirim Ulang E-Tiket / Penolakan) ----------
+  // Tab aktif TIDAK pernah disimpan sebelum ini -- begitu HP admin melakukan
+  // pull-to-refresh (gestur tarik-ke-bawah bawaan browser HP, BUKAN tombol
+  // "Muat Ulang" di halaman ini) sambil ada di tab "Kirim Ulang E-Tiket"
+  // atau "Penolakan", browser me-reload SELURUH halaman dari awal --
+  // dan karena tab aktif tidak tersimpan di mana pun, halaman selalu
+  // kembali ke tab default "Verifikasi Bayar" begitu reload selesai,
+  // padahal admin sedang di tab lain. Sekarang tab aktif disimpan ke
+  // sessionStorage tiap kali ganti tab, dan dipulihkan begitu halaman
+  // dibuka ulang (lihat pemanggilan aktifkanTab di bukaApp). Ditemukan
+  // Kang, 9 September 2026.
+  var TAB_KEY = "pembayaranTabAktif";
+  function aktifkanTab(nama){
+    var btn = document.querySelector('.tab-btn[data-tab="' + nama + '"]');
+    if (!btn) return;
+    document.querySelectorAll(".tab-btn").forEach(function(b){ b.classList.remove("active"); });
+    document.querySelectorAll(".tab-panel").forEach(function(p){ p.classList.add("hidden"); });
+    btn.classList.add("active");
+    document.querySelector('.tab-panel[data-panel="' + nama + '"]').classList.remove("hidden");
+    sessionStorage.setItem(TAB_KEY, nama);
+  }
   document.querySelectorAll(".tab-btn").forEach(function(btn){
-    btn.onclick = function(){
-      document.querySelectorAll(".tab-btn").forEach(function(b){ b.classList.remove("active"); });
-      document.querySelectorAll(".tab-panel").forEach(function(p){ p.classList.add("hidden"); });
-      btn.classList.add("active");
-      document.querySelector('.tab-panel[data-panel="' + btn.getAttribute("data-tab") + '"]').classList.remove("hidden");
-    };
+    btn.onclick = function(){ aktifkanTab(btn.getAttribute("data-tab")); };
   });
 
   // Hash SHA-256 dari password yang benar -- bukan password mentahnya --
@@ -856,6 +885,7 @@
     document.getElementById("app").classList.remove("hidden");
     muatDaftar();
     muatDaftarTolak();
+    aktifkanTab(sessionStorage.getItem(TAB_KEY) || "bayar");
   }
 
   document.querySelectorAll(".materi-btn").forEach(function(btn){
