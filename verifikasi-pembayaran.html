@@ -564,9 +564,19 @@
           // email tetap jalan, tombol WA ini cuma cadangan/tambahan.
           box.innerHTML =
             (res.emailDikirim === false
-              ? '<div class="tunai">Masa OTS -- email dimatikan, kirim e-tiket lewat tombol ini:</div>'
-              : '<div class="tunai">Lunas -- e-tiket sudah dikirim otomatis ke email peserta. Tombol di bawah cadangan kalau mau kirim manual juga:</div>') +
+              ? '<div class="tunai">Masa OTS -- email dimatikan, tab WA dibuka otomatis (kalau tidak terbuka, klik tombol ini):</div>'
+              : '<div class="tunai">Lunas -- e-tiket sudah dikirim otomatis ke email peserta. Tab WA juga dibuka otomatis (cadangan kalau mau kirim manual juga):</div>') +
             '<a class="wa-btn" href="' + res.waLink + '" target="_blank" rel="noopener">Kirim E-Tiket via WhatsApp</a>';
+          // Buka otomatis -- sebelumnya admin harus klik tombol ini SATU
+          // KALI LAGI setelah Tandai Lunas, padahal Kang maunya begitu klik
+          // Tandai Lunas, tab WA-nya langsung kebuka tanpa klik tambahan.
+          // window.open() di sini masih dianggap browser sebagai hasil
+          // langsung dari klik tombol Tandai Lunas (chain fetch/.then tanpa
+          // setTimeout), jadi TIDAK diblokir popup blocker Chrome. Tombol
+          // di atas tetap ada sebagai cadangan kalau browser tertentu
+          // (Safari, dll) tetap memblokirnya. Permintaan Kang, 9 September
+          // 2026.
+          window.open(res.waLink, "_blank", "noopener");
         } else {
           box.innerHTML = '<div class="tunai">Lunas -- e-tiket sudah terkirim.</div>';
         }
