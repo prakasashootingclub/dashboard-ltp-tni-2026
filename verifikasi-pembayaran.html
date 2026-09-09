@@ -147,6 +147,13 @@
     font-size:12.5px; color:#E58B7A; margin-top:8px; padding-top:8px;
     border-top:1px solid #2A322C;
   }
+  .kartu-tolak .aksi-row{ display:flex; gap:8px; margin-top:8px; }
+  .kartu-tolak .aksi-row .wa-btn{ flex:2; margin-top:0; }
+  .kartu-tolak button.hapus-btn{
+    flex:1; padding:11px; border-radius:6px; border:1px solid #B4483A;
+    background:#161B17; color:#E58B7A; font-size:13px; font-weight:700;
+  }
+  .kartu-tolak button.hapus-btn:disabled{ opacity:.5; }
   #statusTolak{font-size:12px; color:#5B6660; margin-bottom:10px;}
   /* #cariTolakInput sebelumnya TIDAK punya style sendiri sama sekali,
      jadi tampil beda (bentuk default browser, bukan gelap seperti
@@ -768,17 +775,56 @@
     }
     el.innerHTML = list.map(function(r){
       var waLink = waLinkPenolakan(r);
-      return '<div class="kartu-tolak">' +
+      return '<div class="kartu-tolak" data-baris="' + r.baris + '">' +
         '<div class="baris-atas">' +
           '<div class="nama">' + escapeHtml(r.nama) + '</div>' +
           '<div class="waktu">' + fmtWaktuTolak(r.waktu) + '</div>' +
         '</div>' +
         '<div class="meta">' + escapeHtml(r.kategori) + ' &middot; ' + escapeHtml(r.item) + ' &middot; HP: ' + escapeHtml(r.hp) + '</div>' +
         '<div class="alasan">' + escapeHtml(r.alasan) + '</div>' +
-        (waLink ? '<a class="wa-btn" href="' + waLink + '" target="_blank" rel="noopener">Chat WA &rarr;</a>' : '') +
+        '<div class="aksi-row">' +
+          (waLink ? '<a class="wa-btn" href="' + waLink + '" target="_blank" rel="noopener">Chat WA &rarr;</a>' : '') +
+          '<button type="button" class="hapus-btn" data-baris="' + r.baris + '">Hapus</button>' +
+        '</div>' +
       '</div>';
     }).join("");
   }
+
+  // Hapus 1 baris penolakan -- klik tombol "Hapus" di kartunya, konfirmasi
+  // dulu (permanen, tidak bisa dibatalkan), lalu panggil endpoint
+  // hapus_ditolak dan muat ulang daftar supaya kartu langsung hilang.
+  // Event delegation di #listTolak (bukan pasang listener per kartu) --
+  // supaya tetap jalan walau kartu di-render ulang lewat innerHTML.
+  document.getElementById("listTolak").addEventListener("click", function(e){
+    var btn = e.target.closest(".hapus-btn");
+    if (!btn) return;
+    var kartu = btn.closest(".kartu-tolak");
+    var nama = kartu ? kartu.querySelector(".nama").textContent : "";
+    if (!confirm('Hapus penolakan "' + nama + '" dari daftar? Tindakan ini tidak bisa dibatalkan.')) return;
+    btn.disabled = true;
+    btn.textContent = "Menghapus...";
+    var pw = sessionStorage.getItem(STORAGE_KEY);
+    fetch(WEBAPP_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "hapus_ditolak", pw: pw, baris: btn.dataset.baris })
+    })
+      .then(function(r){ return r.json(); })
+      .then(function(res){
+        if (!res.ok) {
+          alert(res.pesan || "Gagal menghapus.");
+          btn.disabled = false;
+          btn.textContent = "Hapus";
+          return;
+        }
+        muatDaftarTolak();
+      })
+      .catch(function(err){
+        alert("Gagal terhubung ke server: " + err);
+        btn.disabled = false;
+        btn.textContent = "Hapus";
+      });
+  });
 
   function terapkanFilterTolak(){
     var kata = document.getElementById("cariTolakInput").value.trim().toLowerCase();
