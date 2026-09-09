@@ -91,7 +91,17 @@
 
 <script>
   var WEBAPP_URL = "https://script.google.com/macros/s/AKfycbyGY8Pi3gBALM8GVP6XCB04P_eebPw2thlP_ShQR6IVC31vuCZcWXxQK677crIgHysu/exec";
-  var STORAGE_KEY = "scannerPw";
+  // Key sessionStorage SENGAJA beda dari "scannerPw" (dipakai
+  // scanner-checkin.html) -- halaman ini menerima password Verifikasi
+  // Pusat ATAU Check In (lihat PW_HASH_VERIFIKASI/PW_HASH_CHECKIN di
+  // bawah), sedangkan scanner-checkin.html cuma menerima password Check
+  // In. Kalau key-nya SAMA, orang yang login ke sini pakai password
+  // Verifikasi Pusat lalu pindah ke scanner-checkin.html akan otomatis
+  // "masuk" (skip gerbang password) padahal passwordnya salah untuk
+  // halaman itu -- bug yang sama persis ditemukan Kang di Dana Masuk vs
+  // Verifikasi Pembayaran, 9 September 2026 (lihat catatan STORAGE_KEY di
+  // dana-masuk.html).
+  var STORAGE_KEY = "scannerLegacyPw";
   var currentMode = "scan_verifikasi_pusat";
   var scanner = null;
   var busy = false;
