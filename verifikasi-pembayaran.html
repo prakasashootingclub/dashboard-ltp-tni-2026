@@ -58,6 +58,16 @@
   .pos-aktif{
     font-size:11px; color:#8C9A8A; margin-bottom:10px;
   }
+  /* Tombol/link "Kembali ke Dashboard" -- di HP ada tombol back
+     bawaan browser/gesture, tapi di laptop/desktop sering tidak
+     ada cara cepat balik ke index.html tanpa ini. Disamakan gaya
+     dengan .back-link di checkin-*.html/data-peserta.html supaya
+     konsisten satu situs. Permintaan Kang, 9 September 2026. */
+  .back-link{
+    display:inline-block; margin-bottom:14px; font-size:12px;
+    color:#c68a2e; text-decoration:none;
+  }
+  .back-link:hover{text-decoration:underline;}
   .pos-aktif button{
     background:none; border:none; color:#5b8fd6; text-decoration:underline;
     font-size:11px; padding:0; margin-left:6px;
@@ -211,6 +221,7 @@
 </div>
 
 <div id="pilihMateri" class="hidden">
+  <a class="back-link" href="index.html">&larr; Kembali ke Dashboard</a>
   <h2>Pos Materi Mana?</h2>
   <div class="lbl" style="margin-bottom:10px;">Pilih materi yang dijaga di pos ini</div>
   <button class="materi-btn" data-materi="Senapan">Senapan</button>
@@ -222,6 +233,7 @@
 </div>
 
 <div id="app" class="hidden">
+  <a class="back-link" href="index.html">&larr; Kembali ke Dashboard</a>
   <h2>Verifikasi Pembayaran</h2>
   <div class="pos-aktif">Pos: <b id="posAktifLabel"></b><button id="gantiPosBtn">Ganti</button></div>
 

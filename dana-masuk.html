@@ -76,6 +76,16 @@
   }
   h1{font-size:26px; font-weight:700; letter-spacing:-0.01em;}
   .subtitle{font-size:13px; color:var(--ink-dim); margin-top:4px;}
+  /* Tombol/link "Kembali ke Dashboard" -- di HP ada tombol back
+     bawaan browser/gesture, tapi di laptop/desktop sering tidak
+     ada cara cepat balik ke index.html tanpa ini. Disamakan gaya
+     dengan .back-link di checkin-*.html/data-peserta.html supaya
+     konsisten satu situs. Permintaan Kang, 9 September 2026. */
+  .back-link{
+    display:inline-block; margin-top:10px; font-family:var(--mono); font-size:11px;
+    color:var(--olive-bright); text-decoration:none;
+  }
+  .back-link:hover{text-decoration:underline;}
   #refreshBtn{
     font-family:var(--mono); font-size:12px; padding:9px 16px; border-radius:6px;
     border:1px solid var(--line); background:var(--panel); color:var(--amber-bright);
@@ -169,6 +179,7 @@
         <div class="brand-eyebrow">LTP TNI 2026 &middot; Internal</div>
         <h1>Dana Masuk</h1>
         <div class="subtitle">Total uang yang sudah terverifikasi Lunas</div>
+        <a class="back-link" href="index.html">&larr; Kembali ke Dashboard</a>
       </div>
       <div>
         <button id="refreshBtn">&#8635; Muat Ulang</button>
