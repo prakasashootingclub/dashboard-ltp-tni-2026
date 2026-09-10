@@ -123,6 +123,15 @@
     background:#5C7A3A; color:#0E1210; font-size:13px; font-weight:700;
   }
   .card button.lunas:disabled{background:#3a4a3a; color:#8C9A8A;}
+  /* Sama gayanya dengan .kartu-tolak button.hapus-btn (tab Penolakan) --
+     disamakan supaya "aksi hapus" konsisten di semua tab. Permintaan
+     Kang, 10 September 2026: ada peserta salah pilih materi saat daftar,
+     perlu cara hapus dari tab Verifikasi Bayar juga. */
+  .card button.hapus-peserta{
+    flex:1; padding:11px; border-radius:6px; border:1px solid #B4483A;
+    background:#161B17; color:#E58B7A; font-size:13px; font-weight:700;
+  }
+  .card button.hapus-peserta:disabled{ opacity:.5; }
   .card button.batal{
     flex:1; padding:11px; border-radius:6px; border:1px solid #2A322C;
     background:#161B17; color:#9ba488; font-size:13px; font-weight:700;
@@ -505,7 +514,8 @@
         fotoKtpHtml +
         buktiHtml +
         '<div class="row-btn"><button class="lunas"' + (bisaVerifikasi ? '' : ' disabled') + '>' +
-          (bisaVerifikasi ? 'Tandai Lunas' : 'Upload Bukti Dulu') + '</button></div>';
+          (bisaVerifikasi ? 'Tandai Lunas' : 'Upload Bukti Dulu') + '</button>' +
+          '<button type="button" class="hapus-peserta">Hapus</button></div>';
 
       var fileInput = card.querySelector('[data-role="input"]');
       if (fileInput) {
@@ -623,6 +633,45 @@
 
   document.getElementById("refreshBtn").onclick = muatDaftar;
   document.getElementById("cariInput").addEventListener("input", terapkanFilter);
+
+  // Hapus 1 pendaftaran yang salah materi -- klik "Hapus" di kartunya,
+  // konfirmasi dulu (permanen), lalu panggil endpoint hapus_peserta_pending
+  // dan muat ulang daftar. Backend MENOLAK hapus kalau statusnya sudah
+  // "Lunas" (lihat hapusPesertaPending_, Code.js), jadi tombol ini aman
+  // dipakai bebas di sini -- tidak akan tidak sengaja menghapus peserta
+  // yang sudah bayar. Event delegation di #list (bukan pasang listener per
+  // kartu) supaya tetap jalan walau kartu di-render ulang. Permintaan
+  // Kang, 10 September 2026.
+  document.getElementById("list").addEventListener("click", function(e){
+    var btn = e.target.closest(".hapus-peserta");
+    if (!btn) return;
+    var card = btn.closest(".card");
+    var nama = card.querySelector(".nama").textContent;
+    if (!confirm('Hapus pendaftaran "' + nama + '" dari daftar? Tindakan ini tidak bisa dibatalkan -- pakai ini kalau peserta salah pilih materi.')) return;
+    btn.disabled = true;
+    btn.textContent = "Menghapus...";
+    var pw = sessionStorage.getItem(STORAGE_KEY);
+    fetch(WEBAPP_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "hapus_peserta_pending", pw: pw, idPendaftaran: card.dataset.id })
+    })
+      .then(function(r){ return r.json(); })
+      .then(function(res){
+        if (!res.ok) {
+          alert(res.pesan || "Gagal menghapus.");
+          btn.disabled = false;
+          btn.textContent = "Hapus";
+          return;
+        }
+        muatDaftar();
+      })
+      .catch(function(err){
+        alert("Gagal terhubung ke server: " + err);
+        btn.disabled = false;
+        btn.textContent = "Hapus";
+      });
+  });
 
   // ---------- Kirim ulang e-tiket (peserta sudah Lunas) ----------
   // Terpisah dari daftar utama di atas (yang cuma isi peserta BELUM
