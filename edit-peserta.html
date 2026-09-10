@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0E1210">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-512.png">
+<title>Edit Data Peserta — LTP TNI 2026</title>
+<script>
+  window.onerror = function(msg, src, line, col, err){
+    var d = document.createElement("div");
+    d.style.cssText = "position:fixed;top:0;left:0;right:0;z-index:99;background:#B4483A;color:#fff;padding:10px;font-size:12px;font-family:monospace;word-break:break-word;";
+    d.textContent = "JS ERROR: " + msg + " (baris " + line + ")";
+    document.body ? document.body.prepend(d) : window.addEventListener("DOMContentLoaded", function(){ document.body.prepend(d); });
+  };
+</script>
+<style>
+  :root{
+    --bg:#0E1210; --panel:#161B17; --panel-2:#1D2420; --line:#2A322C;
+    --ink:#E9EAE3; --ink-dim:#8C9A8A; --ink-faint:#5B6660;
+    --olive:#5C7A3A; --olive-bright:#8FB35A; --amber:#C7852E; --amber-bright:#E5A94A;
+    --red:#B4483A; --red-bright:#E58B7A;
+    --sans: -apple-system, "Segoe UI", "Inter", Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", "Roboto Mono", Consolas, monospace;
+  }
+  *{box-sizing:border-box;}
+  body{
+    font-family:var(--sans); background:var(--bg); color:var(--ink);
+    margin:0; padding:16px; max-width:640px; margin-left:auto; margin-right:auto;
+  }
+  h2{font-size:18px; margin:0 0 4px;}
+  .lbl{font-size:11px; text-transform:uppercase; color:var(--ink-faint); letter-spacing:.08em; margin-bottom:14px;}
+  .hidden{display:none !important;}
+  .back-link{
+    display:inline-block; margin-bottom:14px; font-size:12px;
+    color:var(--amber); text-decoration:none;
+  }
+  .back-link:hover{text-decoration:underline;}
+
+  /* ---------- gerbang password ---------- */
+  #gate{
+    min-height:80vh; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:14px; padding:20px;
+  }
+  #gate input{
+    width:100%; max-width:280px; padding:12px 14px; border-radius:6px;
+    border:1px solid var(--line); background:var(--panel); color:var(--ink); font-size:15px;
+  }
+  #gate button{
+    width:100%; max-width:280px; padding:12px; border-radius:6px; border:none;
+    background:var(--olive); color:var(--bg); font-size:14px; font-weight:700;
+  }
+  #gate .err{color:var(--red-bright); font-size:13px; min-height:16px;}
+  #gate .warn-akses{
+    max-width:280px; font-size:11px; color:var(--amber-bright); text-align:center;
+    background:var(--panel-2); border:1px solid var(--line); border-radius:6px; padding:10px;
+  }
+
+  /* ---------- pencarian ---------- */
+  #cariInput{
+    width:100%; padding:10px 12px; border-radius:6px; border:1px solid var(--line);
+    background:var(--panel); color:var(--ink); font-size:14px; margin-bottom:6px;
+  }
+  #statusCari{font-size:12px; color:var(--ink-faint); margin-bottom:10px;}
+  .hasil-card{
+    background:var(--panel); border:1px solid var(--line); border-radius:8px;
+    padding:12px 14px; margin-bottom:8px; cursor:pointer;
+  }
+  .hasil-card:hover{border-color:var(--olive);}
+  .hasil-card .nama{font-size:14px; font-weight:700;}
+  .hasil-card .meta{font-size:12px; color:var(--ink-dim); margin-top:2px;}
+  .badge{
+    display:inline-block; font-size:10px; font-weight:700; padding:2px 7px;
+    border-radius:10px; margin-left:6px; text-transform:uppercase; letter-spacing:.04em;
+  }
+  .badge.lunas{background:rgba(143,179,90,.15); color:var(--olive-bright);}
+  .badge.pending{background:rgba(229,169,74,.15); color:var(--amber-bright);}
+
+  /* ---------- form edit ---------- */
+  #formEdit{
+    background:var(--panel); border:1px solid var(--line); border-radius:10px;
+    padding:18px; margin-top:16px;
+  }
+  #formEdit h3{font-size:15px; margin:0 0 2px;}
+  #formEdit .sub{font-size:11px; color:var(--ink-faint); margin-bottom:14px;}
+  .field{margin-bottom:12px;}
+  .field label{display:block; font-size:11px; color:var(--ink-dim); margin-bottom:4px;}
+  .field input[type="text"], .field input[type="number"], .field select{
+    width:100%; padding:9px 10px; border-radius:6px; border:1px solid var(--line);
+    background:var(--panel-2); color:var(--ink); font-size:13.5px;
+  }
+  .field .catatan{font-size:10.5px; color:var(--ink-faint); margin-top:3px;}
+  .row2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .section-title{
+    font-family:var(--mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase;
+    color:var(--ink-faint); margin:18px 0 10px; padding-top:14px; border-top:1px solid var(--line);
+  }
+  .section-title:first-of-type{margin-top:0; padding-top:0; border-top:none;}
+  .readonly-box{
+    background:var(--panel-2); border:1px solid var(--line); border-radius:6px;
+    padding:10px 12px; font-size:12px; color:var(--ink-dim); line-height:1.7; margin-bottom:14px;
+  }
+  .readonly-box a{color:var(--amber-bright);}
+  .readonly-box .kunci{color:var(--ink-faint);}
+  .status-lunas-lock{
+    background:rgba(143,179,90,.1); border:1px solid var(--olive); border-radius:6px;
+    padding:9px 10px; font-size:12.5px; color:var(--olive-bright);
+  }
+  #simpanBtn{
+    width:100%; padding:13px; border-radius:6px; border:none;
+    background:var(--olive); color:var(--bg); font-size:14px; font-weight:700; margin-top:6px;
+  }
+  #simpanBtn:disabled{background:#3a4a3a; color:var(--ink-dim);}
+  #batalBtn{
+    width:100%; padding:11px; border-radius:6px; border:1px solid var(--line);
+    background:var(--panel-2); color:var(--ink-dim); font-size:13px; font-weight:700; margin-top:8px;
+  }
+  #simpanStatus{font-size:12.5px; margin-top:10px; min-height:16px;}
+  #simpanStatus.ok{color:var(--olive-bright);}
+  #simpanStatus.err{color:var(--red-bright);}
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <h2>Edit Data Peserta</h2>
+  <div class="warn-akses">Halaman khusus admin -- ubah data pendaftaran peserta secara langsung. Bukan untuk petugas lapangan.</div>
+  <input type="password" id="pwInput" placeholder="Password" autocomplete="off">
+  <button id="pwBtn">Masuk</button>
+  <div class="err" id="pwErr"></div>
+</div>
+
+<div id="app" class="hidden">
+  <h2>Edit Data Peserta</h2>
+  <div class="lbl">Koreksi data pendaftaran yang salah, tanpa peserta perlu isi ulang form</div>
+  <a class="back-link" href="index.html">&larr; Kembali ke Dashboard</a>
+
+  <input type="text" id="cariInput" placeholder="Cari Nama, NIK, No HP, Email, atau ID Pendaftaran...">
+  <div id="statusCari">Ketik untuk mencari peserta.</div>
+  <div id="hasilCari"></div>
+
+  <div id="formEdit" class="hidden"></div>
+</div>
+
+<script>
+  var WEBAPP_URL = "https://script.google.com/macros/s/AKfycbyGY8Pi3gBALM8GVP6XCB04P_eebPw2thlP_ShQR6IVC31vuCZcWXxQK677crIgHysu/exec";
+  // Key sessionStorage SENGAJA unik ("editPesertaPw") -- bukan salah satu
+  // dari "pembayaranPw"/"danaMasukPw"/dst. Ini pola yang sudah terbukti
+  // penting di halaman lain (lihat catatan STORAGE_KEY di dana-masuk.html,
+  // ditemukan Kang 9 September 2026): sessionStorage satu per TAB per
+  // ORIGIN, bukan per halaman -- kalau key-nya sama dengan halaman lain,
+  // pindah ke sini otomatis "masuk" pakai password yang salah tanpa
+  // divalidasi ulang.
+  var STORAGE_KEY = "editPesertaPw";
+
+  function escapeHtml(s){
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+    });
+  }
+
+  // ---------- pencarian ----------
+  var timerCari = null;
+  document.getElementById("cariInput").addEventListener("input", function(){
+    if (timerCari) clearTimeout(timerCari);
+    timerCari = setTimeout(cariPeserta, 400);
+  });
+  document.getElementById("cariInput").addEventListener("keydown", function(e){
+    if (e.key === "Enter") { if (timerCari) clearTimeout(timerCari); cariPeserta(); }
+  });
+
+  function cariPeserta(){
+    var status = document.getElementById("statusCari");
+    var q = document.getElementById("cariInput").value.trim();
+    if (!q) { status.textContent = "Ketik untuk mencari peserta."; document.getElementById("hasilCari").innerHTML = ""; return; }
+    status.textContent = "Mencari...";
+    var pw = sessionStorage.getItem(STORAGE_KEY);
+    fetch(WEBAPP_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "cari_edit_peserta", kueri: q, pw: pw })
+    })
+      .then(function(r){ return r.json(); })
+      .then(function(res){
+        if (!res.ok) { kunciUlang_(res.pesan || "Gagal mencari."); return; }
+        status.textContent = res.data.length
+          ? res.data.length + " peserta ditemukan." + (res.terpotong ? " Masih ada hasil lain -- persempit pencarian kalau belum ketemu." : "")
+          : "Tidak ada peserta yang cocok.";
+        renderHasilCari(res.data);
+      })
+      .catch(function(err){ status.textContent = "Gagal terhubung ke server: " + err; });
+  }
+
+  function renderHasilCari(items){
+    var el = document.getElementById("hasilCari");
+    el.innerHTML = items.map(function(it){
+      var isLunas = it.statusBayar === "Lunas";
+      return '<div class="hasil-card" data-id="' + escapeHtml(it.idPendaftaran) + '">' +
+        '<div class="nama">' + escapeHtml(it.nama) +
+          '<span class="badge ' + (isLunas ? "lunas" : "pending") + '">' + escapeHtml(it.statusBayar) + '</span>' +
+        '</div>' +
+        '<div class="meta">' + escapeHtml(it.kategori) + ' &middot; ' + escapeHtml(it.item) + '<br>' +
+          'NIK: ' + escapeHtml(it.nik) + ' &middot; HP: ' + escapeHtml(it.hp) +
+        '</div>' +
+      '</div>';
+    }).join("");
+    el.querySelectorAll(".hasil-card").forEach(function(card){
+      card.onclick = function(){ bukaFormEdit(card.dataset.id); };
+    });
+  }
+
+  // ---------- katalog kategori/item (untuk dropdown) ----------
+  var katalogKategori = null;
+  function muatKatalogKategori(cb){
+    if (katalogKategori) { cb(); return; }
+    var pw = sessionStorage.getItem(STORAGE_KEY);
+    fetch(WEBAPP_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "get_kategori_edit", pw: pw })
+    })
+      .then(function(r){ return r.json(); })
+      .then(function(res){
+        if (!res.ok) { kunciUlang_(res.pesan || "Gagal memuat katalog kategori."); return; }
+        katalogKategori = res.data;
+        cb();
+      })
+      .catch(function(err){ alert("Gagal memuat katalog kategori: " + err); });
+  }
+
+  // ---------- form edit ----------
+  // Indeks kolom HEADER_ROW (0-based) yang dipakai form ini -- HARUS sama
+  // persis dengan HEADER_ROW di Code.js.
+  var KOLOM = {
+    timestamp: 0, hp: 1, nama: 2, ktp: 3, kta: 4, kategori: 5, item: 6,
+    golongan: 7, sumber: 8, metodeBayar: 9, biaya: 10, statusBayar: 11,
+    idPendaftaran: 12, buktiTransferUrl: 13, qrId: 14, qrUrl: 15,
+    statusDaftarUlang: 17, waktuDaftarUlang: 18, statusKirimWa: 19, hpCocok: 20,
+    fotoKtpUrl: 21, email: 22, anggotaTim: 23, waktuLunas: 24,
+    powerFactor: 26, kategoriUsia: 27, waktuPelaksanaan: 28, catatanKoreksi: 29,
+    instansiClub: 30, namaTandem: 31, nikAnggotaTim: 32, fotoKtpAnggotaTim: 33
+  };
+
+  var pesertaAktif = null; // {idPendaftaran, nilai[]} yang sedang diedit
+
+  function bukaFormEdit(idPendaftaran){
+    var box = document.getElementById("formEdit");
+    box.classList.remove("hidden");
+    box.innerHTML = '<div style="text-align:center;color:#5B6660;padding:20px;">Memuat data peserta...</div>';
+    box.scrollIntoView({ behavior: "smooth", block: "start" });
+
+    muatKatalogKategori(function(){
+      var pw = sessionStorage.getItem(STORAGE_KEY);
+      fetch(WEBAPP_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({ action: "get_peserta_edit", idPendaftaran: idPendaftaran, pw: pw })
+      })
+        .then(function(r){ return r.json(); })
+        .then(function(res){
+          if (!res.ok) { box.innerHTML = '<div style="color:#E58B7A;">' + escapeHtml(res.pesan || "Gagal memuat.") + '</div>'; return; }
+          pesertaAktif = { idPendaftaran: idPendaftaran, nilai: res.nilai };
+          renderFormEdit();
+        })
+        .catch(function(err){ box.innerHTML = '<div style="color:#E58B7A;">Gagal terhubung ke server: ' + escapeHtml(err) + '</div>'; });
+    });
+  }
+
+  function v(idx){ return pesertaAktif.nilai[idx] == null ? "" : pesertaAktif.nilai[idx]; }
+
+  function renderFormEdit(){
+    var box = document.getElementById("formEdit");
+    var statusBayarSekarang = v(KOLOM.statusBayar);
+    var isLunas = statusBayarSekarang === "Lunas";
+
+    var namaKategoriSekarang = v(KOLOM.kategori);
+    var itemSekarang = v(KOLOM.item);
+
+    var optKategori = katalogKategori.map(function(k){
+      return '<option value="' + escapeHtml(k.nama) + '"' + (k.nama === namaKategoriSekarang ? " selected" : "") + '>' + escapeHtml(k.nama) + '</option>';
+    }).join("");
+
+    function itemOptionsUntuk(namaKat){
+      var kat = katalogKategori.find(function(k){ return k.nama === namaKat; });
+      var items = kat ? kat.items : [];
+      // Item tersimpan sekarang mungkin sudah tidak ada di katalog (materi
+      // lama/dihapus) -- tetap disisipkan supaya tidak hilang diam-diam
+      // dari dropdown begitu form dibuka.
+      if (itemSekarang && items.indexOf(itemSekarang) === -1) items = [itemSekarang].concat(items);
+      return items.map(function(it){
+        return '<option value="' + escapeHtml(it) + '"' + (it === itemSekarang ? " selected" : "") + '>' + escapeHtml(it) + '</option>';
+      }).join("");
+    }
+
+    var qrLink = v(KOLOM.qrUrl) ? '<a href="' + escapeHtml(v(KOLOM.qrUrl)) + '" target="_blank" rel="noopener">Lihat QR &rarr;</a>' : '<span class="kunci">belum ada</span>';
+    var buktiLink = v(KOLOM.buktiTransferUrl) ? '<a href="' + escapeHtml(v(KOLOM.buktiTransferUrl)) + '" target="_blank" rel="noopener">Lihat &rarr;</a>' : '<span class="kunci">belum ada -- upload lewat tab Verifikasi Bayar</span>';
+
+    box.innerHTML =
+      '<h3>' + escapeHtml(v(KOLOM.nama)) + '</h3>' +
+      '<div class="sub">ID Pendaftaran: ' + escapeHtml(v(KOLOM.idPendaftaran)) + '</div>' +
+
+      '<div class="readonly-box">' +
+        'Daftar: ' + escapeHtml(v(KOLOM.timestamp)) + '<br>' +
+        'Bukti Transfer: ' + buktiLink + '<br>' +
+        'E-Tiket QR: ' + qrLink + (v(KOLOM.waktuLunas) ? ' &middot; Lunas sejak: ' + escapeHtml(v(KOLOM.waktuLunas)) : '') +
+      '</div>' +
+
+      '<div class="section-title">Data Peserta</div>' +
+      '<div class="row2">' +
+        field_("Nama", "nama", "text") +
+        field_("No HP", "hp", "text") +
+      '</div>' +
+      '<div class="row2">' +
+        field_("No KTP (NIK)", "ktp", "text") +
+        field_("No KTA", "kta", "text") +
+      '</div>' +
+      field_("Email", "email", "text") +
+      '<div class="field"><label>Golongan</label><select id="f_golongan">' +
+        opt_(["TNI/Polri", "Sipil"], v(KOLOM.golongan)) +
+      '</select></div>' +
+
+      '<div class="section-title">Materi</div>' +
+      '<div class="row2">' +
+        '<div class="field"><label>Kategori</label><select id="f_kategori">' + optKategori + '</select></div>' +
+        '<div class="field"><label>Item/Divisi</label><select id="f_item">' + itemOptionsUntuk(namaKategoriSekarang) + '</select></div>' +
+      '</div>' +
+      '<div class="row2">' +
+        '<div class="field"><label>Metode Bayar</label><select id="f_metodeBayar">' + opt_(["Transfer", "Tunai (OTS)"], v(KOLOM.metodeBayar)) + '</select></div>' +
+        field_("Biaya (Rp)", "biaya", "number") +
+      '</div>' +
+      '<div class="field catatan" style="margin-top:-6px;">Ganti Kategori/Item/Golongan tidak otomatis hitung ulang Biaya -- cek & sesuaikan manual kalau perlu.</div>' +
+
+      '<div class="section-title">Status Bayar</div>' +
+      (isLunas
+        ? '<div class="status-lunas-lock">Sudah <b>Lunas</b> -- tidak bisa diubah dari sini. Field lain di atas tetap bisa dikoreksi.</div>'
+        : '<div class="field"><select id="f_statusBayar">' + opt_(["Menunggu Bukti Transfer", "Menunggu Verifikasi"], statusBayarSekarang) + '</select>' +
+          '<div class="catatan">Untuk menandai Lunas, pakai tombol "Tandai Lunas" di tab Verifikasi Bayar (supaya e-tiket ikut terbit &amp; terkirim).</div></div>') +
+
+      '<div class="section-title">Info Tambahan (opsional, tergantung materi)</div>' +
+      field_("Instansi/Club", "instansiClub", "text") +
+      field_("Nama Tandem (Air Rifle)", "namaTandem", "text") +
+      field_("Anggota Tim (Beregu)", "anggotaTim", "text") +
+      field_("NIK Anggota Tim (Beregu)", "nikAnggotaTim", "text") +
+      field_("Foto KTP URL", "fotoKtpUrl", "text") +
+      field_("Foto KTP Anggota Tim (Beregu)", "fotoKtpAnggotaTim", "text") +
+      '<div class="row2">' +
+        field_("Power Factor (IPSC)", "powerFactor", "text") +
+        field_("Kategori Usia/Gender (IPSC)", "kategoriUsia", "text") +
+      '</div>' +
+      field_("Waktu Pelaksanaan (IPSC)", "waktuPelaksanaan", "text") +
+      field_("Catatan Koreksi", "catatanKoreksi", "text") +
+
+      '<div class="section-title">Status Operasional</div>' +
+      '<div class="row2">' +
+        '<div class="field"><label>Sumber Pendaftaran</label><select id="f_sumber">' + opt_(["Online", "OTS"], v(KOLOM.sumber)) + '</select></div>' +
+        '<div class="field"><label>Status Daftar Ulang</label><select id="f_statusDaftarUlang">' + opt_(["Belum", "Sudah"], v(KOLOM.statusDaftarUlang)) + '</select></div>' +
+      '</div>' +
+      '<div class="row2">' +
+        '<div class="field"><label>HP Cocok?</label><select id="f_hpCocok">' + opt_(["Ya", "Tidak"], v(KOLOM.hpCocok)) + '</select></div>' +
+        field_("Status Kirim WA", "statusKirimWa", "text") +
+      '</div>' +
+      field_("Waktu Daftar Ulang", "waktuDaftarUlang", "text") +
+
+      '<div id="simpanStatus"></div>' +
+      '<button id="simpanBtn">Simpan Perubahan</button>' +
+      '<button id="batalBtn" type="button">Batal</button>';
+
+    function field_(label, key, tipe){
+      return '<div class="field"><label>' + label + '</label><input type="' + tipe + '" id="f_' + key + '" value="' + escapeHtml(v(KOLOM[key])) + '"></div>';
+    }
+    function opt_(daftar, terpilih){
+      return daftar.map(function(o){ return '<option value="' + escapeHtml(o) + '"' + (o === terpilih ? " selected" : "") + '>' + escapeHtml(o) + '</option>'; }).join("");
+    }
+
+    document.getElementById("f_kategori").addEventListener("change", function(){
+      document.getElementById("f_item").innerHTML = itemOptionsUntuk(this.value);
+    });
+    document.getElementById("batalBtn").onclick = function(){
+      box.classList.add("hidden");
+      box.innerHTML = "";
+      pesertaAktif = null;
+    };
+    document.getElementById("simpanBtn").onclick = simpanPerubahan;
+  }
+
+  function simpanPerubahan(){
+    var btn = document.getElementById("simpanBtn");
+    var statusEl = document.getElementById("simpanStatus");
+    var namaKonfirm = document.getElementById("f_nama").value.trim();
+    if (!confirm('Simpan perubahan data untuk "' + namaKonfirm + '"?')) return;
+
+    var perubahan = {};
+    function ambil(key, idxKey){ perubahan[String(KOLOM[idxKey])] = document.getElementById("f_" + key).value.trim(); }
+    ambil("nama", "nama"); ambil("hp", "hp"); ambil("ktp", "ktp"); ambil("kta", "kta");
+    ambil("email", "email"); ambil("golongan", "golongan");
+    ambil("kategori", "kategori"); ambil("item", "item");
+    ambil("metodeBayar", "metodeBayar");
+    perubahan[String(KOLOM.biaya)] = Number(document.getElementById("f_biaya").value) || 0;
+    var elStatusBayar = document.getElementById("f_statusBayar");
+    if (elStatusBayar) perubahan[String(KOLOM.statusBayar)] = elStatusBayar.value;
+    ambil("instansiClub", "instansiClub"); ambil("namaTandem", "namaTandem");
+    ambil("anggotaTim", "anggotaTim"); ambil("nikAnggotaTim", "nikAnggotaTim");
+    ambil("fotoKtpUrl", "fotoKtpUrl"); ambil("fotoKtpAnggotaTim", "fotoKtpAnggotaTim");
+    ambil("powerFactor", "powerFactor"); ambil("kategoriUsia", "kategoriUsia");
+    ambil("waktuPelaksanaan", "waktuPelaksanaan"); ambil("catatanKoreksi", "catatanKoreksi");
+    ambil("sumber", "sumber"); ambil("statusDaftarUlang", "statusDaftarUlang");
+    ambil("hpCocok", "hpCocok"); ambil("statusKirimWa", "statusKirimWa");
+    ambil("waktuDaftarUlang", "waktuDaftarUlang");
+
+    btn.disabled = true;
+    btn.textContent = "Menyimpan...";
+    statusEl.className = ""; statusEl.textContent = "";
+    var pw = sessionStorage.getItem(STORAGE_KEY);
+    fetch(WEBAPP_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "update_peserta_data", idPendaftaran: pesertaAktif.idPendaftaran, perubahan: perubahan, pw: pw })
+    })
+      .then(function(r){ return r.json(); })
+      .then(function(res){
+        btn.disabled = false;
+        btn.textContent = "Simpan Perubahan";
+        if (!res.ok) {
+          statusEl.className = "err";
+          statusEl.textContent = res.pesan || "Gagal menyimpan.";
+          return;
+        }
+        statusEl.className = "ok";
+        statusEl.textContent = "Tersimpan.";
+        document.getElementById("cariInput").value = "";
+        document.getElementById("hasilCari").innerHTML = "";
+        document.getElementById("statusCari").textContent = "Ketik untuk mencari peserta.";
+      })
+      .catch(function(err){
+        btn.disabled = false;
+        btn.textContent = "Simpan Perubahan";
+        statusEl.className = "err";
+        statusEl.textContent = "Gagal terhubung ke server: " + err;
+      });
+  }
+
+  // ---------- gerbang password ----------
+  function unlock(pw){
+    document.getElementById("gate").classList.add("hidden");
+    document.getElementById("app").classList.remove("hidden");
+    sessionStorage.setItem(STORAGE_KEY, pw);
+  }
+
+  function kunciUlang_(pesan){
+    sessionStorage.removeItem(STORAGE_KEY);
+    document.getElementById("app").classList.add("hidden");
+    document.getElementById("gate").classList.remove("hidden");
+    document.getElementById("pwErr").textContent = pesan + " Silakan masukkan password lagi.";
+    document.getElementById("pwInput").value = "";
+  }
+
+  // Password TERPISAH dari semua password lain di situs ini -- khusus
+  // Kang, bukan dibagikan ke petugas lapangan. Permintaan Kang, 10
+  // September 2026.
+  var PW_HASH = "5f93b6e1e178174501c69d6ded4db890a64a9c2832b966cfc1c0765419b648f5";
+  function sha256Hex(text){
+    var data = new TextEncoder().encode(text);
+    return crypto.subtle.digest("SHA-256", data).then(function(buf){
+      return Array.prototype.map.call(new Uint8Array(buf), function(b){
+        return b.toString(16).padStart(2, "0");
+      }).join("");
+    });
+  }
+
+  document.getElementById("pwBtn").onclick = function(){
+    var pw = document.getElementById("pwInput").value.trim();
+    if (!pw) { document.getElementById("pwErr").textContent = "Isi password dulu."; return; }
+    document.getElementById("pwErr").textContent = "";
+    sha256Hex(pw).then(function(hash){
+      if (hash !== PW_HASH) {
+        document.getElementById("pwErr").textContent = "Password salah.";
+        return;
+      }
+      unlock(pw);
+    });
+  };
+  document.getElementById("pwInput").addEventListener("keydown", function(e){
+    if (e.key === "Enter") document.getElementById("pwBtn").click();
+  });
+
+  var saved = sessionStorage.getItem(STORAGE_KEY);
+  if (saved) unlock(saved);
+</script>
+
+</body>
+</html>
