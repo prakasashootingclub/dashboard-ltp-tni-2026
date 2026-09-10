@@ -717,6 +717,18 @@
   document.getElementById("cariLunasInput").addEventListener("keydown", function(e){
     if (e.key === "Enter") cariLunas();
   });
+  // Auto-cari sambil ngetik, sama seperti tab Verifikasi Bayar & Penolakan
+  // (#cariInput/#cariTolakInput) -- bedanya tab ini cari ke SERVER (bukan
+  // filter data yang sudah di-fetch, lihat catatan di atas), jadi wajib
+  // di-debounce supaya tidak nembak request tiap 1 huruf diketik. 400ms
+  // dipilih supaya masih terasa "otomatis" tapi tidak spam kalau ngetik
+  // cepat. Permintaan Kang, 10 September 2026 -- sebelumnya HARUS klik
+  // "Cari Peserta" dulu, tidak konsisten dengan 2 tab lain.
+  var timerCariLunas = null;
+  document.getElementById("cariLunasInput").addEventListener("input", function(){
+    if (timerCariLunas) clearTimeout(timerCariLunas);
+    timerCariLunas = setTimeout(cariLunas, 400);
+  });
 
   // ---------- Penolakan (dipindah dari ots-ditolak.html, 7 September 2026) ----------
   // Sama sekali tidak difilter per pos materi -- semua pos yang pegang
