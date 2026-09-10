@@ -59,6 +59,32 @@
     background:var(--panel-2); border:1px solid var(--line); border-radius:6px; padding:10px;
   }
 
+  /* ---------- tab ---------- */
+  .tab-btn-row{display:flex; gap:8px; margin-bottom:16px;}
+  .tab-btn{
+    flex:1; padding:11px; border-radius:6px; border:1px solid var(--line);
+    background:var(--panel); color:var(--ink-dim); font-size:13px; font-weight:700;
+  }
+  .tab-btn.aktif{background:var(--olive); color:var(--bg); border-color:var(--olive);}
+
+  /* ---------- kartu ditolak ---------- */
+  .kartu-tolak{
+    background:var(--panel); border:1px solid var(--line); border-left:3px solid var(--red);
+    border-radius:8px; padding:12px 14px; margin-bottom:10px;
+  }
+  .kartu-tolak .baris-atas{display:flex; justify-content:space-between; align-items:flex-start; gap:12px;}
+  .kartu-tolak .nama{font-size:14px; font-weight:700;}
+  .kartu-tolak .waktu{font-family:var(--mono); font-size:11px; color:var(--ink-faint); white-space:nowrap;}
+  .kartu-tolak .meta{font-size:12px; color:var(--ink-dim); margin-top:4px;}
+  .kartu-tolak .alasan{
+    font-size:12px; color:var(--amber-bright); margin-top:6px; padding-top:6px;
+    border-top:1px solid var(--line);
+  }
+  .kartu-tolak button.perbaiki-btn{
+    width:100%; margin-top:10px; padding:10px; border-radius:6px; border:1px solid var(--olive);
+    background:var(--panel-2); color:var(--olive-bright); font-size:13px; font-weight:700;
+  }
+
   /* ---------- pencarian ---------- */
   #cariInput{
     width:100%; padding:10px 12px; border-radius:6px; border:1px solid var(--line);
@@ -138,11 +164,24 @@
   <div class="lbl">Koreksi data pendaftaran yang salah, tanpa peserta perlu isi ulang form</div>
   <a class="back-link" href="index.html">&larr; Kembali ke Dashboard</a>
 
-  <input type="text" id="cariInput" placeholder="Cari Nama, NIK, No HP, Email, atau ID Pendaftaran...">
-  <div id="statusCari">Ketik untuk mencari peserta.</div>
-  <div id="hasilCari"></div>
+  <div class="tab-btn-row">
+    <button type="button" class="tab-btn aktif" data-tab="peserta">Peserta Terdaftar</button>
+    <button type="button" class="tab-btn" data-tab="ditolak">Perbaiki Penolakan</button>
+  </div>
 
-  <div id="formEdit" class="hidden"></div>
+  <div id="tabPeserta">
+    <input type="text" id="cariInput" placeholder="Cari Nama, NIK, No HP, Email, atau ID Pendaftaran...">
+    <div id="statusCari">Ketik untuk mencari peserta.</div>
+    <div id="hasilCari"></div>
+
+    <div id="formEdit" class="hidden"></div>
+  </div>
+
+  <div id="tabDitolak" class="hidden">
+    <div id="statusDitolak" style="font-size:12px;color:#5B6660;margin-bottom:10px;">Memuat...</div>
+    <div id="listDitolak"></div>
+    <div id="formPerbaikiDitolak" class="hidden"></div>
+  </div>
 </div>
 
 <script>
@@ -161,6 +200,18 @@
       return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
     });
   }
+
+  // ---------- tab ----------
+  document.querySelectorAll(".tab-btn").forEach(function(btn){
+    btn.onclick = function(){
+      document.querySelectorAll(".tab-btn").forEach(function(b){ b.classList.remove("aktif"); });
+      btn.classList.add("aktif");
+      var tab = btn.dataset.tab;
+      document.getElementById("tabPeserta").classList.toggle("hidden", tab !== "peserta");
+      document.getElementById("tabDitolak").classList.toggle("hidden", tab !== "ditolak");
+      if (tab === "ditolak") muatDaftarDitolak();
+    };
+  });
 
   // ---------- pencarian ----------
   var timerCari = null;
@@ -437,6 +488,184 @@
       .catch(function(err){
         btn.disabled = false;
         btn.textContent = "Simpan Perubahan";
+        statusEl.className = "err";
+        statusEl.textContent = "Gagal terhubung ke server: " + err;
+      });
+  }
+
+  // ---------- tab "Perbaiki Penolakan" ----------
+  // Data Ditolak jauh lebih sedikit dari Peserta (cuma Nama/HP/Email/
+  // Kategori/Item/Alasan/Sumber, lihat DITOLAK_HEADER_ di Code.js) --
+  // field lain (NIK, Golongan, Metode Bayar, dst) WAJIB diisi admin di
+  // sini sebelum bisa dipindahkan. Setelah dipindahkan, baris Ditolak-nya
+  // otomatis dihapus dan baris Peserta baru langsung muncul di tab
+  // Verifikasi Bayar (status "Menunggu Bukti Transfer"/"Menunggu
+  // Verifikasi", sama seperti pendaftaran normal). Permintaan Kang, 10
+  // September 2026.
+  var daftarDitolakAktif = [];
+
+  function muatDaftarDitolak(){
+    var status = document.getElementById("statusDitolak");
+    status.textContent = "Memuat...";
+    document.getElementById("formPerbaikiDitolak").classList.add("hidden");
+    document.getElementById("formPerbaikiDitolak").innerHTML = "";
+    var pw = sessionStorage.getItem(STORAGE_KEY);
+    fetch(WEBAPP_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "list_ditolak_edit", pw: pw })
+    })
+      .then(function(r){ return r.json(); })
+      .then(function(res){
+        if (!res.ok) { kunciUlang_(res.pesan || "Gagal memuat."); return; }
+        daftarDitolakAktif = res.data;
+        status.textContent = res.data.length ? res.data.length + " penolakan." : "Belum ada penolakan. Aman.";
+        renderListDitolak(res.data);
+      })
+      .catch(function(err){ status.textContent = "Gagal terhubung ke server: " + err; });
+  }
+
+  function fmtWaktuTolak(iso){
+    try { return new Date(iso).toLocaleString("id-ID", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }); }
+    catch (e) { return iso; }
+  }
+
+  function renderListDitolak(list){
+    var el = document.getElementById("listDitolak");
+    el.innerHTML = list.map(function(r){
+      return '<div class="kartu-tolak" data-baris="' + r.baris + '">' +
+        '<div class="baris-atas">' +
+          '<div class="nama">' + escapeHtml(r.nama) + '</div>' +
+          '<div class="waktu">' + fmtWaktuTolak(r.waktu) + '</div>' +
+        '</div>' +
+        '<div class="meta">' + escapeHtml(r.kategori) + ' &middot; ' + escapeHtml(r.item) + ' &middot; HP: ' + escapeHtml(r.hp) + '</div>' +
+        '<div class="alasan">' + escapeHtml(r.alasan) + '</div>' +
+        '<button type="button" class="perbaiki-btn" data-baris="' + r.baris + '">Perbaiki &amp; Pindahkan ke Verifikasi Bayar</button>' +
+      '</div>';
+    }).join("");
+    el.querySelectorAll(".perbaiki-btn").forEach(function(btn){
+      btn.onclick = function(){
+        var entri = daftarDitolakAktif.find(function(r){ return String(r.baris) === btn.dataset.baris; });
+        if (entri) bukaFormPerbaikiDitolak(entri);
+      };
+    });
+  }
+
+  function bukaFormPerbaikiDitolak(entri){
+    var box = document.getElementById("formPerbaikiDitolak");
+    box.classList.remove("hidden");
+    box.innerHTML = '<div style="text-align:center;color:#5B6660;padding:20px;">Memuat katalog kategori...</div>';
+    box.scrollIntoView({ behavior: "smooth", block: "start" });
+
+    muatKatalogKategori(function(){
+      var optKategori = katalogKategori.map(function(k){
+        return '<option value="' + escapeHtml(k.nama) + '"' + (k.nama === entri.kategori ? " selected" : "") + '>' + escapeHtml(k.nama) + '</option>';
+      }).join("");
+      function itemOptionsUntuk(namaKat){
+        var kat = katalogKategori.find(function(k){ return k.nama === namaKat; });
+        var items = kat ? kat.items : [];
+        if (entri.item && items.indexOf(entri.item) === -1) items = [entri.item].concat(items);
+        return items.map(function(it){
+          return '<option value="' + escapeHtml(it) + '"' + (it === entri.item ? " selected" : "") + '>' + escapeHtml(it) + '</option>';
+        }).join("");
+      }
+      function fieldD(label, id, val){
+        return '<div class="field"><label>' + label + '</label><input type="text" id="' + id + '" value="' + escapeHtml(val || "") + '"></div>';
+      }
+
+      box.innerHTML =
+        '<h3>Perbaiki: ' + escapeHtml(entri.nama) + '</h3>' +
+        '<div class="sub">Alasan ditolak sebelumnya: ' + escapeHtml(entri.alasan) + '</div>' +
+        '<div class="section-title">Data Peserta</div>' +
+        '<div class="row2">' + fieldD("Nama", "d_nama", entri.nama) + fieldD("No HP", "d_hp", entri.hp) + '</div>' +
+        '<div class="row2">' + fieldD("No KTP (NIK) *wajib*", "d_nik", "") + fieldD("No KTA", "d_kta", "-") + '</div>' +
+        fieldD("Email", "d_email", entri.email) +
+        '<div class="field"><label>Golongan *wajib*</label><select id="d_golongan"><option value="">-- pilih --</option><option value="TNI/Polri">TNI/Polri</option><option value="Sipil">Sipil</option></select></div>' +
+
+        '<div class="section-title">Materi</div>' +
+        '<div class="row2">' +
+          '<div class="field"><label>Kategori</label><select id="d_kategori">' + optKategori + '</select></div>' +
+          '<div class="field"><label>Item/Divisi</label><select id="d_item">' + itemOptionsUntuk(entri.kategori) + '</select></div>' +
+        '</div>' +
+        '<div class="field"><label>Metode Bayar</label><select id="d_metodeBayar">' +
+          '<option value="Transfer">Transfer</option><option value="Tunai (OTS)">Tunai (OTS)</option>' +
+        '</select></div>' +
+        fieldD("Bukti Transfer URL (kalau sudah ada, opsional)", "d_buktiTransferUrl", "") +
+        '<div class="field catatan">Biaya dihitung otomatis sesuai Kategori/Item/Golongan yang dipilih -- sama seperti pendaftaran normal.</div>' +
+
+        '<div class="section-title">Info Tambahan (opsional)</div>' +
+        fieldD("Instansi/Club", "d_instansiClub", "-") +
+        fieldD("Nama Tandem (Air Rifle)", "d_namaTandem", "-") +
+        fieldD("Anggota Tim (Beregu)", "d_anggotaTim", "-") +
+        fieldD("NIK Anggota Tim (Beregu)", "d_nikAnggotaTim", "-") +
+        fieldD("Foto KTP URL", "d_fotoKtpUrl", "-") +
+        fieldD("Foto KTP Anggota Tim (Beregu)", "d_fotoKtpAnggotaTim", "-") +
+        '<div class="row2">' + fieldD("Power Factor (IPSC)", "d_powerFactor", "-") + fieldD("Kategori Usia/Gender (IPSC)", "d_kategoriUsia", "-") + '</div>' +
+        fieldD("Waktu Pelaksanaan (IPSC)", "d_waktuPelaksanaan", "-") +
+
+        '<div id="simpanStatusDitolak"></div>' +
+        '<button id="pindahkanBtn">Perbaiki &amp; Pindahkan ke Verifikasi Bayar</button>' +
+        '<button id="batalDitolakBtn" type="button">Batal</button>';
+
+      document.getElementById("d_kategori").addEventListener("change", function(){
+        document.getElementById("d_item").innerHTML = itemOptionsUntuk(this.value);
+      });
+      document.getElementById("batalDitolakBtn").onclick = function(){
+        box.classList.add("hidden"); box.innerHTML = "";
+      };
+      document.getElementById("pindahkanBtn").onclick = function(){ simpanPerbaikanDitolak(entri.baris); };
+    });
+  }
+
+  function simpanPerbaikanDitolak(baris){
+    var btn = document.getElementById("pindahkanBtn");
+    var statusEl = document.getElementById("simpanStatusDitolak");
+    var g = function(id){ return document.getElementById(id).value.trim(); };
+
+    var nama = g("d_nama"), hp = g("d_hp"), nik = g("d_nik"), golongan = g("d_golongan");
+    if (!nama || !hp || !nik || !golongan) {
+      statusEl.className = "err";
+      statusEl.textContent = "Nama, No HP, NIK, dan Golongan wajib diisi.";
+      return;
+    }
+    if (!confirm('Perbaiki data "' + nama + '" dan pindahkan ke Verifikasi Bayar? Baris penolakannya akan dihapus.')) return;
+
+    var data = {
+      nama: nama, hp: hp, nik: nik, kta: g("d_kta"), email: g("d_email"), golongan: golongan,
+      kategori: g("d_kategori"), item: g("d_item"), metodeBayar: g("d_metodeBayar"),
+      buktiTransferUrl: g("d_buktiTransferUrl"),
+      instansiClub: g("d_instansiClub"), namaTandem: g("d_namaTandem"),
+      anggotaTim: g("d_anggotaTim"), nikAnggotaTim: g("d_nikAnggotaTim"),
+      fotoKtpUrl: g("d_fotoKtpUrl"), fotoKtpAnggotaTim: g("d_fotoKtpAnggotaTim"),
+      powerFactor: g("d_powerFactor"), kategoriUsia: g("d_kategoriUsia"),
+      waktuPelaksanaan: g("d_waktuPelaksanaan")
+    };
+
+    btn.disabled = true;
+    btn.textContent = "Memindahkan...";
+    statusEl.className = ""; statusEl.textContent = "";
+    var pw = sessionStorage.getItem(STORAGE_KEY);
+    fetch(WEBAPP_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "perbaiki_dan_pindahkan_penolakan", baris: baris, data: data, pw: pw })
+    })
+      .then(function(r){ return r.json(); })
+      .then(function(res){
+        btn.disabled = false;
+        btn.textContent = "Perbaiki & Pindahkan ke Verifikasi Bayar";
+        if (!res.ok) { statusEl.className = "err"; statusEl.textContent = res.pesan || "Gagal memindahkan."; return; }
+        statusEl.className = "ok";
+        statusEl.textContent = "Berhasil dipindahkan -- sudah muncul di tab Verifikasi Bayar.";
+        setTimeout(function(){
+          document.getElementById("formPerbaikiDitolak").classList.add("hidden");
+          document.getElementById("formPerbaikiDitolak").innerHTML = "";
+          muatDaftarDitolak();
+        }, 1200);
+      })
+      .catch(function(err){
+        btn.disabled = false;
+        btn.textContent = "Perbaiki & Pindahkan ke Verifikasi Bayar";
         statusEl.className = "err";
         statusEl.textContent = "Gagal terhubung ke server: " + err;
       });
