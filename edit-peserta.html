@@ -573,14 +573,27 @@
         return '<div class="field"><label>' + label + '</label><input type="text" id="' + id + '" value="' + escapeHtml(val || "") + '"></div>';
       }
 
+      // Kolom 9-22 di sheet Ditolak (NIK, Golongan, dst) ditambahkan 10
+      // September 2026 -- sekarang data lengkap peserta yang ditolak
+      // TERSIMPAN, bukan cuma catatan ringkas, jadi form ini pre-fill dari
+      // situ (entri.nik dkk) bukan kosong lagi. Penolakan LAMA (sebelum
+      // kolom ini ada) otomatis dapat "-" dari backend -- masih harus diisi
+      // manual, tapi itu cuma sisa data lama, bukan yang baru.
+      var selGolongan = entri.golongan === "TNI/Polri" || entri.golongan === "Sipil" ? entri.golongan : "";
+      var selMetode = entri.metodeBayar === "Tunai (OTS)" ? "Tunai (OTS)" : "Transfer";
+      function nilaiBersih_(v){ return (v && v !== "-") ? v : ""; }
+
       box.innerHTML =
         '<h3>Perbaiki: ' + escapeHtml(entri.nama) + '</h3>' +
         '<div class="sub">Alasan ditolak sebelumnya: ' + escapeHtml(entri.alasan) + '</div>' +
         '<div class="section-title">Data Peserta</div>' +
         '<div class="row2">' + fieldD("Nama", "d_nama", entri.nama) + fieldD("No HP", "d_hp", entri.hp) + '</div>' +
-        '<div class="row2">' + fieldD("No KTP (NIK) *wajib*", "d_nik", "") + fieldD("No KTA", "d_kta", "-") + '</div>' +
+        '<div class="row2">' + fieldD("No KTP (NIK) *wajib*", "d_nik", nilaiBersih_(entri.nik)) + fieldD("No KTA", "d_kta", entri.kta) + '</div>' +
         fieldD("Email", "d_email", entri.email) +
-        '<div class="field"><label>Golongan *wajib*</label><select id="d_golongan"><option value="">-- pilih --</option><option value="TNI/Polri">TNI/Polri</option><option value="Sipil">Sipil</option></select></div>' +
+        '<div class="field"><label>Golongan *wajib*</label><select id="d_golongan"><option value="">-- pilih --</option>' +
+          '<option value="TNI/Polri"' + (selGolongan === "TNI/Polri" ? " selected" : "") + '>TNI/Polri</option>' +
+          '<option value="Sipil"' + (selGolongan === "Sipil" ? " selected" : "") + '>Sipil</option>' +
+        '</select></div>' +
 
         '<div class="section-title">Materi</div>' +
         '<div class="row2">' +
@@ -588,20 +601,21 @@
           '<div class="field"><label>Item/Divisi</label><select id="d_item">' + itemOptionsUntuk(entri.kategori) + '</select></div>' +
         '</div>' +
         '<div class="field"><label>Metode Bayar</label><select id="d_metodeBayar">' +
-          '<option value="Transfer">Transfer</option><option value="Tunai (OTS)">Tunai (OTS)</option>' +
+          '<option value="Transfer"' + (selMetode === "Transfer" ? " selected" : "") + '>Transfer</option>' +
+          '<option value="Tunai (OTS)"' + (selMetode === "Tunai (OTS)" ? " selected" : "") + '>Tunai (OTS)</option>' +
         '</select></div>' +
-        fieldD("Bukti Transfer URL (kalau sudah ada, opsional)", "d_buktiTransferUrl", "") +
+        fieldD("Bukti Transfer URL (kalau sudah ada, opsional)", "d_buktiTransferUrl", nilaiBersih_(entri.buktiTransferUrl)) +
         '<div class="field catatan">Biaya dihitung otomatis sesuai Kategori/Item/Golongan yang dipilih -- sama seperti pendaftaran normal.</div>' +
 
         '<div class="section-title">Info Tambahan (opsional)</div>' +
-        fieldD("Instansi/Club", "d_instansiClub", "-") +
-        fieldD("Nama Tandem (Air Rifle)", "d_namaTandem", "-") +
-        fieldD("Anggota Tim (Beregu)", "d_anggotaTim", "-") +
-        fieldD("NIK Anggota Tim (Beregu)", "d_nikAnggotaTim", "-") +
-        fieldD("Foto KTP URL", "d_fotoKtpUrl", "-") +
-        fieldD("Foto KTP Anggota Tim (Beregu)", "d_fotoKtpAnggotaTim", "-") +
-        '<div class="row2">' + fieldD("Power Factor (IPSC)", "d_powerFactor", "-") + fieldD("Kategori Usia/Gender (IPSC)", "d_kategoriUsia", "-") + '</div>' +
-        fieldD("Waktu Pelaksanaan (IPSC)", "d_waktuPelaksanaan", "-") +
+        fieldD("Instansi/Club", "d_instansiClub", entri.instansiClub) +
+        fieldD("Nama Tandem (Air Rifle)", "d_namaTandem", entri.namaTandem) +
+        fieldD("Anggota Tim (Beregu)", "d_anggotaTim", entri.anggotaTim) +
+        fieldD("NIK Anggota Tim (Beregu)", "d_nikAnggotaTim", entri.nikAnggotaTim) +
+        fieldD("Foto KTP URL", "d_fotoKtpUrl", nilaiBersih_(entri.fotoKtpUrl)) +
+        fieldD("Foto KTP Anggota Tim (Beregu)", "d_fotoKtpAnggotaTim", entri.fotoKtpAnggotaTim) +
+        '<div class="row2">' + fieldD("Power Factor (IPSC)", "d_powerFactor", entri.powerFactor) + fieldD("Kategori Usia/Gender (IPSC)", "d_kategoriUsia", entri.kategoriUsia) + '</div>' +
+        fieldD("Waktu Pelaksanaan (IPSC)", "d_waktuPelaksanaan", entri.waktuPelaksanaan) +
 
         '<div id="simpanStatusDitolak"></div>' +
         '<button id="pindahkanBtn">Perbaiki &amp; Pindahkan ke Verifikasi Bayar</button>' +
