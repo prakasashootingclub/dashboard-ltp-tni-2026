@@ -480,10 +480,18 @@
           return;
         }
         statusEl.className = "ok";
-        statusEl.textContent = "Tersimpan.";
-        document.getElementById("cariInput").value = "";
-        document.getElementById("hasilCari").innerHTML = "";
-        document.getElementById("statusCari").textContent = "Ketik untuk mencari peserta.";
+        statusEl.textContent = "Tersimpan! Menutup form...";
+        btn.disabled = true;
+        document.getElementById("batalBtn").disabled = true;
+        setTimeout(function(){
+          var box = document.getElementById("formEdit");
+          box.classList.add("hidden");
+          box.innerHTML = "";
+          pesertaAktif = null;
+          document.getElementById("cariInput").value = "";
+          document.getElementById("hasilCari").innerHTML = "";
+          document.getElementById("statusCari").textContent = "Tersimpan. Ketik untuk mencari peserta.";
+        }, 900);
       })
       .catch(function(err){
         btn.disabled = false;
