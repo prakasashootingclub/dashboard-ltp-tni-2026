@@ -489,14 +489,24 @@ function render(){
   const checkinSum = sum("checkin");
   const pct = (num)=> terdaftarSum > 0 ? Math.round(num/terdaftarSum*100)+"%" : "—";
 
-  // Rincian Peserta/Regu di kotak Terdaftar -- "Regu" cuma pendaftaran item
-  // Beregu (Senapan & Eksekutif, satu-satunya kategori yang punya item
-  // Beregu), sisanya (termasuk Perorangan Senapan/Eksekutif + semua kategori
-  // lain) dihitung "Peserta". Permintaan Kang, 14 September 2026.
-  const reguSum = fr.filter(r=>r.item.includes("Beregu")).reduce((a,r)=>a+r.terdaftar,0);
-  const pesertaSum = terdaftarSum - reguSum;
+  // Angka kotak "Terdaftar" DIHITUNG SEBAGAI ORANG RIIL (Perorangan + semua
+  // anggota tim Regu), SAMA seperti "X peserta" di kartu Senapan/Eksekutif --
+  // supaya kalau dijumlah manual per kartu (345+138+102+...), hasilnya cocok
+  // sama angka di kotak ini. Sebelumnya kotak ini pakai jumlah baris
+  // pendaftaran (795), sedangkan kartu sudah pakai jumlah orang riil (805),
+  // makanya tidak pernah nyambung kalau dijumlah -- ditemukan Kang, 14
+  // September 2026. anggotaPerRegu: Senapan=2, Eksekutif(Pistol)=3, sesuai
+  // anggotaBeregu di KATEGORI_LIST/Code.gs.
+  const reguTeamSum = fr.filter(r=>r.item.includes("Beregu")).reduce((a,r)=>a+r.terdaftar,0);
+  const reguOrangSum = fr.reduce((a,r)=>{
+    if (!r.item.includes("Beregu")) return a;
+    const anggotaPerRegu = r.kat === "Senapan" ? 2 : r.kat === "Pistol" ? 3 : 1;
+    return a + r.terdaftar * anggotaPerRegu;
+  }, 0);
+  const pesertaSum = terdaftarSum - reguTeamSum; // Perorangan (non-Beregu) = orang riil juga, 1 baris = 1 orang
+  const headcountSum = pesertaSum + reguOrangSum;
   const totals = [
-    {n:terdaftarSum, l:"Terdaftar", cls:"", sub:`&bull; ${fmt(pesertaSum)} Perorangan<br>&bull; ${fmt(reguSum)} Regu`},
+    {n:headcountSum, l:"Terdaftar", cls:"", sub:`&bull; ${fmt(pesertaSum)} Perorangan<br>&bull; ${fmt(reguTeamSum)} Regu (${fmt(reguOrangSum)} orang)`},
     {n:checkinSum, l:"Daftar Ulang", cls:"amber", sub:pct(checkinSum)+" dari terdaftar"},
   ];
   document.getElementById("totalsStrip").innerHTML = totals.map(t=>`
