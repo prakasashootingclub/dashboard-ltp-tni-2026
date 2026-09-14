@@ -286,6 +286,22 @@
       });
   }
 
+  // Konfirmasi terakhir SEBELUM benar-benar diverifikasi -- 2 kasus beda
+  // pesan (permintaan Kang, 15 September 2026):
+  //  1. Kupon KOSONG -- pastikan itu memang disengaja (peserta tidak
+  //     bawa/tidak dapat kupon), bukan cuma lupa ketik.
+  //  2. Kupon TERISI -- pastikan angkanya SUDAH DICOCOKKAN ke sobekan
+  //     kupon fisik peserta (bukan asal ketik/salah lihat), supaya tidak
+  //     ada nomor salah ketik yang lolos ke database.
+  // Dipakai di 2 jalur: form hasil scan (verifKuponBtn) & hasil
+  // pencarian manual (verif-manual).
+  function konfirmasiKupon(kupon){
+    if (!kupon) {
+      return confirm("Nomor kupon KOSONG.\n\nYakin peserta ini memang TIDAK membawa/menyerahkan kupon doorprize? (Daftar Ulang tetap lanjut TANPA nomor kupon)");
+    }
+    return confirm("Nomor kupon yang diketik: \"" + kupon + "\"\n\nPASTIKAN nomor ini sudah dicocokkan persis dengan sobekan kupon fisik yang diserahkan peserta. Sudah yakin benar?");
+  }
+
   // Tampilkan data peserta + kotak isi nomor kupon doorprize + tombol
   // "Verifikasi Daftar Ulang" -- SETELAH scan/cari, SEBELUM benar-benar
   // ditandai daftar ulang (baru ditandai kalau tombol ini diklik).
@@ -321,6 +337,7 @@
       var btn = this;
       var kupon = document.getElementById("kuponInput").value.trim();
       var errEl = document.getElementById("kuponErr");
+      if (!konfirmasiKupon(kupon)) return;
       btn.disabled = true; btn.textContent = "Memproses...";
       errEl.textContent = "";
       var pw = sessionStorage.getItem(STORAGE_KEY);
@@ -503,7 +520,9 @@
           btn.onclick = function(){
             var kuponEl = card.querySelector(".kupon-manual");
             var errEl = card.querySelector(".kupon-err-manual");
-            verifikasiManual(p.etiketId, btn, kuponEl ? kuponEl.value.trim() : "", errEl);
+            var kuponVal = kuponEl ? kuponEl.value.trim() : "";
+            if (!konfirmasiKupon(kuponVal)) return;
+            verifikasiManual(p.etiketId, btn, kuponVal, errEl);
           };
           var koreksiBtn = document.createElement("button");
           koreksiBtn.className = "btn-koreksi";
