@@ -131,7 +131,8 @@
      Beregu (lihat itemCatalog & anggotaBeregu di Code.gs). Ditaruh di bawah
      kat-total, rata kanan seperti pemiliknya. */
   .card-breakdown{
-    font-family:var(--mono); font-size:11px; color:var(--ink-faint); text-align:right; margin-top:3px;
+    font-family:var(--mono); font-size:11px; color:var(--ink-faint); text-align:right;
+    margin-top:5px; line-height:1.6;
   }
 
   .funnel{display:flex; flex-direction:column; gap:7px;}
@@ -495,7 +496,7 @@ function render(){
   const reguSum = fr.filter(r=>r.item.includes("Beregu")).reduce((a,r)=>a+r.terdaftar,0);
   const pesertaSum = terdaftarSum - reguSum;
   const totals = [
-    {n:terdaftarSum, l:"Terdaftar", cls:"", sub:`- ${fmt(pesertaSum)} Peserta<br>- ${fmt(reguSum)} Regu`},
+    {n:terdaftarSum, l:"Terdaftar", cls:"", sub:`&bull; ${fmt(pesertaSum)} Perorangan<br>&bull; ${fmt(reguSum)} Regu`},
     {n:checkinSum, l:"Daftar Ulang", cls:"amber", sub:pct(checkinSum)+" dari terdaftar"},
   ];
   document.getElementById("totalsStrip").innerHTML = totals.map(t=>`
@@ -523,7 +524,7 @@ function render(){
     if (k.key === "Senapan" || k.key === "Pistol") {
       const perorangan = kr.filter(r=>!r.item.includes("Beregu")).reduce((a,r)=>a+r.terdaftar,0);
       const regu = kr.filter(r=>r.item.includes("Beregu")).reduce((a,r)=>a+r.terdaftar,0);
-      breakdownHtml = `<div class="card-breakdown">${fmt(perorangan)} Perorangan &middot; ${fmt(regu)} Regu</div>`;
+      breakdownHtml = `<div class="card-breakdown">&bull; ${fmt(perorangan)} Perorangan<br>&bull; ${fmt(regu)} Regu</div>`;
     }
 
     return `
