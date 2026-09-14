@@ -49,6 +49,23 @@
   }
   .btn-koreksi:disabled{border-color:#3a4a3a; color:#8C9A8A;}
 
+  /* ---------- kotak nomor kupon doorprize ---------- */
+  .kupon-lbl{font-size:11px; color:#8C9A8A; display:block; margin:10px 0 4px;}
+  .kupon-input{
+    width:100%; padding:10px; border-radius:6px; border:1px solid #2A322C;
+    background:#0E1210; color:#E9EAE3; font-size:15px; margin-bottom:8px;
+  }
+  .btn-verif-kupon{
+    width:100%; padding:10px; border-radius:6px; border:none;
+    background:#5C7A3A; color:#0E1210; font-weight:700; font-size:13px;
+  }
+  .btn-verif-kupon:disabled{background:#3a4a3a; color:#8C9A8A;}
+  .btn-batal-kupon{
+    width:100%; padding:8px; border-radius:6px; border:1px solid #2A322C;
+    background:none; color:#8C9A8A; font-size:12px; margin-top:6px;
+  }
+  .kupon-err{color:#E58B7A; font-size:12px; margin-top:6px; min-height:14px;}
+
   .cari-toggle{
     display:block; width:100%; text-align:center; margin-top:12px;
     background:none; border:none; color:#8C9A8A; font-size:12px;
@@ -173,7 +190,13 @@
   var WEBAPP_URL = "https://script.google.com/macros/s/AKfycbyGY8Pi3gBALM8GVP6XCB04P_eebPw2thlP_ShQR6IVC31vuCZcWXxQK677crIgHysu/exec";
   var STORAGE_KEY = "scannerPw";
   var MATERI_KEY = "scannerMateri";
-  var ACTION = "scan_checkin_materi";
+  // Dua aksi terpisah (bukan 1 ACTION seperti dulu) -- fitur nomor kupon
+  // doorprize (permintaan Kang, 14 September 2026): scan QR cuma CEK data
+  // (tidak menandai apa pun), petugas isi nomor kupon (sobekan kupon
+  // fisik peserta), baru VERIF yang benar-benar menandai "Sudah" +
+  // simpan nomor kupon.
+  var ACTION_CEK = "cek_checkin_materi";
+  var ACTION_VERIF = "verifikasi_daftar_ulang";
   var scanner = null;
   var busy = false;
 
@@ -216,6 +239,7 @@
         escapeHtml(namaTampilanMateri(res.kategori)) + ' &middot; ' + escapeHtml(res.item) + '<br>' +
         'Golongan: ' + escapeHtml(res.golongan) +
         (res.instansiClub && res.instansiClub !== "-" ? '<br>Instansi/Club: ' + escapeHtml(res.instansiClub) : '') +
+        (res.nomorKupon && res.nomorKupon !== "-" ? '<br>Nomor Kupon Doorprize: <b>' + escapeHtml(res.nomorKupon) + '</b>' : '') +
         '</div>' +
         fotoHtml
       ) : '');
@@ -262,6 +286,75 @@
       });
   }
 
+  // Tampilkan data peserta + kotak isi nomor kupon doorprize + tombol
+  // "Verifikasi Daftar Ulang" -- SETELAH scan/cari, SEBELUM benar-benar
+  // ditandai daftar ulang (baru ditandai kalau tombol ini diklik).
+  // Kamera dijeda (scanner.pause) selama form ini tampil supaya QR yang
+  // sama tidak ke-scan ulang & menimpa kupon yang sedang diketik
+  // petugas. Permintaan Kang, 14 September 2026.
+  function renderFormKupon(box, res, etiketId){
+    box.className = "";
+    var fotoHtml = res.fotoKtpUrl
+      ? '<a href="' + escapeHtml(res.fotoKtpUrl) + '" target="_blank" rel="noopener">Lihat Foto KTP &rarr;</a>'
+      : '<div class="foto-warn">Tidak ada foto KTP -- cocokkan manual dengan KTP fisik.</div>';
+    var hpDigits = String(res.hp || "").replace(/[^0-9]/g, "");
+    var hpHtml = hpDigits
+      ? '<a href="https://wa.me/' + hpDigits + '" target="_blank" rel="noopener">' + escapeHtml(res.hp) + '</a>'
+      : escapeHtml(res.hp);
+    box.innerHTML =
+      '<div class="pesan">' + escapeHtml(res.pesan) + '</div>' +
+      '<div class="nama">' + escapeHtml(res.nama) + '</div>' +
+      '<div class="meta">NIK: ' + escapeHtml(res.ktp) + '<br>' +
+      'HP: ' + hpHtml + '<br>' +
+      escapeHtml(namaTampilanMateri(res.kategori)) + ' &middot; ' + escapeHtml(res.item) + '<br>' +
+      'Golongan: ' + escapeHtml(res.golongan) +
+      (res.instansiClub && res.instansiClub !== "-" ? '<br>Instansi/Club: ' + escapeHtml(res.instansiClub) : '') +
+      '</div>' +
+      fotoHtml +
+      '<label class="kupon-lbl">Nomor Kupon Doorprize (sobekan kupon fisik peserta -- kosongkan kalau tidak ada)</label>' +
+      '<input type="text" id="kuponInput" class="kupon-input" placeholder="Contoh: 0452" inputmode="numeric">' +
+      '<button id="verifKuponBtn" class="btn-verif-kupon">Verifikasi Daftar Ulang</button>' +
+      '<button id="batalKuponBtn" type="button" class="btn-batal-kupon">Batal / Scan Ulang</button>' +
+      '<div id="kuponErr" class="kupon-err"></div>';
+
+    document.getElementById("verifKuponBtn").onclick = function(){
+      var btn = this;
+      var kupon = document.getElementById("kuponInput").value.trim();
+      var errEl = document.getElementById("kuponErr");
+      btn.disabled = true; btn.textContent = "Memproses...";
+      errEl.textContent = "";
+      var pw = sessionStorage.getItem(STORAGE_KEY);
+      var materi = sessionStorage.getItem(MATERI_KEY);
+      fetch(WEBAPP_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({ action: ACTION_VERIF, etiket_id: etiketId, pw: pw, kategori_materi: materi, nomorKupon: kupon })
+      })
+        .then(function(r){ return r.json(); })
+        .then(function(res2){
+          if (!res2.ok) {
+            btn.disabled = false; btn.textContent = "Verifikasi Daftar Ulang";
+            errEl.textContent = res2.pesan || "Gagal.";
+            return;
+          }
+          renderHasil(box, res2, res2.sudah ? "warn" : "ok");
+          busy = false;
+          if (scanner) scanner.resume();
+        })
+        .catch(function(err){
+          btn.disabled = false; btn.textContent = "Verifikasi Daftar Ulang";
+          errEl.textContent = "Gagal terhubung ke server: " + err;
+        });
+    };
+    document.getElementById("batalKuponBtn").onclick = function(){
+      box.className = "";
+      box.textContent = "Dibatalkan -- arahkan kamera ke QR lagi.";
+      busy = false;
+      if (scanner) scanner.resume();
+    };
+    document.getElementById("kuponInput").focus();
+  }
+
   function onScanSuccess(decodedText){
     if (busy) return;
     busy = true;
@@ -274,24 +367,28 @@
     fetch(WEBAPP_URL, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ action: ACTION, etiket_id: decodedText, pw: pw, kategori_materi: materi })
+      body: JSON.stringify({ action: ACTION_CEK, etiket_id: decodedText, pw: pw, kategori_materi: materi })
     })
       .then(function(r){ return r.json(); })
       .then(function(res){
         if(!res.ok){
           renderHasil(box, Object.assign({ pesan: "QR tidak dikenali atau belum lunas." }, res), "err");
+          busy = false;
         } else if(res.sudah){
           renderHasil(box, res, "warn");
+          setTimeout(function(){ busy = false; }, 1500);
         } else {
-          renderHasil(box, res, "ok");
+          // Belum daftar ulang -- tampilkan form kupon, JEDA kamera supaya
+          // tidak scan ulang QR yang sama sementara petugas ketik kupon
+          // (verifKuponBtn/batalKuponBtn di atas yang resume & lepas busy).
+          renderFormKupon(box, res, decodedText);
+          if (scanner) scanner.pause(true);
         }
       })
       .catch(function(err){
         box.className = "err";
         box.textContent = "Gagal terhubung ke server: " + err;
-      })
-      .finally(function(){
-        setTimeout(function(){ busy = false; }, 1500);
+        busy = false;
       });
   }
 
@@ -321,30 +418,33 @@
     });
   }
 
-  function verifikasiManual(etiketId, btn){
+  function verifikasiManual(etiketId, btn, kupon, errEl){
     btn.disabled = true;
     btn.textContent = "Memproses...";
+    if (errEl) errEl.textContent = "";
     var pw = sessionStorage.getItem(STORAGE_KEY);
     var materi = sessionStorage.getItem(MATERI_KEY);
     fetch(WEBAPP_URL, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ action: ACTION, etiket_id: etiketId, pw: pw, kategori_materi: materi })
+      body: JSON.stringify({ action: ACTION_VERIF, etiket_id: etiketId, pw: pw, kategori_materi: materi, nomorKupon: kupon || "" })
     })
       .then(function(r){ return r.json(); })
       .then(function(res){
         if (!res.ok) {
           btn.disabled = false;
-          btn.textContent = "Daftar Ulang Manual";
-          alert(res.pesan || "Gagal.");
+          btn.textContent = "Verifikasi Daftar Ulang";
+          if (errEl) errEl.textContent = res.pesan || "Gagal.";
+          else alert(res.pesan || "Gagal.");
           return;
         }
         btn.textContent = res.sudah ? "Sudah pernah daftar ulang" : "Berhasil daftar ulang";
       })
       .catch(function(err){
         btn.disabled = false;
-        btn.textContent = "Daftar Ulang Manual";
-        alert("Gagal terhubung ke server: " + err);
+        btn.textContent = "Verifikasi Daftar Ulang";
+        if (errEl) errEl.textContent = "Gagal terhubung ke server: " + err;
+        else alert("Gagal terhubung ke server: " + err);
       });
   }
 
@@ -388,12 +488,23 @@
             'HP: ' + hpHtml + '<br>' +
             escapeHtml(namaTampilanMateri(p.kategori)) + ' &middot; ' + escapeHtml(p.item) + '<br>' +
             (p.instansiClub && p.instansiClub !== "-" ? 'Instansi/Club: ' + escapeHtml(p.instansiClub) + '<br>' : '') +
-            'Status: ' + (sudahVerif ? 'Sudah daftar ulang' : 'Belum daftar ulang') + '</div>' +
+            'Status: ' + (sudahVerif
+              ? 'Sudah daftar ulang' + (p.nomorKupon && p.nomorKupon !== "-" ? ' (Kupon: ' + escapeHtml(p.nomorKupon) + ')' : '')
+              : 'Belum daftar ulang') + '</div>' +
             fotoHtml +
-            '<button class="verif-manual">' + (sudahVerif ? 'Sudah pernah daftar ulang' : 'Daftar Ulang Manual') + '</button>';
+            (sudahVerif ? '' :
+              '<label class="kupon-lbl">Nomor Kupon Doorprize (kosongkan kalau tidak ada)</label>' +
+              '<input type="text" class="kupon-input kupon-manual" placeholder="Contoh: 0452" inputmode="numeric">'
+            ) +
+            '<button class="verif-manual">' + (sudahVerif ? 'Sudah pernah daftar ulang' : 'Verifikasi Daftar Ulang') + '</button>' +
+            (sudahVerif ? '' : '<div class="kupon-err kupon-err-manual"></div>');
           var btn = card.querySelector(".verif-manual");
           if (sudahVerif) btn.disabled = true;
-          btn.onclick = function(){ verifikasiManual(p.etiketId, btn); };
+          btn.onclick = function(){
+            var kuponEl = card.querySelector(".kupon-manual");
+            var errEl = card.querySelector(".kupon-err-manual");
+            verifikasiManual(p.etiketId, btn, kuponEl ? kuponEl.value.trim() : "", errEl);
+          };
           var koreksiBtn = document.createElement("button");
           koreksiBtn.className = "btn-koreksi";
           koreksiBtn.textContent = "Tandai Perlu Koreksi Golongan";

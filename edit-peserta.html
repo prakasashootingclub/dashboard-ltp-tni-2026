@@ -255,6 +255,7 @@
         '</div>' +
         '<div class="meta">' + escapeHtml(it.kategori) + ' &middot; ' + escapeHtml(it.item) + '<br>' +
           'NIK: ' + escapeHtml(it.nik) + ' &middot; HP: ' + escapeHtml(it.hp) +
+          (it.nomorKupon && it.nomorKupon !== "-" ? '<br>Kupon Doorprize: ' + escapeHtml(it.nomorKupon) : '') +
         '</div>' +
       '</div>';
     }).join("");
@@ -340,7 +341,8 @@
     statusDaftarUlang: 17, waktuDaftarUlang: 18, statusKirimWa: 19, hpCocok: 20,
     fotoKtpUrl: 21, email: 22, anggotaTim: 23, waktuLunas: 24,
     powerFactor: 26, kategoriUsia: 27, waktuPelaksanaan: 28, catatanKoreksi: 29,
-    instansiClub: 30, namaTandem: 31, nikAnggotaTim: 32, fotoKtpAnggotaTim: 33
+    instansiClub: 30, namaTandem: 31, nikAnggotaTim: 32, fotoKtpAnggotaTim: 33,
+    nomorKupon: 34
   };
 
   var pesertaAktif = null; // {idPendaftaran, nilai[]} yang sedang diedit
@@ -453,6 +455,8 @@
       '</div>' +
       field_("Waktu Pelaksanaan (IPSC)", "waktuPelaksanaan", "text") +
       field_("Catatan Koreksi", "catatanKoreksi", "text") +
+      field_("Nomor Kupon Doorprize", "nomorKupon", "text") +
+      '<div class="field catatan" style="margin-top:-6px;">Diisi otomatis saat petugas Daftar Ulang scan QR &amp; ketik nomor kupon -- ubah di sini HANYA kalau perlu koreksi (mis. petugas salah ketik). 1 nomor kupon tidak boleh dipakai 2 peserta -- kalau dobel, simpan akan ditolak.</div>' +
 
       '<div class="section-title">Status Operasional</div>' +
       '<div class="row2">' +
@@ -534,6 +538,7 @@
     ambil("fotoKtpUrl", "fotoKtpUrl"); ambil("fotoKtpAnggotaTim", "fotoKtpAnggotaTim");
     ambil("powerFactor", "powerFactor"); ambil("kategoriUsia", "kategoriUsia");
     ambil("waktuPelaksanaan", "waktuPelaksanaan"); ambil("catatanKoreksi", "catatanKoreksi");
+    ambil("nomorKupon", "nomorKupon");
     ambil("sumber", "sumber"); ambil("statusDaftarUlang", "statusDaftarUlang");
     ambil("hpCocok", "hpCocok"); ambil("statusKirimWa", "statusKirimWa");
     ambil("waktuDaftarUlang", "waktuDaftarUlang");

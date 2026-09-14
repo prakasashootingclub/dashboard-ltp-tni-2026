@@ -712,6 +712,7 @@
           escapeHtml(namaTampilanMateri(item.kategori)) + ' &middot; ' + escapeHtml(item.item) + '<br>' +
           'NIK: ' + escapeHtml(item.nik) + ' &middot; HP: ' + escapeHtml(item.hp) + '<br>' +
           'Email: ' + escapeHtml(item.email || "-") +
+          (item.nomorKupon && item.nomorKupon !== "-" ? '<br>Kupon Doorprize: ' + escapeHtml(item.nomorKupon) : '') +
         '</div>' +
         buktiHtml +
         (item.waLink
