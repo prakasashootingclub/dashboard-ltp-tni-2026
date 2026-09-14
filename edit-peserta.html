@@ -282,6 +282,54 @@
       .catch(function(err){ alert("Gagal memuat katalog kategori: " + err); });
   }
 
+  // ---------- kotak Nama/NIK anggota tim Beregu, dipecah otomatis sesuai
+  // jumlah anggota item yang dipilih (2 untuk Senapan Beregu, 3 untuk
+  // Eksekutif Beregu, tidak muncul sama sekali untuk item non-Beregu) --
+  // dipakai form Edit Data Peserta DAN Perbaiki Penolakan. Sebelumnya cuma
+  // 1 kotak text bebas isi "Nama1, Nama2, Nama3", bikin Kang kira cuma
+  // muat 1 nama tambahan. Permintaan Kang, 14 September 2026.
+  function cariAnggotaBereguN_(namaKat, namaItem){
+    var kat = katalogKategori && katalogKategori.find(function(k){ return k.nama === namaKat; });
+    var item = kat && kat.items.find(function(it){ return it.nama === namaItem; });
+    return item ? (item.anggotaBeregu || 0) : 0;
+  }
+  function pisahAnggota_(raw){
+    var s = String(raw || "").trim();
+    if (!s || s === "-") return [];
+    return s.split(",").map(function(x){ return x.trim(); });
+  }
+  // idPrefix: "f_" (form edit) atau "d_" (form perbaiki ditolak). namaListLengkap/
+  // nikListLengkap: SEMUA anggota termasuk pendaftar utama (index 0), persis
+  // isi kolom "Anggota Tim (Beregu)"/"NIK Anggota Tim (Beregu)" apa adanya.
+  function htmlAnggotaBeregu_(idPrefix, n, namaListLengkap, nikListLengkap){
+    if (n < 2) {
+      return '<div class="field catatan" id="' + idPrefix + 'anggotaBereguKosong">Item ini bukan Beregu -- tidak perlu isi anggota tim.</div>';
+    }
+    var html = '<div class="field catatan" style="margin-bottom:8px;">Item Beregu (' + n + ' orang). Nama &amp; NIK pendaftar utama pakai field "Nama"/"No KTP" di atas -- isi ' + (n - 1) + ' anggota TAMBAHAN di bawah ini.</div>';
+    for (var i = 2; i <= n; i++){
+      html += '<div class="row2">' +
+        '<div class="field"><label>Nama Anggota ' + i + '</label><input type="text" id="' + idPrefix + 'anggotaNama' + i + '" value="' + escapeHtml(namaListLengkap[i - 1] || "") + '"></div>' +
+        '<div class="field"><label>NIK Anggota ' + i + '</label><input type="text" id="' + idPrefix + 'anggotaNik' + i + '" value="' + escapeHtml(nikListLengkap[i - 1] || "") + '"></div>' +
+      '</div>';
+    }
+    return html;
+  }
+  // Gabungkan balik jadi 1 string "Primer, Anggota2, Anggota3" (format
+  // yang dipakai backend) -- namaPrimer/nikPrimer dari field Nama/No KTP
+  // utama supaya kalau admin edit nama utama, ikut kepakai di gabungan ini
+  // juga (bukan nilai lama yang sudah basi).
+  function gabungAnggotaBeregu_(idPrefix, n, namaPrimer, nikPrimer){
+    if (n < 2) return { nama: "-", nik: "-" };
+    var namaArr = [namaPrimer], nikArr = [nikPrimer];
+    for (var i = 2; i <= n; i++){
+      var elN = document.getElementById(idPrefix + "anggotaNama" + i);
+      var elK = document.getElementById(idPrefix + "anggotaNik" + i);
+      namaArr.push(elN ? elN.value.trim() : "");
+      nikArr.push(elK ? elK.value.trim() : "");
+    }
+    return { nama: namaArr.join(", "), nik: nikArr.join(", ") };
+  }
+
   // ---------- form edit ----------
   // Indeks kolom HEADER_ROW (0-based) yang dipakai form ini -- HARUS sama
   // persis dengan HEADER_ROW di Code.js.
@@ -336,13 +384,15 @@
 
     function itemOptionsUntuk(namaKat){
       var kat = katalogKategori.find(function(k){ return k.nama === namaKat; });
-      var items = kat ? kat.items : [];
+      var items = kat ? kat.items : []; // [{nama, anggotaBeregu}, ...]
       // Item tersimpan sekarang mungkin sudah tidak ada di katalog (materi
       // lama/dihapus) -- tetap disisipkan supaya tidak hilang diam-diam
       // dari dropdown begitu form dibuka.
-      if (itemSekarang && items.indexOf(itemSekarang) === -1) items = [itemSekarang].concat(items);
+      if (itemSekarang && !items.some(function(it){ return it.nama === itemSekarang; })) {
+        items = [{ nama: itemSekarang, anggotaBeregu: 0 }].concat(items);
+      }
       return items.map(function(it){
-        return '<option value="' + escapeHtml(it) + '"' + (it === itemSekarang ? " selected" : "") + '>' + escapeHtml(it) + '</option>';
+        return '<option value="' + escapeHtml(it.nama) + '"' + (it.nama === itemSekarang ? " selected" : "") + '>' + escapeHtml(it.nama) + '</option>';
       }).join("");
     }
 
@@ -393,9 +443,8 @@
       '<div class="section-title">Info Tambahan (opsional, tergantung materi)</div>' +
       field_("Instansi/Club", "instansiClub", "text") +
       field_("Nama Tandem (Air Rifle)", "namaTandem", "text") +
-      field_("Anggota Tim (Beregu)", "anggotaTim", "text") +
-      field_("NIK Anggota Tim (Beregu)", "nikAnggotaTim", "text") +
-      '<div class="field catatan" style="margin-top:-6px;">2 kotak di atas isinya SEMUA anggota tim TERMASUK pendaftar utama, dipisah koma -- BUKAN cuma 1 nama tambahan. Senapan Beregu = 2 nama, Eksekutif Beregu = 3 nama. Contoh: "Randy Al Zikri, Pipik Taupik, Deri Sumardi". Urutan Nama &amp; NIK harus sejajar (nama ke-2 di kotak Nama = NIK ke-2 di kotak NIK).</div>' +
+      '<div class="section-title" style="margin:14px 0 6px;">Anggota Tim (khusus item Beregu)</div>' +
+      '<div id="f_anggotaBereguBox"></div>' +
       field_("Foto KTP URL", "fotoKtpUrl", "text") +
       field_("Foto KTP Anggota Tim (Beregu)", "fotoKtpAnggotaTim", "text") +
       '<div class="row2">' +
@@ -427,8 +476,27 @@
       return daftar.map(function(o){ return '<option value="' + escapeHtml(o) + '"' + (o === terpilih ? " selected" : "") + '>' + escapeHtml(o) + '</option>'; }).join("");
     }
 
+    // Kotak Nama/NIK anggota tim Beregu -- jumlahnya ikut item yang
+    // sedang dipilih di dropdown "Item/Divisi", bukan statis. Nilai awal
+    // (waktu form baru dibuka) dipecah dari data tersimpan (kolom 23/32);
+    // kalau admin ganti Kategori/Item, kotak ini dirender ulang KOSONG
+    // (anggota lama TIDAK ikut diisikan ke item baru -- item baru = tim
+    // baru, mencegah data anggota nyasar ke item yang salah).
+    function renderAnggotaBereguBox(namaListLengkap, nikListLengkap){
+      var namaKat = document.getElementById("f_kategori").value;
+      var namaItem = document.getElementById("f_item").value;
+      var n = cariAnggotaBereguN_(namaKat, namaItem);
+      document.getElementById("f_anggotaBereguBox").innerHTML =
+        htmlAnggotaBeregu_("f_", n, namaListLengkap || [], nikListLengkap || []);
+    }
+    renderAnggotaBereguBox(pisahAnggota_(v(KOLOM.anggotaTim)), pisahAnggota_(v(KOLOM.nikAnggotaTim)));
+
     document.getElementById("f_kategori").addEventListener("change", function(){
       document.getElementById("f_item").innerHTML = itemOptionsUntuk(this.value);
+      renderAnggotaBereguBox();
+    });
+    document.getElementById("f_item").addEventListener("change", function(){
+      renderAnggotaBereguBox();
     });
     document.getElementById("batalBtn").onclick = function(){
       box.classList.add("hidden");
@@ -454,7 +522,15 @@
     var elStatusBayar = document.getElementById("f_statusBayar");
     if (elStatusBayar) perubahan[String(KOLOM.statusBayar)] = elStatusBayar.value;
     ambil("instansiClub", "instansiClub"); ambil("namaTandem", "namaTandem");
-    ambil("anggotaTim", "anggotaTim"); ambil("nikAnggotaTim", "nikAnggotaTim");
+    // Gabung ulang kotak Nama/NIK anggota (per anggota) jadi 1 string
+    // "Primer, Anggota2, Anggota3" -- format yang dipakai backend/Rekap
+    // Divif 1/tampilan lain. Primer diambil dari field Nama/No KTP utama
+    // yang sudah diisi di atas (bukan nilai lama), supaya konsisten kalau
+    // admin sekalian koreksi nama pendaftar utama.
+    var nBeregu = cariAnggotaBereguN_(document.getElementById("f_kategori").value, document.getElementById("f_item").value);
+    var gabungan = gabungAnggotaBeregu_("f_", nBeregu, perubahan[String(KOLOM.nama)], perubahan[String(KOLOM.ktp)]);
+    perubahan[String(KOLOM.anggotaTim)] = gabungan.nama;
+    perubahan[String(KOLOM.nikAnggotaTim)] = gabungan.nik;
     ambil("fotoKtpUrl", "fotoKtpUrl"); ambil("fotoKtpAnggotaTim", "fotoKtpAnggotaTim");
     ambil("powerFactor", "powerFactor"); ambil("kategoriUsia", "kategoriUsia");
     ambil("waktuPelaksanaan", "waktuPelaksanaan"); ambil("catatanKoreksi", "catatanKoreksi");
@@ -572,10 +648,12 @@
       }).join("");
       function itemOptionsUntuk(namaKat){
         var kat = katalogKategori.find(function(k){ return k.nama === namaKat; });
-        var items = kat ? kat.items : [];
-        if (entri.item && items.indexOf(entri.item) === -1) items = [entri.item].concat(items);
+        var items = kat ? kat.items : []; // [{nama, anggotaBeregu}, ...]
+        if (entri.item && !items.some(function(it){ return it.nama === entri.item; })) {
+          items = [{ nama: entri.item, anggotaBeregu: 0 }].concat(items);
+        }
         return items.map(function(it){
-          return '<option value="' + escapeHtml(it) + '"' + (it === entri.item ? " selected" : "") + '>' + escapeHtml(it) + '</option>';
+          return '<option value="' + escapeHtml(it.nama) + '"' + (it.nama === entri.item ? " selected" : "") + '>' + escapeHtml(it.nama) + '</option>';
         }).join("");
       }
       function fieldD(label, id, val){
@@ -619,8 +697,8 @@
         '<div class="section-title">Info Tambahan (opsional)</div>' +
         fieldD("Instansi/Club", "d_instansiClub", entri.instansiClub) +
         fieldD("Nama Tandem (Air Rifle)", "d_namaTandem", entri.namaTandem) +
-        fieldD("Anggota Tim (Beregu)", "d_anggotaTim", entri.anggotaTim) +
-        fieldD("NIK Anggota Tim (Beregu)", "d_nikAnggotaTim", entri.nikAnggotaTim) +
+        '<div class="section-title" style="margin:14px 0 6px;">Anggota Tim (khusus item Beregu)</div>' +
+        '<div id="d_anggotaBereguBox"></div>' +
         fieldD("Foto KTP URL", "d_fotoKtpUrl", nilaiBersih_(entri.fotoKtpUrl)) +
         fieldD("Foto KTP Anggota Tim (Beregu)", "d_fotoKtpAnggotaTim", entri.fotoKtpAnggotaTim) +
         '<div class="row2">' + fieldD("Power Factor (IPSC)", "d_powerFactor", entri.powerFactor) + fieldD("Kategori Usia/Gender (IPSC)", "d_kategoriUsia", entri.kategoriUsia) + '</div>' +
@@ -630,8 +708,21 @@
         '<button id="pindahkanBtn">Perbaiki &amp; Pindahkan ke Verifikasi Bayar</button>' +
         '<button id="batalDitolakBtn" type="button">Batal</button>';
 
+      function renderAnggotaBereguBoxDitolak(namaListLengkap, nikListLengkap){
+        var namaKat = document.getElementById("d_kategori").value;
+        var namaItem = document.getElementById("d_item").value;
+        var n = cariAnggotaBereguN_(namaKat, namaItem);
+        document.getElementById("d_anggotaBereguBox").innerHTML =
+          htmlAnggotaBeregu_("d_", n, namaListLengkap || [], nikListLengkap || []);
+      }
+      renderAnggotaBereguBoxDitolak(pisahAnggota_(entri.anggotaTim), pisahAnggota_(entri.nikAnggotaTim));
+
       document.getElementById("d_kategori").addEventListener("change", function(){
         document.getElementById("d_item").innerHTML = itemOptionsUntuk(this.value);
+        renderAnggotaBereguBoxDitolak();
+      });
+      document.getElementById("d_item").addEventListener("change", function(){
+        renderAnggotaBereguBoxDitolak();
       });
       document.getElementById("batalDitolakBtn").onclick = function(){
         box.classList.add("hidden"); box.innerHTML = "";
@@ -653,12 +744,15 @@
     }
     if (!confirm('Perbaiki data "' + nama + '" dan pindahkan ke Verifikasi Bayar? Baris penolakannya akan dihapus.')) return;
 
+    var nBereguDitolak = cariAnggotaBereguN_(g("d_kategori"), g("d_item"));
+    var gabunganDitolak = gabungAnggotaBeregu_("d_", nBereguDitolak, nama, nik);
+
     var data = {
       nama: nama, hp: hp, nik: nik, kta: g("d_kta"), email: g("d_email"), golongan: golongan,
       kategori: g("d_kategori"), item: g("d_item"), metodeBayar: g("d_metodeBayar"),
       buktiTransferUrl: g("d_buktiTransferUrl"),
       instansiClub: g("d_instansiClub"), namaTandem: g("d_namaTandem"),
-      anggotaTim: g("d_anggotaTim"), nikAnggotaTim: g("d_nikAnggotaTim"),
+      anggotaTim: gabunganDitolak.nama, nikAnggotaTim: gabunganDitolak.nik,
       fotoKtpUrl: g("d_fotoKtpUrl"), fotoKtpAnggotaTim: g("d_fotoKtpAnggotaTim"),
       powerFactor: g("d_powerFactor"), kategoriUsia: g("d_kategoriUsia"),
       waktuPelaksanaan: g("d_waktuPelaksanaan")
