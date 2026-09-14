@@ -295,9 +295,16 @@
   //     ada nomor salah ketik yang lolos ke database.
   // Dipakai di 2 jalur: form hasil scan (verifKuponBtn) & hasil
   // pencarian manual (verif-manual).
+  // Nomor kupon WAJIB diisi -- kupon fisik memang wajib diserahkan ke
+  // tiap peserta saat Daftar Ulang, kolom kosong TIDAK BOLEH lanjut sama
+  // sekali (bukan cuma diperingatkan). Permintaan Kang, 15 September
+  // 2026. Server juga menolak permintaan kosong (lihat verifikasi_daftar_
+  // ulang, Code.js) -- ini cuma penjagaan di sisi tampilan supaya
+  // petugas tidak perlu bolak-balik ke server buat tahu kosong itu salah.
   function konfirmasiKupon(kupon){
     if (!kupon) {
-      return confirm("Nomor kupon KOSONG.\n\nYakin peserta ini memang TIDAK membawa/menyerahkan kupon doorprize? (Daftar Ulang tetap lanjut TANPA nomor kupon)");
+      alert("Nomor kupon WAJIB diisi.\n\nCek ulang -- pastikan kupon doorprize sudah diserahkan ke peserta, lalu ketik nomornya sebelum Verifikasi.");
+      return false;
     }
     return confirm("Nomor kupon yang diketik: \"" + kupon + "\"\n\nPASTIKAN nomor ini sudah dicocokkan persis dengan sobekan kupon fisik yang diserahkan peserta. Sudah yakin benar?");
   }
@@ -327,7 +334,7 @@
       (res.instansiClub && res.instansiClub !== "-" ? '<br>Instansi/Club: ' + escapeHtml(res.instansiClub) : '') +
       '</div>' +
       fotoHtml +
-      '<label class="kupon-lbl">Nomor Kupon Doorprize (sobekan kupon fisik peserta -- kosongkan kalau tidak ada)</label>' +
+      '<label class="kupon-lbl">Nomor Kupon Doorprize (WAJIB diisi -- sobekan kupon fisik peserta)</label>' +
       '<input type="text" id="kuponInput" class="kupon-input" placeholder="Contoh: 0452" inputmode="numeric">' +
       '<button id="verifKuponBtn" class="btn-verif-kupon">Verifikasi Daftar Ulang</button>' +
       '<button id="batalKuponBtn" type="button" class="btn-batal-kupon">Batal / Scan Ulang</button>' +
@@ -510,7 +517,7 @@
               : 'Belum daftar ulang') + '</div>' +
             fotoHtml +
             (sudahVerif ? '' :
-              '<label class="kupon-lbl">Nomor Kupon Doorprize (kosongkan kalau tidak ada)</label>' +
+              '<label class="kupon-lbl">Nomor Kupon Doorprize (WAJIB diisi)</label>' +
               '<input type="text" class="kupon-input kupon-manual" placeholder="Contoh: 0452" inputmode="numeric">'
             ) +
             '<button class="verif-manual">' + (sudahVerif ? 'Sudah pernah daftar ulang' : 'Verifikasi Daftar Ulang') + '</button>' +
