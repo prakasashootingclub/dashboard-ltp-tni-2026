@@ -123,8 +123,14 @@ function checkinRows() {
 function filteredRows() {
   const q = document.getElementById("searchInput").value.trim().toLowerCase();
   const rows = checkinRows();
+  // Kupon "-" (belum diisi) sengaja tidak pernah dianggap cocok, apa pun
+  // yang diketik. Permintaan Kang, 14 September 2026 (cari pemilik
+  // nomor kupon pemenang undian doorprize langsung dari daftar yang
+  // sudah datang).
   return q
-    ? rows.filter(r => (r.nama || "").toLowerCase().includes(q) || (r.hp || "").toLowerCase().includes(q))
+    ? rows.filter(r => (r.nama || "").toLowerCase().includes(q) ||
+        (r.hp || "").toLowerCase().includes(q) ||
+        (r.nomorKupon && r.nomorKupon !== "-" && r.nomorKupon.toLowerCase().includes(q)))
     : rows;
 }
 
@@ -133,7 +139,7 @@ function tabelSubMateriHtml(rows) {
     ? `<th>Power Factor</th><th>Kategori</th><th>Waktu Pelaksanaan</th>`
     : "";
   if (!rows.length) {
-    return `<div class="table-wrap"><table><tbody><tr class="empty-row"><td colspan="7">Belum ada peserta daftar ulang di sub-materi ini.</td></tr></tbody></table></div>`;
+    return `<div class="table-wrap"><table><tbody><tr class="empty-row"><td colspan="8">Belum ada peserta daftar ulang di sub-materi ini.</td></tr></tbody></table></div>`;
   }
   // Urut ASCENDING waktu daftar ulang (siapa datang duluan tampil duluan).
   const sorted = rows.slice().sort((a, b) => (a.waktuCheckinRaw || "").localeCompare(b.waktuCheckinRaw || ""));
@@ -147,6 +153,7 @@ function tabelSubMateriHtml(rows) {
             <th>No HP</th>
             <th>Golongan</th>
             <th>Instansi/Club</th>
+            <th>Kupon Doorprize</th>
             <th>Waktu Daftar Ulang</th>
             ${kolomExtra}
           </tr>
@@ -159,6 +166,7 @@ function tabelSubMateriHtml(rows) {
               <td class="hp">${waLink(r.hp)}</td>
               <td>${escapeHtml(r.golongan)}</td>
               <td>${escapeHtml(r.instansiClub)}</td>
+              <td>${escapeHtml(r.nomorKupon && r.nomorKupon !== "-" ? r.nomorKupon : "-")}</td>
               <td class="waktu-cell">${escapeHtml(r.waktuCheckin)}</td>
               ${materi.showIpscExtra ? `
               <td>${escapeHtml(r.powerFactor)}</td>
@@ -204,7 +212,7 @@ function downloadXlsx() {
   const rows = filteredRows().slice().sort((a, b) => (a.waktuCheckinRaw || "").localeCompare(b.waktuCheckinRaw || ""));
   const kolom = [
     ["no", "No."], ["nama", "Nama"], ["hp", "No HP"], ["item", "Item"], ["golongan", "Golongan"],
-    ["instansiClub", "Instansi/Club"],
+    ["instansiClub", "Instansi/Club"], ["nomorKupon", "Kupon Doorprize"],
     ["waktuCheckin", "Waktu Daftar Ulang"],
     ["powerFactor", "Power Factor (IPSC)"], ["kategoriIpsc", "Kategori (IPSC)"], ["waktuPelaksanaan", "Waktu Pelaksanaan (IPSC)"]
   ];
