@@ -517,13 +517,23 @@ function render(){
     const bar = (val)=> Math.max(4, Math.round(val/max*100));
 
     // Rincian Perorangan/Regu -- cuma Senapan & Eksekutif yang punya item
-    // Beregu, kategori lain dilewati (breakdownHtml kosong). Ditaruh di
-    // bawah "X peserta", rata kanan seperti pemiliknya. Permintaan Kang,
-    // 14 September 2026.
+    // Beregu, kategori lain dilewati (breakdownHtml kosong, headcount = t
+    // seperti biasa). Ditaruh di bawah "X peserta", rata kiri sejajar.
+    // "X peserta" DIHITUNG SEBAGAI JUMLAH ORANG RIIL (perorangan + semua
+    // anggota tim Beregu), BUKAN jumlah baris pendaftaran -- supaya tidak
+    // menyesatkan (329 Perorangan + 8 Regu Senapan seharusnya terbaca 345
+    // orang, bukan 337, karena tiap Regu Senapan = 2 orang, Eksekutif = 3
+    // orang, sesuai anggotaBeregu di KATEGORI_LIST/Code.gs). Baris
+    // Terdaftar/Daftar Ulang di funnel bawah TETAP pakai t/c (jumlah baris
+    // pendaftaran/QR discan), karena daftar ulang memang discan per-QR
+    // per-pendaftaran, bukan per-kepala. Permintaan Kang, 14 September 2026.
     let breakdownHtml = "";
+    let headcount = t;
     if (k.key === "Senapan" || k.key === "Pistol") {
       const perorangan = kr.filter(r=>!r.item.includes("Beregu")).reduce((a,r)=>a+r.terdaftar,0);
       const regu = kr.filter(r=>r.item.includes("Beregu")).reduce((a,r)=>a+r.terdaftar,0);
+      const anggotaPerRegu = k.key === "Senapan" ? 2 : 3; // Pistol/Eksekutif Beregu = 3 orang
+      headcount = perorangan + regu * anggotaPerRegu;
       breakdownHtml = `<div class="card-breakdown">&bull; ${fmt(perorangan)} Perorangan<br>&bull; ${fmt(regu)} Regu</div>`;
     }
 
@@ -534,7 +544,7 @@ function render(){
             <h3>${k.nama}</h3>
           </div>
           <div>
-            <div class="kat-total">${fmt(t)} peserta</div>
+            <div class="kat-total">${fmt(headcount)} peserta</div>
             ${breakdownHtml}
           </div>
         </div>
