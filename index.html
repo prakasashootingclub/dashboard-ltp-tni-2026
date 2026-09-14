@@ -122,17 +122,17 @@
     background:var(--panel); border:1px solid var(--line); border-radius:8px;
     padding:18px 18px 16px;
   }
-  .card-head{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:14px;}
+  .card-head{display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px;}
   .card-head h3{font-size:15px; font-weight:700;}
   .card-head .kat-total{font-family:var(--mono); font-size:13px; color:var(--ink-dim);}
 
-  /* Rincian Perorangan/Beregu -- KHUSUS kartu Senapan & Eksekutif (permintaan
+  /* Rincian Perorangan/Regu -- KHUSUS kartu Senapan & Eksekutif (permintaan
      Kang, 14 September 2026), karena cuma 2 kategori itu yang punya item
-     Beregu (lihat itemCatalog & anggotaBeregu di Code.gs). */
+     Beregu (lihat itemCatalog & anggotaBeregu di Code.gs). Ditaruh di bawah
+     kat-total, rata kanan seperti pemiliknya. */
   .card-breakdown{
-    display:flex; gap:14px; margin-bottom:14px; font-family:var(--mono); font-size:11px; color:var(--ink-faint);
+    font-family:var(--mono); font-size:11px; color:var(--ink-faint); text-align:right; margin-top:3px;
   }
-  .card-breakdown b{color:var(--ink-dim); font-weight:600;}
 
   .funnel{display:flex; flex-direction:column; gap:7px;}
   .frow{display:grid; grid-template-columns:118px 1fr 46px; align-items:center; gap:10px;}
@@ -487,8 +487,15 @@ function render(){
   const terdaftarSum = sum("terdaftar");
   const checkinSum = sum("checkin");
   const pct = (num)=> terdaftarSum > 0 ? Math.round(num/terdaftarSum*100)+"%" : "—";
+
+  // Rincian Peserta/Regu di kotak Terdaftar -- "Regu" cuma pendaftaran item
+  // Beregu (Senapan & Eksekutif, satu-satunya kategori yang punya item
+  // Beregu), sisanya (termasuk Perorangan Senapan/Eksekutif + semua kategori
+  // lain) dihitung "Peserta". Permintaan Kang, 14 September 2026.
+  const reguSum = fr.filter(r=>r.item.includes("Beregu")).reduce((a,r)=>a+r.terdaftar,0);
+  const pesertaSum = terdaftarSum - reguSum;
   const totals = [
-    {n:terdaftarSum, l:"Terdaftar", cls:"", sub:null},
+    {n:terdaftarSum, l:"Terdaftar", cls:"", sub:`- ${fmt(pesertaSum)} Peserta<br>- ${fmt(reguSum)} Regu`},
     {n:checkinSum, l:"Daftar Ulang", cls:"amber", sub:pct(checkinSum)+" dari terdaftar"},
   ];
   document.getElementById("totalsStrip").innerHTML = totals.map(t=>`
@@ -508,18 +515,15 @@ function render(){
     const max = Math.max(t,1);
     const bar = (val)=> Math.max(4, Math.round(val/max*100));
 
-    // Rincian Perorangan/Beregu -- cuma Senapan & Eksekutif yang punya item
-    // Beregu, kategori lain dilewati (breakdownHtml kosong).
+    // Rincian Perorangan/Regu -- cuma Senapan & Eksekutif yang punya item
+    // Beregu, kategori lain dilewati (breakdownHtml kosong). Ditaruh di
+    // bawah "X peserta", rata kanan seperti pemiliknya. Permintaan Kang,
+    // 14 September 2026.
     let breakdownHtml = "";
     if (k.key === "Senapan" || k.key === "Pistol") {
       const perorangan = kr.filter(r=>!r.item.includes("Beregu")).reduce((a,r)=>a+r.terdaftar,0);
-      const beregu = kr.filter(r=>r.item.includes("Beregu")).reduce((a,r)=>a+r.terdaftar,0);
-      breakdownHtml = `
-        <div class="card-breakdown">
-          <span>Perorangan: <b>${fmt(perorangan)}</b></span>
-          <span>Beregu: <b>${fmt(beregu)}</b> tim</span>
-        </div>
-      `;
+      const regu = kr.filter(r=>r.item.includes("Beregu")).reduce((a,r)=>a+r.terdaftar,0);
+      breakdownHtml = `<div class="card-breakdown">${fmt(perorangan)} Perorangan &middot; ${fmt(regu)} Regu</div>`;
     }
 
     return `
@@ -528,9 +532,11 @@ function render(){
           <div>
             <h3>${k.nama}</h3>
           </div>
-          <div class="kat-total">${fmt(t)} peserta</div>
+          <div>
+            <div class="kat-total">${fmt(t)} peserta</div>
+            ${breakdownHtml}
+          </div>
         </div>
-        ${breakdownHtml}
         <div class="funnel">
           <div class="frow"><span class="flab">Terdaftar</span>
             <div class="fbar-track"><div class="fbar-fill s1" style="width:${bar(t)}%"></div></div>
