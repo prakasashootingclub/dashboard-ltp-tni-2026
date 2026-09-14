@@ -126,6 +126,14 @@
   .card-head h3{font-size:15px; font-weight:700;}
   .card-head .kat-total{font-family:var(--mono); font-size:13px; color:var(--ink-dim);}
 
+  /* Rincian Perorangan/Beregu -- KHUSUS kartu Senapan & Eksekutif (permintaan
+     Kang, 14 September 2026), karena cuma 2 kategori itu yang punya item
+     Beregu (lihat itemCatalog & anggotaBeregu di Code.gs). */
+  .card-breakdown{
+    display:flex; gap:14px; margin-bottom:14px; font-family:var(--mono); font-size:11px; color:var(--ink-faint);
+  }
+  .card-breakdown b{color:var(--ink-dim); font-weight:600;}
+
   .funnel{display:flex; flex-direction:column; gap:7px;}
   .frow{display:grid; grid-template-columns:118px 1fr 46px; align-items:center; gap:10px;}
   .frow .flab{font-size:11.5px; color:var(--ink-dim);}
@@ -499,6 +507,21 @@ function render(){
     const c = kr.reduce((a,r)=>a+r.checkin,0);
     const max = Math.max(t,1);
     const bar = (val)=> Math.max(4, Math.round(val/max*100));
+
+    // Rincian Perorangan/Beregu -- cuma Senapan & Eksekutif yang punya item
+    // Beregu, kategori lain dilewati (breakdownHtml kosong).
+    let breakdownHtml = "";
+    if (k.key === "Senapan" || k.key === "Pistol") {
+      const perorangan = kr.filter(r=>!r.item.includes("Beregu")).reduce((a,r)=>a+r.terdaftar,0);
+      const beregu = kr.filter(r=>r.item.includes("Beregu")).reduce((a,r)=>a+r.terdaftar,0);
+      breakdownHtml = `
+        <div class="card-breakdown">
+          <span>Perorangan: <b>${fmt(perorangan)}</b></span>
+          <span>Beregu: <b>${fmt(beregu)}</b> tim</span>
+        </div>
+      `;
+    }
+
     return `
       <div class="card" data-kat="${k.key}">
         <div class="card-head">
@@ -507,6 +530,7 @@ function render(){
           </div>
           <div class="kat-total">${fmt(t)} peserta</div>
         </div>
+        ${breakdownHtml}
         <div class="funnel">
           <div class="frow"><span class="flab">Terdaftar</span>
             <div class="fbar-track"><div class="fbar-fill s1" style="width:${bar(t)}%"></div></div>
