@@ -262,6 +262,7 @@ function tabelSubMateriHtml(rows, showIpscExtra){
             <th>Nama</th>
             <th>Golongan</th>
             <th>Instansi/Club</th>
+            <th>Metode Bayar</th>
             <th>Status Bayar</th>
             <th>Daftar Ulang</th>
             ${kolomExtra}
@@ -273,6 +274,7 @@ function tabelSubMateriHtml(rows, showIpscExtra){
               <td class="nama">${escapeHtml(r.nama)}</td>
               <td>${escapeHtml(r.golongan)}</td>
               <td>${escapeHtml(r.instansiClub)}</td>
+              <td>${escapeHtml(r.metodeBayar)}</td>
               <td>${tagBayar(r.statusBayar, r.waktuLunas)}</td>
               <td>${tagStatus(r.checkinMateri, r.waktuCheckin)}</td>
               ${showIpscExtra ? `
