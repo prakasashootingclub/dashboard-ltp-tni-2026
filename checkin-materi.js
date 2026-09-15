@@ -134,15 +134,37 @@ function filteredRows() {
     : rows;
 }
 
+// Header tabel (No./Nama/No HP/Golongan/Instansi/Club/Kupon Doorprize/
+// Waktu Daftar Ulang, + 3 kolom IPSC kalau relevan) SEKARANG SELALU
+// tampil, walau belum ada 1 pun peserta yang daftar ulang di sub-materi
+// itu -- sebelumnya <thead> cuma dirender kalau rows.length > 0, jadi
+// yang kosong cuma nampilin baris "Belum ada peserta..." tanpa judul
+// kolom sama sekali. Permintaan Kang, 16 September 2026.
 function tabelSubMateriHtml(rows) {
   const kolomExtra = materi.showIpscExtra
     ? `<th>Power Factor</th><th>Kategori</th><th>Waktu Pelaksanaan</th>`
     : "";
-  if (!rows.length) {
-    return `<div class="table-wrap"><table><tbody><tr class="empty-row"><td colspan="8">Belum ada peserta daftar ulang di sub-materi ini.</td></tr></tbody></table></div>`;
-  }
+  const jumlahKolom = 7 + (materi.showIpscExtra ? 3 : 0);
   // Urut ASCENDING waktu daftar ulang (siapa datang duluan tampil duluan).
   const sorted = rows.slice().sort((a, b) => (a.waktuCheckinRaw || "").localeCompare(b.waktuCheckinRaw || ""));
+  const isiTbody = rows.length
+    ? sorted.map((r, i) => `
+        <tr>
+          <td class="num">${i + 1}</td>
+          <td class="nama">${escapeHtml(r.nama)}</td>
+          <td class="hp">${waLink(r.hp)}</td>
+          <td>${escapeHtml(r.golongan)}</td>
+          <td>${escapeHtml(r.instansiClub)}</td>
+          <td>${escapeHtml(r.nomorKupon && r.nomorKupon !== "-" ? r.nomorKupon : "-")}</td>
+          <td class="waktu-cell">${escapeHtml(r.waktuCheckin)}</td>
+          ${materi.showIpscExtra ? `
+          <td>${escapeHtml(r.powerFactor)}</td>
+          <td>${escapeHtml(r.kategoriIpsc)}</td>
+          <td>${escapeHtml(r.waktuPelaksanaan)}</td>
+          ` : ""}
+        </tr>
+      `).join("")
+    : `<tr class="empty-row"><td colspan="${jumlahKolom}">Belum ada peserta daftar ulang di sub-materi ini.</td></tr>`;
   return `
     <div class="table-wrap">
       <table>
@@ -159,22 +181,7 @@ function tabelSubMateriHtml(rows) {
           </tr>
         </thead>
         <tbody>
-          ${sorted.map((r, i) => `
-            <tr>
-              <td class="num">${i + 1}</td>
-              <td class="nama">${escapeHtml(r.nama)}</td>
-              <td class="hp">${waLink(r.hp)}</td>
-              <td>${escapeHtml(r.golongan)}</td>
-              <td>${escapeHtml(r.instansiClub)}</td>
-              <td>${escapeHtml(r.nomorKupon && r.nomorKupon !== "-" ? r.nomorKupon : "-")}</td>
-              <td class="waktu-cell">${escapeHtml(r.waktuCheckin)}</td>
-              ${materi.showIpscExtra ? `
-              <td>${escapeHtml(r.powerFactor)}</td>
-              <td>${escapeHtml(r.kategoriIpsc)}</td>
-              <td>${escapeHtml(r.waktuPelaksanaan)}</td>
-              ` : ""}
-            </tr>
-          `).join("")}
+          ${isiTbody}
         </tbody>
       </table>
     </div>
