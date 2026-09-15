@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0E1210">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-512.png">
+<title>Cari Kupon Undian — LTP TNI 2026</title>
+<script>
+  window.onerror = function(msg, src, line, col, err){
+    var d = document.createElement("div");
+    d.style.cssText = "position:fixed;top:0;left:0;right:0;z-index:99;background:#B4483A;color:#fff;padding:10px;font-size:12px;font-family:monospace;word-break:break-word;";
+    d.textContent = "JS ERROR: " + msg + " (baris " + line + ")";
+    document.body ? document.body.prepend(d) : window.addEventListener("DOMContentLoaded", function(){ document.body.prepend(d); });
+  };
+</script>
+<style>
+  :root{
+    --bg:#0E1210; --panel:#161B17; --panel-2:#1D2420; --line:#2A322C;
+    --ink:#E9EAE3; --ink-dim:#8C9A8A; --ink-faint:#5B6660;
+    --olive:#5C7A3A; --olive-bright:#8FB35A; --amber:#C7852E; --amber-bright:#E5A94A;
+    --red:#B4483A; --red-bright:#E58B7A;
+    --sans: -apple-system, "Segoe UI", "Inter", Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", "Roboto Mono", Consolas, monospace;
+  }
+  *{box-sizing:border-box;}
+  body{
+    font-family:var(--sans); background:var(--bg); color:var(--ink);
+    margin:0; padding:16px; max-width:520px; margin-left:auto; margin-right:auto;
+  }
+  h2{font-size:18px; margin:0 0 4px;}
+  .lbl{font-size:11px; text-transform:uppercase; color:var(--ink-faint); letter-spacing:.08em; margin-bottom:14px;}
+  .hidden{display:none !important;}
+  .back-link{display:inline-block; margin-bottom:14px; font-size:12px; color:var(--amber); text-decoration:none;}
+  .back-link:hover{text-decoration:underline;}
+
+  #gate{
+    min-height:80vh; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:14px; padding:20px;
+  }
+  #gate input{
+    width:100%; max-width:280px; padding:12px 14px; border-radius:6px;
+    border:1px solid var(--line); background:var(--panel); color:var(--ink); font-size:15px;
+  }
+  #gate button{
+    width:100%; max-width:280px; padding:12px; border-radius:6px; border:none;
+    background:var(--olive); color:var(--bg); font-size:14px; font-weight:700;
+  }
+  #gate .err{color:var(--red-bright); font-size:13px; min-height:16px;}
+
+  .cari-box{
+    background:var(--panel); border:1px solid var(--line); border-radius:10px;
+    padding:18px; margin-bottom:16px;
+  }
+  #kuponInput{
+    width:100%; padding:14px 14px; border-radius:8px; border:1px solid var(--line);
+    background:var(--panel-2); color:var(--ink); font-size:22px; font-weight:700;
+    text-align:center; letter-spacing:.05em; font-family:var(--mono);
+  }
+  #kuponInput::placeholder{color:var(--ink-faint); font-weight:400; letter-spacing:normal;}
+  #cariBtn{
+    width:100%; padding:14px; border-radius:8px; border:none; margin-top:10px;
+    background:var(--olive); color:var(--bg); font-size:15px; font-weight:700;
+  }
+  #cariBtn:disabled{background:#3a4a3a; color:var(--ink-dim);}
+  #statusCari{font-size:12.5px; margin-top:10px; min-height:16px; text-align:center;}
+  #statusCari.err{color:var(--red-bright);}
+  #statusCari.ok{color:var(--olive-bright);}
+
+  #hasil{
+    background:var(--panel); border:1px solid var(--olive); border-radius:10px;
+    padding:18px;
+  }
+  #hasil .kupon-tag{
+    display:inline-block; font-family:var(--mono); font-size:12px; font-weight:700;
+    background:var(--panel-2); color:var(--amber-bright); padding:3px 10px;
+    border-radius:20px; margin-bottom:10px;
+  }
+  #hasil .nama{font-size:20px; font-weight:700; margin-bottom:6px;}
+  #hasil .meta{font-size:13px; color:var(--ink-dim); line-height:1.7; margin-bottom:16px;}
+  #hasil .meta b{color:var(--ink);}
+  #hasil textarea{
+    width:100%; min-height:96px; padding:10px 12px; border-radius:6px; border:1px solid var(--line);
+    background:var(--panel-2); color:var(--ink); font-size:13px; font-family:var(--sans);
+    resize:vertical; margin-bottom:10px;
+  }
+  #hasil .field-lbl{font-size:11px; color:var(--ink-faint); margin-bottom:4px; display:block;}
+  #kirimWaBtn{
+    display:block; width:100%; padding:13px; border-radius:6px; border:none;
+    background:#25D366; color:#0E1210; font-size:14px; font-weight:700; text-align:center;
+    text-decoration:none;
+  }
+  #cariLagiBtn{
+    width:100%; padding:11px; border-radius:6px; border:1px solid var(--line);
+    background:var(--panel-2); color:var(--ink-dim); font-size:13px; font-weight:700; margin-top:8px;
+  }
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <h2>Cari Kupon Undian</h2>
+  <div class="lbl" style="text-align:center;">Cari pemilik nomor kupon fisik yang ditarik saat undian</div>
+  <input type="password" id="pwInput" placeholder="Password" autocomplete="off">
+  <button id="pwBtn">Masuk</button>
+  <div class="err" id="pwErr"></div>
+</div>
+
+<div id="app" class="hidden">
+  <h2>Cari Kupon Undian</h2>
+  <div class="lbl">Ketik nomor kupon fisik yang ditarik -- sistem cari nama pemenangnya</div>
+  <a class="back-link" href="index.html">&larr; Kembali ke Dashboard</a>
+
+  <div class="cari-box">
+    <input type="text" id="kuponInput" placeholder="Nomor Kupon" inputmode="numeric" autocomplete="off">
+    <button id="cariBtn">Cari Pemenang</button>
+    <div id="statusCari"></div>
+  </div>
+
+  <div id="hasil" class="hidden"></div>
+</div>
+
+<script>
+  var WEBAPP_URL = "https://script.google.com/macros/s/AKfycbyGY8Pi3gBALM8GVP6XCB04P_eebPw2thlP_ShQR6IVC31vuCZcWXxQK677crIgHysu/exec";
+  // Key sessionStorage SENGAJA unik ("undianPw") -- lihat catatan STORAGE_KEY
+  // di edit-peserta.html: sessionStorage satu per TAB per ORIGIN, key yang
+  // sama dengan halaman lain bikin "masuk" otomatis tanpa divalidasi ulang.
+  var STORAGE_KEY = "cariKuponPw";
+
+  function escapeHtml(s){
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+    });
+  }
+
+  function formatWaLink(hp, pesan){
+    var digit = String(hp || "").replace(/[^0-9]/g, "");
+    if (digit.indexOf("0") === 0) digit = "62" + digit.slice(1);
+    else if (digit.indexOf("62") !== 0) digit = "62" + digit;
+    return "https://wa.me/" + digit + "?text=" + encodeURIComponent(pesan);
+  }
+
+  function templatePesan(nama, nomorKupon){
+    return "Selamat " + nama + "! 🎉\n\n" +
+      "Nomor kupon doorprize *" + nomorKupon + "* Anda terpilih sebagai pemenang pada acara Lomba Tembak Piala Panglima TNI Tahun 2026.\n\n" +
+      "Mohon segera menghubungi panitia di lokasi acara untuk pengambilan hadiah. Terima kasih!";
+  }
+
+  function cariKupon(){
+    var status = document.getElementById("statusCari");
+    var q = document.getElementById("kuponInput").value.trim();
+    document.getElementById("hasil").classList.add("hidden");
+    if (!q) { status.className = "err"; status.textContent = "Isi dulu nomor kuponnya."; return; }
+    status.className = ""; status.textContent = "Mencari...";
+    document.getElementById("cariBtn").disabled = true;
+    var pw = sessionStorage.getItem(STORAGE_KEY);
+    fetch(WEBAPP_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "cari_kupon_undian", nomorKupon: q, pw: pw })
+    })
+      .then(function(r){ return r.json(); })
+      .then(function(res){
+        document.getElementById("cariBtn").disabled = false;
+        if (!res.ok && res.pesan === "Password salah.") { kunciUlang_(res.pesan); return; }
+        if (!res.ok) { status.className = "err"; status.textContent = res.pesan || "Tidak ditemukan."; return; }
+        status.className = "ok"; status.textContent = "Ketemu!";
+        renderHasil(res.data);
+      })
+      .catch(function(err){
+        document.getElementById("cariBtn").disabled = false;
+        status.className = "err"; status.textContent = "Gagal terhubung ke server: " + err;
+      });
+  }
+
+  function renderHasil(d){
+    var pesanDefault = templatePesan(d.nama, d.nomorKupon);
+    var el = document.getElementById("hasil");
+    el.classList.remove("hidden");
+    el.innerHTML =
+      '<div class="kupon-tag">Kupon ' + escapeHtml(d.nomorKupon) + '</div>' +
+      '<div class="nama">' + escapeHtml(d.nama) + '</div>' +
+      '<div class="meta">' +
+        '<b>No HP:</b> ' + escapeHtml(d.hp || "-") + '<br>' +
+        '<b>Kategori:</b> ' + escapeHtml(d.kategori || "-") + ' &middot; ' + escapeHtml(d.item || "-") +
+      '</div>' +
+      '<label class="field-lbl">Pesan WA (bisa diedit sebelum dikirim)</label>' +
+      '<textarea id="pesanWa">' + escapeHtml(pesanDefault) + '</textarea>' +
+      '<a id="kirimWaBtn" target="_blank" rel="noopener">Kirim Ucapan via WhatsApp</a>' +
+      '<button id="cariLagiBtn" type="button">Cari Nomor Lain</button>';
+
+    function updateWaHref(){
+      document.getElementById("kirimWaBtn").href = formatWaLink(d.hp, document.getElementById("pesanWa").value);
+    }
+    updateWaHref();
+    document.getElementById("pesanWa").addEventListener("input", updateWaHref);
+    document.getElementById("cariLagiBtn").onclick = function(){
+      el.classList.add("hidden");
+      document.getElementById("kuponInput").value = "";
+      document.getElementById("statusCari").textContent = "";
+      document.getElementById("kuponInput").focus();
+    };
+  }
+
+  document.getElementById("cariBtn").onclick = cariKupon;
+  document.getElementById("kuponInput").addEventListener("keydown", function(e){
+    if (e.key === "Enter") cariKupon();
+  });
+
+  // ---------- gerbang password ----------
+  function unlock(pw){
+    document.getElementById("gate").classList.add("hidden");
+    document.getElementById("app").classList.remove("hidden");
+    sessionStorage.setItem(STORAGE_KEY, pw);
+    document.getElementById("kuponInput").focus();
+  }
+
+  function kunciUlang_(pesan){
+    sessionStorage.removeItem(STORAGE_KEY);
+    document.getElementById("app").classList.add("hidden");
+    document.getElementById("gate").classList.remove("hidden");
+    document.getElementById("pwErr").textContent = pesan + " Silakan masukkan password lagi.";
+    document.getElementById("pwInput").value = "";
+  }
+
+  // Password SAMA dengan Edit Data Peserta (EDIT_PESERTA_PASSWORD di
+  // backend) -- halaman ini baca kolom kupon dari data peserta yang sama,
+  // jadi sengaja dipersempit ke akses yang sama, bukan dibagikan ke
+  // petugas lapangan biasa.
+  var PW_HASH = "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4";
+  function sha256Hex(text){
+    var data = new TextEncoder().encode(text);
+    return crypto.subtle.digest("SHA-256", data).then(function(buf){
+      return Array.prototype.map.call(new Uint8Array(buf), function(b){
+        return b.toString(16).padStart(2, "0");
+      }).join("");
+    });
+  }
+
+  document.getElementById("pwBtn").onclick = function(){
+    var pw = document.getElementById("pwInput").value.trim();
+    if (!pw) { document.getElementById("pwErr").textContent = "Isi password dulu."; return; }
+    document.getElementById("pwErr").textContent = "";
+    sha256Hex(pw).then(function(hash){
+      if (hash !== PW_HASH) {
+        document.getElementById("pwErr").textContent = "Password salah.";
+        return;
+      }
+      unlock(pw);
+    });
+  };
+  document.getElementById("pwInput").addEventListener("keydown", function(e){
+    if (e.key === "Enter") document.getElementById("pwBtn").click();
+  });
+
+  var saved = sessionStorage.getItem(STORAGE_KEY);
+  if (saved) unlock(saved);
+</script>
+
+</body>
+</html>
