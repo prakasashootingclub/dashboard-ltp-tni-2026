@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0E1210">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-512.png">
+<title>Undian Doorprize — Tampilan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Rajdhani:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script>
+  window.onerror = function(msg, src, line, col, err){
+    var d = document.createElement("div");
+    d.style.cssText = "position:fixed;top:0;left:0;right:0;z-index:99;background:#B4483A;color:#fff;padding:10px;font-size:12px;font-family:monospace;word-break:break-word;";
+    d.textContent = "JS ERROR: " + msg + " (baris " + line + ")";
+    document.body ? document.body.prepend(d) : window.addEventListener("DOMContentLoaded", function(){ document.body.prepend(d); });
+  };
+</script>
+<style>
+  :root{
+    --bg:#0E1210; --bg-2:#0B0F0D; --panel:#161B17; --panel-2:#1D2420; --line:#2A322C;
+    --ink:#E9EAE3; --ink-dim:#8C9A8A; --ink-faint:#5B6660;
+    --olive:#5C7A3A; --olive-bright:#8FB35A; --amber:#C7852E; --amber-bright:#E5A94A;
+    --red:#B4483A; --red-bright:#E58B7A;
+    --mono: 'JetBrains Mono', ui-monospace, "SF Mono", Consolas, monospace;
+    --sans: 'Rajdhani', -apple-system, "Segoe UI", Arial, sans-serif;
+    --display: 'Black Ops One', var(--sans);
+  }
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; overflow:hidden; overscroll-behavior:none; }
+  body{
+    margin:0; background:var(--bg); color:var(--ink); font-family:var(--sans);
+    height:100vh; height:100dvh; display:flex; flex-direction:column;
+  }
+  .hidden{ display:none !important; }
+
+  /* ---------- gerbang password ---------- */
+  #gate{
+    min-height:100vh; min-height:100dvh; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:14px; padding:20px;
+  }
+  #gate h2{ font-size:20px; margin:0; }
+  #gate input{
+    width:100%; max-width:280px; padding:12px 14px; border-radius:6px;
+    border:1px solid var(--line); background:var(--panel); color:var(--ink); font-size:15px;
+  }
+  #gate button{
+    width:100%; max-width:280px; padding:12px; border-radius:6px; border:none;
+    background:var(--olive); color:var(--bg); font-size:14px; font-weight:700; font-family:var(--sans);
+  }
+  #gate .err{ color:var(--red-bright); font-size:13px; min-height:16px; }
+  #gate .lbl{ font-size:12px; color:var(--ink-faint); text-align:center; max-width:280px; }
+
+  /* ---------- backdrop ---------- */
+  .backdrop{
+    position:fixed; inset:0; z-index:0; pointer-events:none;
+    background:
+      radial-gradient(circle at 50% 45%, rgba(143,179,90,0.10) 0%, rgba(143,179,90,0.0) 50%),
+      linear-gradient(180deg, var(--bg-2) 0%, var(--bg) 55%, var(--bg-2) 100%);
+  }
+  .backdrop img.bg-custom{
+    position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:0.55;
+  }
+  .ring{ position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); border:1px solid rgba(143,179,90,0.14); border-radius:50%; }
+  .ring.r1{ width:46vmin; height:46vmin; }
+  .ring.r2{ width:70vmin; height:70vmin; border-color:rgba(143,179,90,0.10); }
+  .ring.r3{ width:94vmin; height:94vmin; border-color:rgba(143,179,90,0.07); }
+
+  .flash-layer{
+    position:fixed; inset:0; z-index:5; pointer-events:none;
+    background:radial-gradient(circle at 50% 40%, rgba(229,169,74,0.55) 0%, rgba(229,169,74,0) 60%);
+    opacity:0;
+  }
+  .flash-layer.go{ animation:flash .5s ease-out; }
+  @keyframes flash{ 0%{opacity:0;} 12%{opacity:1;} 100%{opacity:0;} }
+
+  /* ---------- fullscreen toggle: satu-satunya kontrol yang tampak,
+       dan hilang total begitu masuk fullscreen (permintaan Kang) ---------- */
+  #fsBtn{
+    position:fixed; top:14px; right:14px; z-index:10;
+    width:36px; height:36px; display:flex; align-items:center; justify-content:center;
+    background:rgba(22,27,23,0.7); border:1px solid var(--line); border-radius:8px;
+    color:var(--ink-dim); cursor:pointer;
+  }
+  #fsBtn:hover{ color:var(--ink); border-color:var(--ink-dim); }
+  #fsBtn svg{ width:17px; height:17px; }
+  body:fullscreen #fsBtn{ display:none; }
+  body:-webkit-full-screen #fsBtn{ display:none; }
+
+  /* ---------- layout: kiri gambar hadiah, kanan reel undian, bawah pemenang ---------- */
+  .stage{
+    position:relative; z-index:1; flex:1; min-height:0;
+    display:flex; flex-direction:column;
+    padding:clamp(16px,3vh,40px) clamp(16px,3vw,48px);
+    gap:clamp(14px,2.4vh,26px);
+  }
+  .stage-top{
+    flex:1; min-height:0;
+    display:grid; grid-template-columns:1fr 1.15fr; gap:clamp(16px,2.4vw,36px);
+    align-items:stretch;
+  }
+
+  .hadiah-box{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    overflow:hidden; position:relative; min-height:0;
+  }
+  .hadiah-box img{ width:100%; height:100%; object-fit:contain; }
+  .hadiah-box .kosong{
+    font-family:var(--mono); font-size:12px; color:var(--ink-faint);
+    text-align:center; padding:20px; letter-spacing:.05em;
+  }
+  .hadiah-nama{
+    position:absolute; left:0; right:0; bottom:0;
+    background:linear-gradient(0deg, rgba(11,15,13,0.92), rgba(11,15,13,0));
+    padding:26px 18px 14px; text-align:center;
+    font-family:var(--display); font-size:clamp(16px,2.1vw,26px); color:var(--amber-bright);
+    text-shadow:0 4px 14px rgba(0,0,0,0.5);
+  }
+
+  .draw-box{
+    background:var(--ink); border-radius:14px;
+    box-shadow:0 18px 46px rgba(0,0,0,0.45), inset 0 0 0 1px rgba(0,0,0,0.06);
+    display:flex; align-items:center; justify-content:center;
+    position:relative; overflow:hidden; min-height:0;
+    transition:box-shadow .2s ease;
+  }
+  .draw-box.spinning{ box-shadow:0 0 0 4px var(--olive-bright), 0 18px 46px rgba(0,0,0,0.45); }
+  .draw-box.landed{ box-shadow:0 0 0 4px var(--amber-bright), 0 22px 54px rgba(229,169,74,0.25); }
+
+  .reel-viewport{
+    position:relative; overflow:hidden; width:100%;
+    mask-image:linear-gradient(180deg, transparent 0%, #000 16%, #000 84%, transparent 100%);
+    -webkit-mask-image:linear-gradient(180deg, transparent 0%, #000 16%, #000 84%, transparent 100%);
+  }
+  .reel-track{ display:flex; flex-direction:column; will-change:transform, filter; }
+  .reel-item{
+    font-family:var(--display); font-weight:400;
+    font-size:clamp(30px, 6.4vw, 92px);
+    color:#12160F; letter-spacing:.01em; line-height:1.15; white-space:nowrap;
+    text-align:center; padding:0 clamp(10px,2vw,26px);
+  }
+  .reel-item.mode-nama{ font-family:var(--sans); font-weight:700; font-size:clamp(24px, 4.6vw, 62px); }
+
+  .idle-label{
+    font-family:var(--mono); font-size:clamp(13px,1.6vw,17px); color:#7C8778;
+    letter-spacing:.14em; text-transform:uppercase;
+  }
+
+  /* ---------- pemenang (bawah) ---------- */
+  .pemenang-wrap{ flex:none; min-height:120px; display:flex; align-items:center; justify-content:center; }
+  .pemenang-grid{
+    display:flex; flex-wrap:wrap; align-items:stretch; justify-content:center;
+    gap:14px; width:100%;
+  }
+  .pemenang-card{
+    background:var(--panel); border:1px solid var(--amber-bright); border-radius:12px;
+    padding:16px 22px; min-width:220px; flex:1 1 260px; max-width:420px;
+    text-align:center; animation:enter .4s ease both;
+    box-shadow:0 10px 30px rgba(229,169,74,0.12);
+  }
+  @keyframes enter{ from{ opacity:0; transform:translateY(10px) scale(.97); } to{ opacity:1; transform:none; } }
+  .pemenang-card .pnama{ font-weight:700; font-size:clamp(16px,1.9vw,24px); color:var(--ink); }
+  .pemenang-card .pinstansi{ font-family:var(--mono); font-size:clamp(11px,1.1vw,13px); color:var(--ink-dim); margin-top:4px; }
+  .pemenang-card .php{ font-family:var(--mono); font-size:clamp(11px,1.1vw,13px); color:var(--amber-bright); margin-top:6px; }
+
+  @media (max-width:900px){
+    .stage-top{ grid-template-columns:1fr; grid-template-rows:1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <h2>Undian Doorprize — Tampilan</h2>
+  <div class="lbl">Layar bersih untuk videotron -- semua kontrol ada di halaman Kontrol (laptop terpisah)</div>
+  <input type="password" id="pwInput" placeholder="Password" autocomplete="off">
+  <button id="pwBtn">Masuk</button>
+  <div class="err" id="pwErr"></div>
+</div>
+
+<div id="app" class="hidden">
+  <div class="backdrop" id="backdrop">
+    <div class="ring r3"></div>
+    <div class="ring r2"></div>
+    <div class="ring r1"></div>
+  </div>
+  <div class="flash-layer" id="flashLayer"></div>
+
+  <button id="fsBtn" type="button" title="Fullscreen" aria-label="Tampilkan layar penuh">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+  </button>
+
+  <div class="stage">
+    <div class="stage-top">
+      <div class="hadiah-box" id="hadiahBox">
+        <div class="kosong" id="hadiahKosong">Hadiah belum diatur<br>dari halaman Kontrol</div>
+      </div>
+      <div class="draw-box" id="drawBox">
+        <div class="reel-viewport" id="reelViewport">
+          <div class="reel-track" id="reelTrack">
+            <div class="idle-label">Menunggu undian dimulai&hellip;</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="pemenang-wrap">
+      <div class="pemenang-grid" id="pemenangGrid"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var WEBAPP_URL = "https://script.google.com/macros/s/AKfycbyGY8Pi3gBALM8GVP6XCB04P_eebPw2thlP_ShQR6IVC31vuCZcWXxQK677crIgHysu/exec";
+  var STORAGE_KEY = "undianTampilanPw";
+  var POLL_MS = 1200;
+
+  var hadiahBox = document.getElementById("hadiahBox");
+  var hadiahKosong = document.getElementById("hadiahKosong");
+  var drawBox = document.getElementById("drawBox");
+  var reelViewport = document.getElementById("reelViewport");
+  var reelTrack = document.getElementById("reelTrack");
+  var pemenangGrid = document.getElementById("pemenangGrid");
+  var flashLayer = document.getElementById("flashLayer");
+  var fsBtn = document.getElementById("fsBtn");
+  var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  var lastSesiId = 0;
+  var lastHadiahGambarUrl = null;
+  var poolCache = { nama: null, nomor: null };
+  var audioCtx = null;
+
+  function escapeHtml(s){
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){
+      return { "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c];
+    });
+  }
+
+  function getAudioCtx(){
+    if (!audioCtx) {
+      var Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return null;
+      audioCtx = new Ctx();
+    }
+    if (audioCtx.state === "suspended") audioCtx.resume();
+    return audioCtx;
+  }
+  function playTick(freq, loud){
+    var ctx = getAudioCtx(); if (!ctx) return;
+    var t0 = ctx.currentTime;
+    var osc = ctx.createOscillator(); var gain = ctx.createGain();
+    osc.type = "square"; osc.frequency.setValueAtTime(freq || 740, t0);
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.exponentialRampToValueAtTime(loud ? 0.3 : 0.2, t0 + 0.005);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.055);
+    osc.connect(gain).connect(ctx.destination); osc.start(t0); osc.stop(t0 + 0.06);
+  }
+  function playImpact(){
+    var ctx = getAudioCtx(); if (!ctx) return;
+    var t0 = ctx.currentTime;
+    var osc = ctx.createOscillator(); var gain = ctx.createGain();
+    osc.type = "sine"; osc.frequency.setValueAtTime(160, t0);
+    osc.frequency.exponentialRampToValueAtTime(38, t0 + 0.32);
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.exponentialRampToValueAtTime(0.55, t0 + 0.012);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.4);
+    osc.connect(gain).connect(ctx.destination); osc.start(t0); osc.stop(t0 + 0.42);
+  }
+  function playFanfare(){
+    var ctx = getAudioCtx(); if (!ctx) return;
+    var t0 = ctx.currentTime;
+    playImpact();
+    var notes = [523.25, 659.25, 783.99, 1046.50, 1318.51];
+    notes.forEach(function(freq, i){
+      var start = t0 + 0.08 + i * 0.1;
+      [1, 1.5].forEach(function(mult, layer){
+        var osc = ctx.createOscillator(); var gain = ctx.createGain();
+        osc.type = layer === 0 ? "triangle" : "sine";
+        osc.frequency.setValueAtTime(freq * mult, start);
+        var peak = layer === 0 ? 0.34 : 0.12;
+        gain.gain.setValueAtTime(0.0001, start);
+        gain.gain.exponentialRampToValueAtTime(peak, start + 0.018);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.6);
+        osc.connect(gain).connect(ctx.destination); osc.start(start); osc.stop(start + 0.65);
+      });
+    });
+    var chordStart = t0 + 0.08 + notes.length * 0.1 + 0.06;
+    [523.25, 659.25, 783.99, 1046.50].forEach(function(freq){
+      var osc = ctx.createOscillator(); var gain = ctx.createGain();
+      osc.type = "triangle"; osc.frequency.setValueAtTime(freq, chordStart);
+      gain.gain.setValueAtTime(0.0001, chordStart);
+      gain.gain.exponentialRampToValueAtTime(0.26, chordStart + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.0001, chordStart + 1.1);
+      osc.connect(gain).connect(ctx.destination); osc.start(chordStart); osc.stop(chordStart + 1.15);
+    });
+  }
+
+  function apiCall(action, extra){
+    var pw = sessionStorage.getItem(STORAGE_KEY);
+    var body = Object.assign({ action: action, pw: pw }, extra || {});
+    return fetch(WEBAPP_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(body)
+    }).then(function(r){ return r.json(); });
+  }
+
+  function updateHadiah(state){
+    if (state.hadiahGambarUrl) {
+      if (state.hadiahGambarUrl !== lastHadiahGambarUrl) {
+        hadiahBox.innerHTML = '<img src="' + escapeHtml(state.hadiahGambarUrl) + '" alt="Hadiah">' +
+          (state.hadiah ? '<div class="hadiah-nama">' + escapeHtml(state.hadiah) + '</div>' : '');
+        lastHadiahGambarUrl = state.hadiahGambarUrl;
+      }
+    } else if (lastHadiahGambarUrl !== null || hadiahBox.contains(hadiahKosong) === false) {
+      hadiahBox.innerHTML = '<div class="kosong" id="hadiahKosong">' +
+        (state.hadiah ? escapeHtml(state.hadiah) : "Hadiah belum diatur<br>dari halaman Kontrol") + '</div>';
+      lastHadiahGambarUrl = null;
+    }
+  }
+
+  function easeOutQuart(t){ return 1 - Math.pow(1 - t, 4); }
+  var CRUISE_MS_BASE = reduceMotion ? 2000 : null; // null -> pakai durasiMs dari state
+  var SNAP_MS = reduceMotion ? 300 : 700;
+  var ROWS_PER_SEC = reduceMotion ? 14 : 34;
+  var SNAP_ROWS = reduceMotion ? 4 : 6;
+
+  function muatPoolUntukDekorasi(mode, cb){
+    if (poolCache[mode]) { cb(poolCache[mode]); return; }
+    apiCall("undian_daftar_kandidat", { mode: mode }).then(function(res){
+      poolCache[mode] = (res.ok && res.data && res.data.length) ? res.data : [{ utama: "----" }];
+      cb(poolCache[mode]);
+    }).catch(function(){ cb([{ utama: "----" }]); });
+  }
+
+  function jalankanUndian(state){
+    drawBox.classList.remove("landed");
+    drawBox.classList.add("spinning");
+    pemenangGrid.innerHTML = "";
+
+    var finalValue = state.pemenang && state.pemenang.length ? state.pemenang[0].utama : "----";
+    var isNama = state.mode === "nama";
+
+    muatPoolUntukDekorasi(state.mode, function(pool){
+      var durasiMs = state.durasiMs || 15000;
+      var cruiseMs = reduceMotion ? CRUISE_MS_BASE : Math.max(durasiMs - SNAP_MS, 1200);
+      var cruiseRows = Math.round(ROWS_PER_SEC * (cruiseMs / 1000));
+      var totalRows = cruiseRows + SNAP_ROWS;
+      var sequence = [finalValue];
+      for (var i = 0; i < totalRows; i++) {
+        sequence.push(pool[Math.floor(Math.random() * pool.length)].utama);
+      }
+      reelTrack.innerHTML = "";
+      reelTrack.style.filter = "";
+      sequence.forEach(function(v){
+        var el = document.createElement("div");
+        el.className = "reel-item" + (isNama ? " mode-nama" : "");
+        el.textContent = v;
+        reelTrack.appendChild(el);
+      });
+
+      var itemHeight = reelTrack.firstChild.getBoundingClientRect().height;
+      reelViewport.style.height = itemHeight + "px";
+      var startIdx = sequence.length - 1;
+      reelTrack.style.transform = "translateY(" + (-startIdx * itemHeight) + "px)";
+
+      var totalDuration = cruiseMs + SNAP_MS;
+      var lastIndex = startIdx;
+      var lastTickTime = 0;
+      var t0 = null;
+
+      function frame(ts){
+        if (t0 === null) t0 = ts;
+        var elapsed = ts - t0;
+        var idxFloat, blurPx;
+        if (elapsed <= cruiseMs) {
+          var cruiseT = elapsed / cruiseMs;
+          idxFloat = SNAP_ROWS + cruiseRows * (1 - cruiseT);
+          blurPx = 11;
+        } else {
+          var snapT = Math.min((elapsed - cruiseMs) / SNAP_MS, 1);
+          var eased = easeOutQuart(snapT);
+          idxFloat = SNAP_ROWS * (1 - eased);
+          blurPx = 11 * (1 - eased);
+        }
+        var y = -idxFloat * itemHeight;
+        reelTrack.style.transform = "translateY(" + y + "px)";
+        reelTrack.style.filter = blurPx > 0.15 ? "blur(" + blurPx.toFixed(2) + "px)" : "";
+
+        var idx = Math.round(idxFloat);
+        if (idx !== lastIndex) {
+          lastIndex = idx;
+          if (ts - lastTickTime > 20) {
+            lastTickTime = ts;
+            var progress = Math.min(elapsed / totalDuration, 1);
+            playTick(760 - progress * 260, elapsed > cruiseMs);
+          }
+        }
+        if (elapsed < totalDuration) {
+          requestAnimationFrame(frame);
+        } else {
+          reelTrack.style.transform = "translateY(0px)";
+          reelTrack.style.filter = "";
+          selesaiUndian(state);
+        }
+      }
+      requestAnimationFrame(frame);
+    });
+  }
+
+  function selesaiUndian(state){
+    drawBox.classList.remove("spinning");
+    drawBox.classList.add("landed");
+    playFanfare();
+    flashLayer.classList.remove("go");
+    void flashLayer.offsetWidth;
+    flashLayer.classList.add("go");
+
+    pemenangGrid.innerHTML = (state.pemenang || []).map(function(p){
+      return '<div class="pemenang-card">' +
+        '<div class="pnama">' + escapeHtml(p.nama) + '</div>' +
+        '<div class="pinstansi">' + escapeHtml(p.instansi || "-") + '</div>' +
+        '<div class="php">' + escapeHtml(p.hp || "-") + '</div>' +
+      '</div>';
+    }).join("");
+  }
+
+  function tampilkanIdle(){
+    drawBox.classList.remove("spinning", "landed");
+    reelTrack.innerHTML = '<div class="idle-label">Menunggu undian dimulai&hellip;</div>';
+    reelTrack.style.transform = "";
+    reelTrack.style.filter = "";
+    pemenangGrid.innerHTML = "";
+  }
+
+  function poll(){
+    apiCall("undian_get_state").then(function(res){
+      if (!res.ok && res.pesan === "Password salah.") { kunciUlang_(res.pesan); return; }
+      if (!res.ok) return;
+      var state = res.state;
+      updateHadiah(state);
+      if (state.sesiId !== lastSesiId) {
+        lastSesiId = state.sesiId;
+        if (state.status === "spinning") {
+          jalankanUndian(state);
+        } else {
+          tampilkanIdle();
+        }
+      }
+    }).catch(function(){ /* diam -- coba lagi di poll berikutnya */ });
+  }
+
+  function toggleFullscreen(){
+    if (!document.fullscreenElement) {
+      (document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen || function(){}).call(document.documentElement);
+    } else {
+      (document.exitFullscreen || document.webkitExitFullscreen || function(){}).call(document);
+    }
+  }
+  fsBtn.addEventListener("click", toggleFullscreen);
+
+  // ---------- gerbang password ----------
+  var pollTimer = null;
+  function unlock(pw){
+    document.getElementById("gate").classList.add("hidden");
+    document.getElementById("app").classList.remove("hidden");
+    sessionStorage.setItem(STORAGE_KEY, pw);
+    getAudioCtx();
+    poll();
+    if (pollTimer) clearInterval(pollTimer);
+    pollTimer = setInterval(poll, POLL_MS);
+  }
+
+  function kunciUlang_(pesan){
+    if (pollTimer) clearInterval(pollTimer);
+    sessionStorage.removeItem(STORAGE_KEY);
+    document.getElementById("app").classList.add("hidden");
+    document.getElementById("gate").classList.remove("hidden");
+    document.getElementById("pwErr").textContent = pesan + " Silakan masukkan password lagi.";
+    document.getElementById("pwInput").value = "";
+  }
+
+  var PW_HASH = "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4";
+  function sha256Hex(text){
+    var data = new TextEncoder().encode(text);
+    return crypto.subtle.digest("SHA-256", data).then(function(buf){
+      return Array.prototype.map.call(new Uint8Array(buf), function(b){
+        return b.toString(16).padStart(2, "0");
+      }).join("");
+    });
+  }
+
+  document.getElementById("pwBtn").onclick = function(){
+    var pw = document.getElementById("pwInput").value.trim();
+    if (!pw) { document.getElementById("pwErr").textContent = "Isi password dulu."; return; }
+    document.getElementById("pwErr").textContent = "";
+    sha256Hex(pw).then(function(hash){
+      if (hash !== PW_HASH) { document.getElementById("pwErr").textContent = "Password salah."; return; }
+      unlock(pw);
+    });
+  };
+  document.getElementById("pwInput").addEventListener("keydown", function(e){
+    if (e.key === "Enter") document.getElementById("pwBtn").click();
+  });
+
+  var saved = sessionStorage.getItem(STORAGE_KEY);
+  if (saved) unlock(saved);
+})();
+</script>
+
+</body>
+</html>

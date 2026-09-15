@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0E1210">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-512.png">
+<title>Kontrol Undian — LTP TNI 2026</title>
+<script>
+  window.onerror = function(msg, src, line, col, err){
+    var d = document.createElement("div");
+    d.style.cssText = "position:fixed;top:0;left:0;right:0;z-index:99;background:#B4483A;color:#fff;padding:10px;font-size:12px;font-family:monospace;word-break:break-word;";
+    d.textContent = "JS ERROR: " + msg + " (baris " + line + ")";
+    document.body ? document.body.prepend(d) : window.addEventListener("DOMContentLoaded", function(){ document.body.prepend(d); });
+  };
+</script>
+<style>
+  :root{
+    --bg:#0E1210; --panel:#161B17; --panel-2:#1D2420; --line:#2A322C;
+    --ink:#E9EAE3; --ink-dim:#8C9A8A; --ink-faint:#5B6660;
+    --olive:#5C7A3A; --olive-bright:#8FB35A; --amber:#C7852E; --amber-bright:#E5A94A;
+    --red:#B4483A; --red-bright:#E58B7A;
+    --sans: -apple-system, "Segoe UI", "Inter", Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", "Roboto Mono", Consolas, monospace;
+  }
+  *{box-sizing:border-box;}
+  body{
+    font-family:var(--sans); background:var(--bg); color:var(--ink);
+    margin:0; padding:16px; max-width:820px; margin-left:auto; margin-right:auto;
+  }
+  h2{font-size:18px; margin:0 0 4px;}
+  h3{font-size:14px; margin:0 0 10px;}
+  .lbl{font-size:11px; text-transform:uppercase; color:var(--ink-faint); letter-spacing:.08em; margin-bottom:14px;}
+  .hidden{display:none !important;}
+  .back-link{display:inline-block; margin-bottom:14px; font-size:12px; color:var(--amber); text-decoration:none;}
+  .back-link:hover{text-decoration:underline;}
+
+  #gate{ min-height:80vh; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; padding:20px; }
+  #gate input{ width:100%; max-width:280px; padding:12px 14px; border-radius:6px; border:1px solid var(--line); background:var(--panel); color:var(--ink); font-size:15px; }
+  #gate button{ width:100%; max-width:280px; padding:12px; border-radius:6px; border:none; background:var(--olive); color:var(--bg); font-size:14px; font-weight:700; }
+  #gate .err{ color:var(--red-bright); font-size:13px; min-height:16px; }
+
+  .panel{ background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px 18px; margin-bottom:16px; }
+  .field{ margin-bottom:12px; }
+  .field label{ display:block; font-size:11px; color:var(--ink-dim); margin-bottom:4px; }
+  .field input[type="text"], .field input[type="number"], .field select{
+    width:100%; padding:9px 10px; border-radius:6px; border:1px solid var(--line);
+    background:var(--panel-2); color:var(--ink); font-size:13.5px;
+  }
+  .radio-row{ display:flex; gap:14px; margin-bottom:4px; }
+  .radio-row label{ display:flex; align-items:center; gap:6px; font-size:13px; color:var(--ink); cursor:pointer; }
+  .row2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .check-row{ display:flex; align-items:center; gap:6px; font-size:12px; color:var(--ink-dim); margin-top:6px; }
+
+  .preset-row{ display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
+  .preset-chip{
+    font-family:var(--mono); font-size:11.5px; padding:5px 10px; border-radius:14px;
+    border:1px solid var(--line); background:var(--panel-2); color:var(--ink-dim); cursor:pointer;
+    display:flex; align-items:center; gap:6px;
+  }
+  .preset-chip:hover{ border-color:var(--olive); color:var(--ink); }
+  .preset-chip .x{ color:var(--red-bright); font-weight:700; }
+
+  .img-preview{
+    width:100%; max-height:140px; object-fit:contain; border-radius:8px;
+    border:1px solid var(--line); background:var(--panel-2); margin-top:8px; display:none;
+  }
+  .img-preview.show{ display:block; }
+
+  #undiBtn{
+    width:100%; padding:15px; border-radius:8px; border:none;
+    background:linear-gradient(180deg, var(--amber-bright), var(--amber));
+    color:#101410; font-size:16px; font-weight:800; letter-spacing:.03em;
+    margin-top:4px;
+  }
+  #undiBtn:disabled{ opacity:.5; }
+  #bersihkanBtn{
+    width:100%; padding:11px; border-radius:6px; border:1px solid var(--line);
+    background:var(--panel-2); color:var(--ink-dim); font-size:13px; font-weight:700; margin-top:8px;
+  }
+  .pool-status{ font-family:var(--mono); font-size:11.5px; color:var(--ink-faint); margin-top:10px; text-align:center; }
+  .pool-status b{ color:var(--olive-bright); }
+  #kirimStatus{ font-size:12.5px; margin-top:10px; text-align:center; min-height:16px; }
+  #kirimStatus.ok{ color:var(--olive-bright); }
+  #kirimStatus.err{ color:var(--red-bright); }
+
+  .hasil-filter{ display:flex; gap:8px; margin-bottom:10px; align-items:center; flex-wrap:wrap; }
+  .hasil-filter select{ flex:1; min-width:160px; padding:8px 10px; border-radius:6px; border:1px solid var(--line); background:var(--panel-2); color:var(--ink); font-size:13px; }
+  .aksi-btn{
+    font-size:12px; font-weight:700; padding:8px 12px; border-radius:6px;
+    border:1px solid var(--line); background:var(--panel-2); color:var(--ink-dim); cursor:pointer;
+  }
+  .aksi-btn:hover{ color:var(--ink); border-color:var(--olive); }
+  .aksi-row{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
+
+  table{ width:100%; border-collapse:collapse; font-size:12px; }
+  th, td{ text-align:left; padding:7px 8px; border-bottom:1px solid var(--line); }
+  th{ color:var(--ink-faint); font-weight:600; text-transform:uppercase; font-size:10.5px; letter-spacing:.05em; }
+  td{ color:var(--ink-dim); }
+  .table-wrap{ max-height:320px; overflow-y:auto; }
+  .empty-msg{ font-size:12px; color:var(--ink-faint); text-align:center; padding:14px; }
+
+  .link-info{
+    font-family:var(--mono); font-size:11px; color:var(--ink-faint); line-height:1.6;
+    background:var(--panel-2); border:1px solid var(--line); border-radius:6px; padding:10px 12px;
+  }
+  .link-info a{ color:var(--amber-bright); }
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <h2>Kontrol Undian</h2>
+  <div class="lbl" style="text-align:center;">Halaman operator -- hasil tampil di layar Tampilan (laptop lain)</div>
+  <input type="password" id="pwInput" placeholder="Password" autocomplete="off">
+  <button id="pwBtn">Masuk</button>
+  <div class="err" id="pwErr"></div>
+</div>
+
+<div id="app" class="hidden">
+  <h2>Kontrol Undian</h2>
+  <div class="lbl">Buka undian-tampilan.html di laptop/device videotron, sambungkan ke internet, lalu kocok dari sini</div>
+  <a class="back-link" href="index.html">&larr; Kembali ke Dashboard</a>
+
+  <div class="link-info" style="margin-bottom:16px;">
+    Link Tampilan (buka di laptop videotron):<br>
+    <a href="undian-tampilan.html" target="_blank" rel="noopener">undian-tampilan.html</a>
+  </div>
+
+  <div class="panel">
+    <h3>Pengaturan Undian</h3>
+
+    <div class="field">
+      <label>Sistem Undian</label>
+      <div class="radio-row">
+        <label><input type="radio" name="mode" value="nama" checked> Nama Peserta</label>
+        <label><input type="radio" name="mode" value="nomor"> Nomor Undian (Kupon)</label>
+      </div>
+    </div>
+
+    <div class="row2">
+      <div class="field">
+        <label for="jumlahInput">Jumlah Pemenang</label>
+        <input type="number" id="jumlahInput" value="1" min="1">
+        <div class="check-row"><input type="checkbox" id="takTerbatasChk"> <label for="takTerbatasChk">Tak terbatas (semua yang tersisa)</label></div>
+      </div>
+      <div class="field">
+        <label for="durasiSelect">Durasi Kocok</label>
+        <select id="durasiSelect">
+          <option value="5000">5 detik</option>
+          <option value="10000">10 detik</option>
+          <option value="15000" selected>15 detik</option>
+          <option value="20000">20 detik</option>
+          <option value="25000">25 detik</option>
+          <option value="30000">30 detik</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="hadiahInput">Hadiah untuk undian ini</label>
+      <input type="text" id="hadiahInput" placeholder="mis. Voucher Belanja 500rb" autocomplete="off">
+      <div class="preset-row" id="presetRow"></div>
+      <button type="button" class="aksi-btn" id="simpanPresetBtn" style="margin-top:8px;">+ Simpan sebagai preset</button>
+    </div>
+
+    <div class="field">
+      <label for="gambarInput">Gambar Hadiah (tampil di layar Tampilan)</label>
+      <input type="file" id="gambarInput" accept="image/*">
+      <img id="gambarPreview" class="img-preview">
+      <div id="gambarStatus" style="font-size:11px; color:var(--ink-faint); margin-top:4px;"></div>
+    </div>
+
+    <button id="undiBtn" disabled>MEMUAT DATA&hellip;</button>
+    <button id="bersihkanBtn" type="button">Bersihkan (lanjut ke hadiah berikutnya)</button>
+    <div class="pool-status" id="poolStatus"></div>
+    <div id="kirimStatus"></div>
+  </div>
+
+  <div class="panel">
+    <h3>Hasil Undian</h3>
+    <div class="hasil-filter">
+      <select id="filterHadiah"><option value="">Semua Hadiah</option></select>
+      <button type="button" class="aksi-btn" id="muatHasilBtn">&#8635; Muat Ulang</button>
+    </div>
+    <div class="aksi-row">
+      <button type="button" class="aksi-btn" id="downloadBtn">&#8681; Download CSV</button>
+      <button type="button" class="aksi-btn" id="printBtn">&#128438; Print</button>
+      <button type="button" class="aksi-btn" id="kirimWaBtn">&#128172; Kirim via WhatsApp</button>
+    </div>
+    <div class="table-wrap">
+      <table id="hasilTable">
+        <thead><tr><th>Waktu</th><th>Hadiah</th><th>Pemenang</th><th>Instansi</th><th>No HP</th></tr></thead>
+        <tbody id="hasilBody"></tbody>
+      </table>
+      <div class="empty-msg hidden" id="hasilKosong">Belum ada hasil undian.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  var WEBAPP_URL = "https://script.google.com/macros/s/AKfycbyGY8Pi3gBALM8GVP6XCB04P_eebPw2thlP_ShQR6IVC31vuCZcWXxQK677crIgHysu/exec";
+  var STORAGE_KEY = "undianKontrolPw";
+
+  function escapeHtml(s){
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){
+      return { "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c];
+    });
+  }
+
+  function apiCall(action, extra){
+    var pw = sessionStorage.getItem(STORAGE_KEY);
+    var body = Object.assign({ action: action, pw: pw }, extra || {});
+    return fetch(WEBAPP_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(body)
+    }).then(function(r){ return r.json(); });
+  }
+
+  var pool = [];
+  var hasilUndian = [];
+  var hadiahGambarUrlSaatIni = "";
+  var mode = "nama";
+
+  function modeSaatIni(){
+    var el = document.querySelector('input[name="mode"]:checked');
+    return el ? el.value : "nama";
+  }
+
+  function kunciEksklusi(item, mode){
+    return mode === "nomor" ? ("K:" + item.nomorKupon) : ("N:" + item.nama + "|" + item.instansi);
+  }
+
+  function muatPoolDanRiwayat(){
+    document.getElementById("undiBtn").disabled = true;
+    document.getElementById("undiBtn").textContent = "MEMUAT DATA…";
+    mode = modeSaatIni();
+    Promise.all([
+      apiCall("undian_daftar_kandidat", { mode: mode }),
+      apiCall("undian_daftar_hasil")
+    ]).then(function(results){
+      var kandidatRes = results[0], hasilRes = results[1];
+      if ((!kandidatRes.ok || !hasilRes.ok) && (kandidatRes.pesan === "Password salah." || hasilRes.pesan === "Password salah.")) {
+        kunciUlang_("Password salah.");
+        return;
+      }
+      hasilUndian = hasilRes.ok ? hasilRes.data : [];
+      renderHasil();
+
+      var sudahMenang = {};
+      hasilUndian.forEach(function(h){
+        var key = h.mode === "nomor" ? ("K:" + h.nomorKupon) : ("N:" + h.nama + "|" + h.instansi);
+        sudahMenang[key] = true;
+      });
+      var semuaKandidat = kandidatRes.ok ? kandidatRes.data : [];
+      pool = semuaKandidat.filter(function(item){ return !sudahMenang[kunciEksklusi(item, mode)]; });
+      updatePoolStatus();
+    }).catch(function(err){
+      document.getElementById("poolStatus").textContent = "Gagal memuat data: " + err;
+    });
+  }
+
+  function updatePoolStatus(){
+    var jumlahDiminta = document.getElementById("takTerbatasChk").checked ? pool.length : parseInt(document.getElementById("jumlahInput").value, 10) || 1;
+    document.getElementById("poolStatus").innerHTML =
+      "<b>" + pool.length + "</b> " + (mode === "nomor" ? "nomor kupon" : "peserta") + " tersedia untuk diundi &middot; " +
+      "<b>" + hasilUndian.length + "</b> sudah tercatat menang (semua hadiah)";
+    var btn = document.getElementById("undiBtn");
+    btn.disabled = pool.length === 0;
+    btn.textContent = pool.length === 0 ? "TIDAK ADA KANDIDAT TERSISA" : ("UNDI (" + Math.min(jumlahDiminta, pool.length) + " pemenang)");
+  }
+
+  document.querySelectorAll('input[name="mode"]').forEach(function(r){ r.addEventListener("change", muatPoolDanRiwayat); });
+  document.getElementById("jumlahInput").addEventListener("input", updatePoolStatus);
+  document.getElementById("takTerbatasChk").addEventListener("change", function(){
+    document.getElementById("jumlahInput").disabled = this.checked;
+    updatePoolStatus();
+  });
+  document.getElementById("muatHasilBtn").addEventListener("click", muatPoolDanRiwayat);
+
+  // ---------- preset hadiah ----------
+  function muatPreset(){
+    apiCall("undian_daftar_preset").then(function(res){
+      if (!res.ok) return;
+      var row = document.getElementById("presetRow");
+      row.innerHTML = res.data.map(function(n){
+        return '<span class="preset-chip" data-nama="' + escapeHtml(n) + '"><span class="pilih">' + escapeHtml(n) + '</span> <span class="x" data-hapus="' + escapeHtml(n) + '">&times;</span></span>';
+      }).join("");
+      row.querySelectorAll(".pilih").forEach(function(el){
+        el.addEventListener("click", function(){
+          document.getElementById("hadiahInput").value = el.parentElement.dataset.nama;
+        });
+      });
+      row.querySelectorAll("[data-hapus]").forEach(function(el){
+        el.addEventListener("click", function(e){
+          e.stopPropagation();
+          apiCall("undian_hapus_preset", { nama: el.dataset.hapus }).then(muatPreset);
+        });
+      });
+    });
+  }
+  document.getElementById("simpanPresetBtn").addEventListener("click", function(){
+    var nama = document.getElementById("hadiahInput").value.trim();
+    if (!nama) { alert("Isi nama hadiah dulu."); return; }
+    apiCall("undian_simpan_preset", { nama: nama }).then(muatPreset);
+  });
+
+  // ---------- upload gambar hadiah ----------
+  document.getElementById("gambarInput").addEventListener("change", function(){
+    var file = this.files[0];
+    if (!file) return;
+    var status = document.getElementById("gambarStatus");
+    status.textContent = "Mengupload…";
+    var reader = new FileReader();
+    reader.onload = function(){
+      var base64 = reader.result.split(",")[1];
+      apiCall("undian_upload_gambar", { base64: base64, mimeType: file.type }).then(function(res){
+        if (!res.ok) { status.textContent = "Gagal upload: " + (res.pesan || ""); return; }
+        hadiahGambarUrlSaatIni = res.url;
+        var img = document.getElementById("gambarPreview");
+        img.src = res.url;
+        img.classList.add("show");
+        status.textContent = "Gambar tersimpan, akan tampil di layar Tampilan begitu UNDI ditekan.";
+      }).catch(function(err){ status.textContent = "Gagal upload: " + err; });
+    };
+    reader.readAsDataURL(file);
+  });
+
+  // ---------- UNDI ----------
+  document.getElementById("undiBtn").addEventListener("click", function(){
+    if (!pool.length) return;
+    var jumlahDiminta = document.getElementById("takTerbatasChk").checked ? pool.length : (parseInt(document.getElementById("jumlahInput").value, 10) || 1);
+    var jumlah = Math.min(jumlahDiminta, pool.length);
+    var hadiah = document.getElementById("hadiahInput").value.trim() || "Hadiah belum diisi";
+    var durasiMs = parseInt(document.getElementById("durasiSelect").value, 10);
+
+    var salinan = pool.slice();
+    var pemenang = [];
+    for (var i = 0; i < jumlah; i++) {
+      var idx = Math.floor(Math.random() * salinan.length);
+      pemenang.push(salinan[idx]);
+      salinan.splice(idx, 1);
+    }
+
+    document.getElementById("undiBtn").disabled = true;
+    document.getElementById("kirimStatus").className = "";
+    document.getElementById("kirimStatus").textContent = "Mengirim ke layar Tampilan…";
+
+    apiCall("undian_mulai_sesi", {
+      mode: mode, hadiah: hadiah, hadiahGambarUrl: hadiahGambarUrlSaatIni,
+      durasiMs: durasiMs, pemenang: pemenang
+    }).then(function(res){
+      if (!res.ok) {
+        document.getElementById("kirimStatus").className = "err";
+        document.getElementById("kirimStatus").textContent = res.pesan || "Gagal mengirim ke layar Tampilan.";
+        document.getElementById("undiBtn").disabled = false;
+        return;
+      }
+      document.getElementById("kirimStatus").className = "ok";
+      document.getElementById("kirimStatus").textContent = jumlah + " pemenang terpilih -- sedang berputar di layar Tampilan.";
+      setTimeout(muatPoolDanRiwayat, (durasiMs || 15000) + 800);
+    }).catch(function(err){
+      document.getElementById("kirimStatus").className = "err";
+      document.getElementById("kirimStatus").textContent = "Gagal terhubung ke server: " + err;
+      document.getElementById("undiBtn").disabled = false;
+    });
+  });
+
+  document.getElementById("bersihkanBtn").addEventListener("click", function(){
+    if (!confirm("Kosongkan layar Tampilan dan lanjut ke hadiah berikutnya? Hasil undian sebelumnya TETAP tersimpan di riwayat.")) return;
+    document.getElementById("hadiahInput").value = "";
+    var img = document.getElementById("gambarPreview");
+    img.classList.remove("show"); img.src = "";
+    hadiahGambarUrlSaatIni = "";
+    document.getElementById("gambarStatus").textContent = "";
+    apiCall("undian_bersihkan", { hadiahGambarUrl: "" }).then(muatPoolDanRiwayat);
+  });
+
+  // ---------- riwayat / hasil ----------
+  function renderHasil(){
+    var select = document.getElementById("filterHadiah");
+    var hadiahSet = {};
+    hasilUndian.forEach(function(h){ hadiahSet[h.hadiah] = true; });
+    var terpilih = select.value;
+    select.innerHTML = '<option value="">Semua Hadiah</option>' +
+      Object.keys(hadiahSet).map(function(h){ return '<option value="' + escapeHtml(h) + '">' + escapeHtml(h) + '</option>'; }).join("");
+    select.value = terpilih;
+
+    renderTabel();
+  }
+
+  function dataTerfilter(){
+    var f = document.getElementById("filterHadiah").value;
+    return f ? hasilUndian.filter(function(h){ return h.hadiah === f; }) : hasilUndian;
+  }
+
+  function renderTabel(){
+    var data = dataTerfilter();
+    var body = document.getElementById("hasilBody");
+    var kosong = document.getElementById("hasilKosong");
+    if (!data.length) {
+      body.innerHTML = "";
+      kosong.classList.remove("hidden");
+      return;
+    }
+    kosong.classList.add("hidden");
+    body.innerHTML = data.slice().reverse().map(function(h){
+      return "<tr><td>" + escapeHtml(h.waktu) + "</td><td>" + escapeHtml(h.hadiah) + "</td><td>" +
+        escapeHtml(h.nama) + "</td><td>" + escapeHtml(h.instansi) + "</td><td>" + escapeHtml(h.hp) + "</td></tr>";
+    }).join("");
+  }
+  document.getElementById("filterHadiah").addEventListener("change", renderTabel);
+
+  function csvEscape(v){
+    var s = String(v == null ? "" : v);
+    return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }
+  document.getElementById("downloadBtn").addEventListener("click", function(){
+    var data = dataTerfilter();
+    if (!data.length) { alert("Tidak ada data untuk didownload."); return; }
+    var header = ["Waktu", "Hadiah", "Mode", "Nomor/Nama", "Nama Lengkap", "Instansi", "No HP", "Nomor Kupon"];
+    var rows = [header].concat(data.map(function(h){
+      return [h.waktu, h.hadiah, h.mode, h.utama, h.nama, h.instansi, h.hp, h.nomorKupon];
+    }));
+    var csv = rows.map(function(r){ return r.map(csvEscape).join(","); }).join("\r\n");
+    var blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "hasil-undian-" + Utilities_tanggalFile() + ".csv";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  });
+  function Utilities_tanggalFile(){
+    var d = new Date();
+    return d.getFullYear() + "" + String(d.getMonth()+1).padStart(2,"0") + "" + String(d.getDate()).padStart(2,"0") + "_" + String(d.getHours()).padStart(2,"0") + String(d.getMinutes()).padStart(2,"0");
+  }
+
+  document.getElementById("printBtn").addEventListener("click", function(){
+    var data = dataTerfilter();
+    if (!data.length) { alert("Tidak ada data untuk diprint."); return; }
+    var judul = document.getElementById("filterHadiah").value || "Semua Hadiah";
+    var w = window.open("", "_blank");
+    var baris = data.map(function(h, i){
+      return "<tr><td>" + (i+1) + "</td><td>" + escapeHtml(h.waktu) + "</td><td>" + escapeHtml(h.hadiah) + "</td><td>" +
+        escapeHtml(h.nama) + "</td><td>" + escapeHtml(h.instansi) + "</td><td>" + escapeHtml(h.hp) + "</td></tr>";
+    }).join("");
+    w.document.write(
+      "<html><head><title>Hasil Undian - " + escapeHtml(judul) + "</title>" +
+      "<style>body{font-family:Arial,sans-serif;padding:24px;} h1{font-size:18px;} table{width:100%;border-collapse:collapse;font-size:12px;} " +
+      "th,td{border:1px solid #999;padding:6px 8px;text-align:left;} th{background:#eee;}</style></head><body>" +
+      "<h1>Hasil Undian Doorprize - Lomba Tembak Piala Panglima TNI 2026</h1>" +
+      "<p>Kategori: " + escapeHtml(judul) + " &middot; Dicetak: " + new Date().toLocaleString("id-ID") + "</p>" +
+      "<table><thead><tr><th>No</th><th>Waktu</th><th>Hadiah</th><th>Pemenang</th><th>Instansi</th><th>No HP</th></tr></thead><tbody>" +
+      baris + "</tbody></table></body></html>"
+    );
+    w.document.close();
+    w.focus();
+    setTimeout(function(){ w.print(); }, 300);
+  });
+
+  document.getElementById("kirimWaBtn").addEventListener("click", function(){
+    var data = dataTerfilter();
+    if (!data.length) { alert("Tidak ada data untuk dikirim."); return; }
+    var judul = document.getElementById("filterHadiah").value || "Semua Hadiah";
+    var teks = "*HASIL UNDIAN DOORPRIZE*\nLomba Tembak Piala Panglima TNI 2026\nKategori: " + judul + "\n\n" +
+      data.map(function(h, i){
+        return (i+1) + ". " + h.nama + " (" + h.instansi + ") - " + h.hadiah + " - " + h.hp;
+      }).join("\n");
+    window.open("https://wa.me/?text=" + encodeURIComponent(teks), "_blank");
+  });
+
+  // ---------- gerbang password ----------
+  function unlock(pw){
+    document.getElementById("gate").classList.add("hidden");
+    document.getElementById("app").classList.remove("hidden");
+    sessionStorage.setItem(STORAGE_KEY, pw);
+    muatPreset();
+    muatPoolDanRiwayat();
+  }
+
+  function kunciUlang_(pesan){
+    sessionStorage.removeItem(STORAGE_KEY);
+    document.getElementById("app").classList.add("hidden");
+    document.getElementById("gate").classList.remove("hidden");
+    document.getElementById("pwErr").textContent = pesan + " Silakan masukkan password lagi.";
+    document.getElementById("pwInput").value = "";
+  }
+
+  var PW_HASH = "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4";
+  function sha256Hex(text){
+    var data = new TextEncoder().encode(text);
+    return crypto.subtle.digest("SHA-256", data).then(function(buf){
+      return Array.prototype.map.call(new Uint8Array(buf), function(b){
+        return b.toString(16).padStart(2, "0");
+      }).join("");
+    });
+  }
+
+  document.getElementById("pwBtn").onclick = function(){
+    var pw = document.getElementById("pwInput").value.trim();
+    if (!pw) { document.getElementById("pwErr").textContent = "Isi password dulu."; return; }
+    document.getElementById("pwErr").textContent = "";
+    sha256Hex(pw).then(function(hash){
+      if (hash !== PW_HASH) { document.getElementById("pwErr").textContent = "Password salah."; return; }
+      unlock(pw);
+    });
+  };
+  document.getElementById("pwInput").addEventListener("keydown", function(e){
+    if (e.key === "Enter") document.getElementById("pwBtn").click();
+  });
+
+  var saved = sessionStorage.getItem(STORAGE_KEY);
+  if (saved) unlock(saved);
+</script>
+
+</body>
+</html>
