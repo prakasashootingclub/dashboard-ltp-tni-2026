@@ -108,6 +108,18 @@
     background:var(--panel-2); border:1px solid var(--line); border-radius:6px; padding:10px 12px;
   }
   .link-info a{ color:var(--amber-bright); }
+
+  .simulasi-row{
+    display:flex; align-items:center; gap:8px; margin-bottom:12px; padding:9px 12px;
+    border:1px solid var(--amber); border-radius:6px; background:rgba(199,133,46,0.1);
+  }
+  .simulasi-row label{ font-size:12.5px; color:var(--amber-bright); font-weight:700; cursor:pointer; }
+  .simulasi-row .ket{ font-size:11px; color:var(--ink-faint); font-weight:400; margin-left:4px; }
+
+  .hapus-btn{
+    font-size:11px; color:var(--red-bright); background:none; border:none; cursor:pointer; padding:2px 6px;
+  }
+  .hapus-btn:hover{ text-decoration:underline; }
 </style>
 </head>
 <body>
@@ -128,6 +140,11 @@
   <div class="link-info" style="margin-bottom:16px;">
     Link Tampilan (buka di laptop videotron):<br>
     <a href="undian-tampilan.html" target="_blank" rel="noopener">undian-tampilan.html</a>
+  </div>
+
+  <div class="simulasi-row">
+    <input type="checkbox" id="simulasiChk">
+    <label for="simulasiChk">Mode Simulasi<span class="ket">-- kocok dari 2000 kupon dummy (0001-2000), TIDAK menyentuh data peserta asli / riwayat asli</span></label>
   </div>
 
   <div class="panel">
@@ -193,7 +210,7 @@
     </div>
     <div class="table-wrap">
       <table id="hasilTable">
-        <thead><tr><th>Waktu</th><th>Hadiah</th><th>Pemenang</th><th>Instansi</th><th>No HP</th></tr></thead>
+        <thead><tr><th>Waktu</th><th>Hadiah</th><th>Pemenang</th><th>Instansi</th><th>No HP</th><th></th></tr></thead>
         <tbody id="hasilBody"></tbody>
       </table>
       <div class="empty-msg hidden" id="hasilKosong">Belum ada hasil undian.</div>
@@ -226,7 +243,12 @@
   var hadiahGambarUrlSaatIni = "";
   var mode = "nama";
 
+  function simulasiAktif(){
+    return document.getElementById("simulasiChk").checked;
+  }
+
   function modeSaatIni(){
+    if (simulasiAktif()) return "nomor"; // data simulasi cuma kupon, tidak ada mode nama
     var el = document.querySelector('input[name="mode"]:checked');
     return el ? el.value : "nama";
   }
@@ -235,13 +257,20 @@
     return mode === "nomor" ? ("K:" + item.nomorKupon) : ("N:" + item.nama + "|" + item.instansi);
   }
 
+  document.getElementById("simulasiChk").addEventListener("change", function(){
+    var nonaktif = this.checked;
+    document.querySelectorAll('input[name="mode"]').forEach(function(r){ r.disabled = nonaktif; });
+    muatPoolDanRiwayat();
+  });
+
   function muatPoolDanRiwayat(){
     document.getElementById("undiBtn").disabled = true;
     document.getElementById("undiBtn").textContent = "MEMUAT DATA…";
     mode = modeSaatIni();
+    var simulasi = simulasiAktif();
     Promise.all([
-      apiCall("undian_daftar_kandidat", { mode: mode }),
-      apiCall("undian_daftar_hasil")
+      apiCall("undian_daftar_kandidat", { mode: mode, simulasi: simulasi }),
+      apiCall("undian_daftar_hasil", { simulasi: simulasi })
     ]).then(function(results){
       var kandidatRes = results[0], hasilRes = results[1];
       if ((!kandidatRes.ok || !hasilRes.ok) && (kandidatRes.pesan === "Password salah." || hasilRes.pesan === "Password salah.")) {
@@ -309,6 +338,22 @@
     apiCall("undian_simpan_preset", { nama: nama }).then(muatPreset);
   });
 
+  // ---------- push nama & gambar hadiah ke layar Tampilan SECARA LANGSUNG,
+  // tanpa nunggu tombol UNDI -- bug lama: nama hadiah yang diketik/gambar
+  // yang diupload baru muncul di Tampilan setelah UNDI ditekan (Kang: "nama
+  // hadiah belum tampil ... gambar belum muncul, harusnya begitu upload
+  // ... langsung otomatis muncul"). undian_set_hadiah_live TIDAK memicu
+  // sesi undian baru, cuma update tampilan kotak hadiah.
+  var timerHadiahLive = null;
+  function dorongHadiahLive(){
+    var hadiah = document.getElementById("hadiahInput").value.trim();
+    apiCall("undian_set_hadiah_live", { hadiah: hadiah, hadiahGambarUrl: hadiahGambarUrlSaatIni });
+  }
+  document.getElementById("hadiahInput").addEventListener("input", function(){
+    if (timerHadiahLive) clearTimeout(timerHadiahLive);
+    timerHadiahLive = setTimeout(dorongHadiahLive, 500);
+  });
+
   // ---------- upload gambar hadiah ----------
   document.getElementById("gambarInput").addEventListener("change", function(){
     var file = this.files[0];
@@ -324,7 +369,8 @@
         var img = document.getElementById("gambarPreview");
         img.src = res.url;
         img.classList.add("show");
-        status.textContent = "Gambar tersimpan, akan tampil di layar Tampilan begitu UNDI ditekan.";
+        status.textContent = "Gambar tersimpan -- sudah tampil otomatis di layar Tampilan.";
+        dorongHadiahLive();
       }).catch(function(err){ status.textContent = "Gagal upload: " + err; });
     };
     reader.readAsDataURL(file);
@@ -352,7 +398,7 @@
 
     apiCall("undian_mulai_sesi", {
       mode: mode, hadiah: hadiah, hadiahGambarUrl: hadiahGambarUrlSaatIni,
-      durasiMs: durasiMs, pemenang: pemenang
+      durasiMs: durasiMs, pemenang: pemenang, simulasi: simulasiAktif()
     }).then(function(res){
       if (!res.ok) {
         document.getElementById("kirimStatus").className = "err";
@@ -410,8 +456,19 @@
     kosong.classList.add("hidden");
     body.innerHTML = data.slice().reverse().map(function(h){
       return "<tr><td>" + escapeHtml(h.waktu) + "</td><td>" + escapeHtml(h.hadiah) + "</td><td>" +
-        escapeHtml(h.nama) + "</td><td>" + escapeHtml(h.instansi) + "</td><td>" + escapeHtml(h.hp) + "</td></tr>";
+        escapeHtml(h.nama) + "</td><td>" + escapeHtml(h.instansi) + "</td><td>" + escapeHtml(h.hp) + "</td>" +
+        "<td><button type=\"button\" class=\"hapus-btn\" data-waktu=\"" + escapeHtml(h.waktu) + "\" data-utama=\"" + escapeHtml(h.utama) + "\" data-nama=\"" + escapeHtml(h.nama) + "\">Hapus</button></td></tr>";
     }).join("");
+    body.querySelectorAll(".hapus-btn").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        if (!confirm("Hapus 1 baris hasil undian ini? Nomor/nama ini akan bisa terpilih lagi di undian berikutnya.")) return;
+        apiCall("undian_hapus_hasil", { waktu: btn.dataset.waktu, utama: btn.dataset.utama, nama: btn.dataset.nama, simulasi: simulasiAktif() })
+          .then(function(res){
+            if (!res.ok) { alert(res.pesan || "Gagal menghapus."); return; }
+            muatPoolDanRiwayat();
+          });
+      });
+    });
   }
   document.getElementById("filterHadiah").addEventListener("change", renderTabel);
 

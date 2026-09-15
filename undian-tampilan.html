@@ -88,8 +88,13 @@
   }
   #fsBtn:hover{ color:var(--ink); border-color:var(--ink-dim); }
   #fsBtn svg{ width:17px; height:17px; }
-  body:fullscreen #fsBtn{ display:none; }
-  body:-webkit-full-screen #fsBtn{ display:none; }
+  /* :fullscreen cocok elemen manapun yang sedang jadi fullscreen element --
+     kita minta fullscreen di <html> (document.documentElement), BUKAN di
+     <body>, jadi selector harus "body:fullscreen" (yang TIDAK PERNAH match)
+     diganti ":fullscreen #fsBtn" (cocok ke turunan elemen fullscreen apa
+     pun). Bug ditemukan Kang 16 September 2026 -- ikon tidak pernah hilang. */
+  :fullscreen #fsBtn, :-webkit-full-screen #fsBtn{ display:none; }
+  #fsBtn.force-hide{ display:none; }
 
   /* ---------- layout: kiri gambar hadiah, kanan reel undian, bawah pemenang ---------- */
   .stage{
@@ -164,9 +169,19 @@
     box-shadow:0 10px 30px rgba(229,169,74,0.12);
   }
   @keyframes enter{ from{ opacity:0; transform:translateY(10px) scale(.97); } to{ opacity:1; transform:none; } }
+  .pemenang-card .pkupon{
+    display:inline-block; font-family:var(--mono); font-weight:700; font-size:12px;
+    color:var(--amber-bright); background:var(--panel-2); border:1px solid var(--line);
+    border-radius:20px; padding:2px 10px; margin-bottom:6px;
+  }
   .pemenang-card .pnama{ font-weight:700; font-size:clamp(16px,1.9vw,24px); color:var(--ink); }
   .pemenang-card .pinstansi{ font-family:var(--mono); font-size:clamp(11px,1.1vw,13px); color:var(--ink-dim); margin-top:4px; }
   .pemenang-card .php{ font-family:var(--mono); font-size:clamp(11px,1.1vw,13px); color:var(--amber-bright); margin-top:6px; }
+  .simulasi-badge{
+    position:fixed; top:14px; left:14px; z-index:10;
+    font-family:var(--mono); font-size:11px; font-weight:700; letter-spacing:.08em;
+    color:#12160F; background:var(--amber-bright); padding:5px 12px; border-radius:6px;
+  }
 
   @media (max-width:900px){
     .stage-top{ grid-template-columns:1fr; grid-template-rows:1fr 1fr; }
@@ -190,6 +205,8 @@
     <div class="ring r1"></div>
   </div>
   <div class="flash-layer" id="flashLayer"></div>
+
+  <div class="simulasi-badge hidden" id="simulasiBadge">MODE SIMULASI</div>
 
   <button id="fsBtn" type="button" title="Fullscreen" aria-label="Tampilkan layar penuh">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
@@ -218,21 +235,22 @@
 (function(){
   var WEBAPP_URL = "https://script.google.com/macros/s/AKfycbyGY8Pi3gBALM8GVP6XCB04P_eebPw2thlP_ShQR6IVC31vuCZcWXxQK677crIgHysu/exec";
   var STORAGE_KEY = "undianTampilanPw";
-  var POLL_MS = 1200;
+  // Diperkecil dari 1200 -> 500 (permintaan Kang 16 Sep 2026: "belum
+  // real time, masih ada jeda"). Masih realistis dalam kuota Apps Script
+  // untuk pemakaian jangka pendek per sesi undian.
+  var POLL_MS = 500;
 
   var hadiahBox = document.getElementById("hadiahBox");
-  var hadiahKosong = document.getElementById("hadiahKosong");
   var drawBox = document.getElementById("drawBox");
   var reelViewport = document.getElementById("reelViewport");
   var reelTrack = document.getElementById("reelTrack");
   var pemenangGrid = document.getElementById("pemenangGrid");
   var flashLayer = document.getElementById("flashLayer");
   var fsBtn = document.getElementById("fsBtn");
-  var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   var lastSesiId = 0;
-  var lastHadiahGambarUrl = null;
-  var poolCache = { nama: null, nomor: null };
+  var lastHadiahKey = null;
+  var poolCache = {};
   var audioCtx = null;
 
   function escapeHtml(s){
@@ -310,124 +328,161 @@
     }).then(function(r){ return r.json(); });
   }
 
+  // Bug lama: cuma re-render kalau gambar berubah, jadi kalau nama hadiah
+  // diketik operator TANPA gambar, teksnya tidak pernah update di layar
+  // ini. Sekarang dibandingkan pakai key gabungan (gambar + nama) supaya
+  // KEDUANYA re-render begitu salah satu berubah. Ditemukan Kang, 16
+  // September 2026.
   function updateHadiah(state){
+    var key = (state.hadiahGambarUrl || "") + "|" + (state.hadiah || "");
+    if (key === lastHadiahKey) return;
+    lastHadiahKey = key;
     if (state.hadiahGambarUrl) {
-      if (state.hadiahGambarUrl !== lastHadiahGambarUrl) {
-        hadiahBox.innerHTML = '<img src="' + escapeHtml(state.hadiahGambarUrl) + '" alt="Hadiah">' +
-          (state.hadiah ? '<div class="hadiah-nama">' + escapeHtml(state.hadiah) + '</div>' : '');
-        lastHadiahGambarUrl = state.hadiahGambarUrl;
-      }
-    } else if (lastHadiahGambarUrl !== null || hadiahBox.contains(hadiahKosong) === false) {
-      hadiahBox.innerHTML = '<div class="kosong" id="hadiahKosong">' +
+      hadiahBox.innerHTML = '<img src="' + escapeHtml(state.hadiahGambarUrl) + '" alt="Hadiah">' +
+        (state.hadiah ? '<div class="hadiah-nama">' + escapeHtml(state.hadiah) + '</div>' : '');
+    } else {
+      hadiahBox.innerHTML = '<div class="kosong">' +
         (state.hadiah ? escapeHtml(state.hadiah) : "Hadiah belum diatur<br>dari halaman Kontrol") + '</div>';
-      lastHadiahGambarUrl = null;
     }
+    document.getElementById("simulasiBadge").classList.toggle("hidden", !state.simulasi);
   }
 
   function easeOutQuart(t){ return 1 - Math.pow(1 - t, 4); }
-  var CRUISE_MS_BASE = reduceMotion ? 2000 : null; // null -> pakai durasiMs dari state
-  var SNAP_MS = reduceMotion ? 300 : 700;
-  var ROWS_PER_SEC = reduceMotion ? 14 : 34;
-  var SNAP_ROWS = reduceMotion ? 4 : 6;
+  var SNAP_MS = 700;
+  var ROWS_PER_SEC = 34;
+  var SNAP_ROWS = 6;
+  // Durasi pemanasan (cruise) SETELAH pemenang pertama, dipakai untuk
+  // pemenang ke-2 dst supaya urutan tetap wajar tanpa bikin total durasi
+  // membengkak kalau jumlah pemenang banyak.
+  var CRUISE_MS_LANJUTAN = 2600;
 
-  function muatPoolUntukDekorasi(mode, cb){
-    if (poolCache[mode]) { cb(poolCache[mode]); return; }
-    apiCall("undian_daftar_kandidat", { mode: mode }).then(function(res){
-      poolCache[mode] = (res.ok && res.data && res.data.length) ? res.data : [{ utama: "----" }];
-      cb(poolCache[mode]);
+  function muatPoolUntukDekorasi(mode, simulasi, cb){
+    var key = (simulasi ? "sim:" : "real:") + mode;
+    if (poolCache[key]) { cb(poolCache[key]); return; }
+    apiCall("undian_daftar_kandidat", { mode: mode, simulasi: simulasi }).then(function(res){
+      poolCache[key] = (res.ok && res.data && res.data.length) ? res.data : [{ utama: "----" }];
+      cb(poolCache[key]);
     }).catch(function(){ cb([{ utama: "----" }]); });
   }
 
+  // Muter reel 1x sampai berhenti tepat di "finalValue", lalu panggil
+  // selesaiCb(). cruiseMs SELALU dihormati sesuai parameter (TIDAK ada
+  // lagi override "prefers-reduced-motion" yang bikin durasi meleset dari
+  // pilihan operator -- bug ditemukan Kang 16 Sep 2026).
+  function satuKaliPutar(pool, isNama, finalValue, cruiseMs, selesaiCb){
+    var cruiseRows = Math.round(ROWS_PER_SEC * (cruiseMs / 1000));
+    var totalRows = cruiseRows + SNAP_ROWS;
+    var sequence = [finalValue];
+    for (var i = 0; i < totalRows; i++) {
+      sequence.push(pool[Math.floor(Math.random() * pool.length)].utama);
+    }
+    reelTrack.innerHTML = "";
+    reelTrack.style.filter = "";
+    sequence.forEach(function(v){
+      var el = document.createElement("div");
+      el.className = "reel-item" + (isNama ? " mode-nama" : "");
+      el.textContent = v;
+      reelTrack.appendChild(el);
+    });
+
+    var itemHeight = reelTrack.firstChild.getBoundingClientRect().height;
+    reelViewport.style.height = itemHeight + "px";
+    var startIdx = sequence.length - 1;
+    reelTrack.style.transform = "translateY(" + (-startIdx * itemHeight) + "px)";
+
+    var totalDuration = cruiseMs + SNAP_MS;
+    var lastIndex = startIdx;
+    var lastTickTime = 0;
+    var t0 = null;
+
+    function frame(ts){
+      if (t0 === null) t0 = ts;
+      var elapsed = ts - t0;
+      var idxFloat, blurPx;
+      if (elapsed <= cruiseMs) {
+        var cruiseT = elapsed / cruiseMs;
+        idxFloat = SNAP_ROWS + cruiseRows * (1 - cruiseT);
+        blurPx = 11;
+      } else {
+        var snapT = Math.min((elapsed - cruiseMs) / SNAP_MS, 1);
+        var eased = easeOutQuart(snapT);
+        idxFloat = SNAP_ROWS * (1 - eased);
+        blurPx = 11 * (1 - eased);
+      }
+      var y = -idxFloat * itemHeight;
+      reelTrack.style.transform = "translateY(" + y + "px)";
+      reelTrack.style.filter = blurPx > 0.15 ? "blur(" + blurPx.toFixed(2) + "px)" : "";
+
+      var idx = Math.round(idxFloat);
+      if (idx !== lastIndex) {
+        lastIndex = idx;
+        if (ts - lastTickTime > 20) {
+          lastTickTime = ts;
+          var progress = Math.min(elapsed / totalDuration, 1);
+          playTick(760 - progress * 260, elapsed > cruiseMs);
+        }
+      }
+      if (elapsed < totalDuration) {
+        requestAnimationFrame(frame);
+      } else {
+        reelTrack.style.transform = "translateY(0px)";
+        reelTrack.style.filter = "";
+        selesaiCb();
+      }
+    }
+    requestAnimationFrame(frame);
+  }
+
+  // Bug lama: kalau pemenang > 1, reel cuma berhenti di 1 nilai (punya
+  // pemenang pertama) tapi kartu di bawah nampilin SEMUA pemenang --
+  // kelihatan tidak nyambung. Sekarang reel berputar ULANG untuk TIAP
+  // pemenang secara berurutan, dan kartunya baru muncul begitu reel
+  // benar-benar berhenti di nilai orang itu. Ditemukan Kang, 16 Sep 2026.
   function jalankanUndian(state){
     drawBox.classList.remove("landed");
     drawBox.classList.add("spinning");
     pemenangGrid.innerHTML = "";
 
-    var finalValue = state.pemenang && state.pemenang.length ? state.pemenang[0].utama : "----";
+    var daftarPemenang = (state.pemenang && state.pemenang.length) ? state.pemenang : [{ utama: "----", nama: "-", instansi: "-", hp: "-" }];
     var isNama = state.mode === "nama";
+    var durasiPertama = state.durasiMs || 15000;
 
-    muatPoolUntukDekorasi(state.mode, function(pool){
-      var durasiMs = state.durasiMs || 15000;
-      var cruiseMs = reduceMotion ? CRUISE_MS_BASE : Math.max(durasiMs - SNAP_MS, 1200);
-      var cruiseRows = Math.round(ROWS_PER_SEC * (cruiseMs / 1000));
-      var totalRows = cruiseRows + SNAP_ROWS;
-      var sequence = [finalValue];
-      for (var i = 0; i < totalRows; i++) {
-        sequence.push(pool[Math.floor(Math.random() * pool.length)].utama);
-      }
-      reelTrack.innerHTML = "";
-      reelTrack.style.filter = "";
-      sequence.forEach(function(v){
-        var el = document.createElement("div");
-        el.className = "reel-item" + (isNama ? " mode-nama" : "");
-        el.textContent = v;
-        reelTrack.appendChild(el);
-      });
-
-      var itemHeight = reelTrack.firstChild.getBoundingClientRect().height;
-      reelViewport.style.height = itemHeight + "px";
-      var startIdx = sequence.length - 1;
-      reelTrack.style.transform = "translateY(" + (-startIdx * itemHeight) + "px)";
-
-      var totalDuration = cruiseMs + SNAP_MS;
-      var lastIndex = startIdx;
-      var lastTickTime = 0;
-      var t0 = null;
-
-      function frame(ts){
-        if (t0 === null) t0 = ts;
-        var elapsed = ts - t0;
-        var idxFloat, blurPx;
-        if (elapsed <= cruiseMs) {
-          var cruiseT = elapsed / cruiseMs;
-          idxFloat = SNAP_ROWS + cruiseRows * (1 - cruiseT);
-          blurPx = 11;
-        } else {
-          var snapT = Math.min((elapsed - cruiseMs) / SNAP_MS, 1);
-          var eased = easeOutQuart(snapT);
-          idxFloat = SNAP_ROWS * (1 - eased);
-          blurPx = 11 * (1 - eased);
-        }
-        var y = -idxFloat * itemHeight;
-        reelTrack.style.transform = "translateY(" + y + "px)";
-        reelTrack.style.filter = blurPx > 0.15 ? "blur(" + blurPx.toFixed(2) + "px)" : "";
-
-        var idx = Math.round(idxFloat);
-        if (idx !== lastIndex) {
-          lastIndex = idx;
-          if (ts - lastTickTime > 20) {
-            lastTickTime = ts;
-            var progress = Math.min(elapsed / totalDuration, 1);
-            playTick(760 - progress * 260, elapsed > cruiseMs);
-          }
-        }
-        if (elapsed < totalDuration) {
-          requestAnimationFrame(frame);
-        } else {
-          reelTrack.style.transform = "translateY(0px)";
-          reelTrack.style.filter = "";
-          selesaiUndian(state);
-        }
-      }
-      requestAnimationFrame(frame);
+    muatPoolUntukDekorasi(state.mode, state.simulasi, function(pool){
+      putarUrutan(pool, isNama, daftarPemenang, 0, durasiPertama);
     });
+
+    function putarUrutan(pool, isNama, daftar, idx, cruiseMs){
+      var pemenangIni = daftar[idx];
+      satuKaliPutar(pool, isNama, pemenangIni.utama, cruiseMs, function(){
+        tambahKartuPemenang(pemenangIni);
+        var masihAda = idx + 1 < daftar.length;
+        if (masihAda) {
+          drawBox.classList.remove("landed");
+          drawBox.classList.add("spinning");
+          setTimeout(function(){
+            putarUrutan(pool, isNama, daftar, idx + 1, CRUISE_MS_LANJUTAN);
+          }, 550);
+        } else {
+          drawBox.classList.remove("spinning");
+          drawBox.classList.add("landed");
+          playFanfare();
+          flashLayer.classList.remove("go");
+          void flashLayer.offsetWidth;
+          flashLayer.classList.add("go");
+        }
+      });
+    }
   }
 
-  function selesaiUndian(state){
-    drawBox.classList.remove("spinning");
-    drawBox.classList.add("landed");
-    playFanfare();
-    flashLayer.classList.remove("go");
-    void flashLayer.offsetWidth;
-    flashLayer.classList.add("go");
-
-    pemenangGrid.innerHTML = (state.pemenang || []).map(function(p){
-      return '<div class="pemenang-card">' +
-        '<div class="pnama">' + escapeHtml(p.nama) + '</div>' +
-        '<div class="pinstansi">' + escapeHtml(p.instansi || "-") + '</div>' +
-        '<div class="php">' + escapeHtml(p.hp || "-") + '</div>' +
-      '</div>';
-    }).join("");
+  function tambahKartuPemenang(p){
+    var el = document.createElement("div");
+    el.className = "pemenang-card";
+    el.innerHTML =
+      (p.nomorKupon && p.nomorKupon !== "-" ? '<div class="pkupon">Kupon ' + escapeHtml(p.nomorKupon) + '</div><br>' : '') +
+      '<div class="pnama">' + escapeHtml(p.nama) + '</div>' +
+      '<div class="pinstansi">' + escapeHtml(p.instansi || "-") + '</div>' +
+      '<div class="php">' + escapeHtml(p.hp || "-") + '</div>';
+    pemenangGrid.appendChild(el);
   }
 
   function tampilkanIdle(){
@@ -463,6 +518,15 @@
     }
   }
   fsBtn.addEventListener("click", toggleFullscreen);
+  // Cadangan JS selain CSS :fullscreen -- kalau ada browser/webview
+  // videotron yang tidak konsisten menerapkan pseudo-class-nya, tombol
+  // tetap dipaksa hilang lewat class.
+  function syncFsBtnVisibility(){
+    var fs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+    fsBtn.classList.toggle("force-hide", fs);
+  }
+  document.addEventListener("fullscreenchange", syncFsBtnVisibility);
+  document.addEventListener("webkitfullscreenchange", syncFsBtnVisibility);
 
   // ---------- gerbang password ----------
   var pollTimer = null;
@@ -470,7 +534,6 @@
     document.getElementById("gate").classList.add("hidden");
     document.getElementById("app").classList.remove("hidden");
     sessionStorage.setItem(STORAGE_KEY, pw);
-    getAudioCtx();
     poll();
     if (pollTimer) clearInterval(pollTimer);
     pollTimer = setInterval(poll, POLL_MS);
@@ -499,6 +562,13 @@
     var pw = document.getElementById("pwInput").value.trim();
     if (!pw) { document.getElementById("pwErr").textContent = "Isi password dulu."; return; }
     document.getElementById("pwErr").textContent = "";
+    // Bug lama: AudioContext dibuat di dalam unlock(), yang baru jalan
+    // SETELAH digest SHA-256 async selesai -- di titik itu browser sudah
+    // tidak menganggap ini "klik user" lagi, jadi AudioContext nyangkut
+    // suspended selamanya dan tidak ada suara sama sekali. Sekarang
+    // context dibuat LANGSUNG di sini, di dalam handler klik yang sama,
+    // SEBELUM proses async apa pun. Ditemukan Kang, 16 Sep 2026.
+    getAudioCtx();
     sha256Hex(pw).then(function(hash){
       if (hash !== PW_HASH) { document.getElementById("pwErr").textContent = "Password salah."; return; }
       unlock(pw);
@@ -506,6 +576,15 @@
   };
   document.getElementById("pwInput").addEventListener("keydown", function(e){
     if (e.key === "Enter") document.getElementById("pwBtn").click();
+  });
+
+  // Reload halaman (sessionStorage sudah ada password) TIDAK dianggap
+  // "klik user" oleh browser -- pasang pengait 1x di klik pertama di
+  // halaman supaya AudioContext tetap ke-unlock walau bukan lewat form
+  // password.
+  document.addEventListener("click", function onFirstClick(){
+    getAudioCtx();
+    document.removeEventListener("click", onFirstClick);
   });
 
   var saved = sessionStorage.getItem(STORAGE_KEY);
