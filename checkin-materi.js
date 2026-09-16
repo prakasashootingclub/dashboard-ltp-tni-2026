@@ -44,6 +44,7 @@ const MATERI_REGISTRY = {
       "300 M Plat Baja 3 Sikap Beregu (Standard/Pejera Logam)",
       "600 M Tactical Prone Perorangan (TNI/Polri)",
       "600 M Tactical Prone Perorangan (Sipil)",
+      "600 M Tactical Prone Perorangan (Senior)",
     ],
   },
   eksekutif: {
