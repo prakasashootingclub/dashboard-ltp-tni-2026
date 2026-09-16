@@ -89,22 +89,6 @@ const MATERI_REGISTRY = {
 
 const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbyGY8Pi3gBALM8GVP6XCB04P_eebPw2thlP_ShQR6IVC31vuCZcWXxQK677crIgHysu/exec";
 
-// Password DIPISAH PER KELOMPOK materi (permintaan Kang, 13 September
-// 2026) -- sebelumnya halaman ini sama sekali tanpa password. Eksekutif &
-// Falling Plate berbagi 1 password (sama-sama Pistol, 1 meja pos), begitu
-// juga IPSC & Non IPSC. Pemetaan ini HARUS sama persis dengan
-// DAFTAR_ULANG_KELOMPOK_ di Code.js.
-const MATERI_GROUP = {
-  senapan: "senapan", eksekutif: "eksfp", fallingplate: "eksfp",
-  airrifle: "airrifle", ipsc: "ipscnon", nonipsc: "ipscnon"
-};
-const GROUP = MATERI_GROUP[MATERI_KEY];
-const STORAGE_KEY = "daftarUlangPw_" + GROUP;
-const GROUP_LABEL = {
-  senapan: "Senapan", eksfp: "Eksekutif & Falling Plate",
-  airrifle: "Air Rifle", ipscnon: "IPSC & Non IPSC"
-};
-
 const materi = MATERI_REGISTRY[MATERI_KEY];
 let allRows = [];
 
@@ -240,80 +224,37 @@ function render() {
   document.getElementById("katSections").innerHTML = tabelHtml(rows);
 }
 
-// Mengembalikan true kalau password diterima server (dipakai gerbang untuk
-// tahu harus buka kunci atau tidak), false kalau ditolak. Tetap dipakai
-// utuk polling data tiap 15 detik setelah terbuka.
-async function muatData(pw) {
+// Halaman ini SENGAJA TANPA PASSWORD (permintaan Kang, 16 September
+// 2026 -- dibalik lagi dari perubahan 13 September yang menambah
+// password per kelompok). Backend list_daftar_ulang juga sudah tidak
+// lagi mengecek CONFIG.DAFTAR_ULANG_PASSWORD, lihat Code.js.
+async function muatData() {
   try {
     const res = await fetch(WEBAPP_URL, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ action: "list_daftar_ulang", materiKey: MATERI_KEY, pw: pw })
+      body: JSON.stringify({ action: "list_daftar_ulang", materiKey: MATERI_KEY })
     });
     const json = await res.json();
     if (!json.ok) {
-      if (document.getElementById("gate").classList.contains("hidden")) {
-        // Sesi sudah terbuka tapi request berikutnya gagal (mis. password
-        // diganti admin di tengah jalan) -- kunci ulang, jangan biarkan
-        // diam nyangkut kosong.
-        sessionStorage.removeItem(STORAGE_KEY);
-        document.getElementById("app").classList.add("hidden");
-        document.getElementById("gate").classList.remove("hidden");
-        document.getElementById("pwErr").textContent = (json.pesan || "Password salah.") + " Silakan masukkan password lagi.";
-      }
-      return false;
+      document.getElementById("katSections").innerHTML =
+        `<div class="table-wrap"><table><tbody><tr class="empty-row"><td>${escapeHtml(json.pesan || "Gagal memuat data.")}</td></tr></tbody></table></div>`;
+      return;
     }
     allRows = json.rows || [];
     render();
     const now = new Date();
     document.getElementById("lastSync").textContent = "Terakhir diperbarui: " + now.toLocaleTimeString("id-ID", { hour12: false });
-    return true;
   } catch (err) {
     document.getElementById("katSections").innerHTML =
       `<div class="table-wrap"><table><tbody><tr class="empty-row"><td>Gagal terhubung ke server: ${escapeHtml(err.message || err)}</td></tr></tbody></table></div>`;
-    return true; // jaringan bermasalah, bukan soal password -- jangan kunci ulang
   }
 }
 
 document.title = "LTP TNI 2026 — Daftar Ulang " + materi.judul;
 document.getElementById("pageTitle").textContent = "Daftar Ulang — " + materi.judul;
-document.getElementById("gateTitle").textContent = "Daftar Ulang — " + materi.judul;
-document.getElementById("gateSub").textContent = "Password pos " + GROUP_LABEL[GROUP];
 document.getElementById("searchInput").addEventListener("input", render);
 document.getElementById("downloadBtn").addEventListener("click", downloadXlsx);
 
-let pollInterval = null;
-function bukaHalaman(pw) {
-  document.getElementById("gate").classList.add("hidden");
-  document.getElementById("app").classList.remove("hidden");
-  sessionStorage.setItem(STORAGE_KEY, pw);
-  muatData(pw);
-  if (!pollInterval) pollInterval = setInterval(() => muatData(sessionStorage.getItem(STORAGE_KEY)), 15000);
-}
-
-document.getElementById("pwBtn").onclick = async function(){
-  const pw = document.getElementById("pwInput").value.trim();
-  const err = document.getElementById("pwErr");
-  if (!pw) { err.textContent = "Isi password dulu."; return; }
-  err.textContent = "";
-  const btn = document.getElementById("pwBtn");
-  btn.disabled = true; btn.textContent = "Memeriksa...";
-  const ok = await muatData(pw);
-  btn.disabled = false; btn.textContent = "Masuk";
-  if (ok) {
-    bukaHalaman(pw);
-  } else {
-    err.textContent = "Password salah.";
-  }
-};
-document.getElementById("pwInput").addEventListener("keydown", function(e){
-  if (e.key === "Enter") document.getElementById("pwBtn").click();
-});
-
-const savedPw = sessionStorage.getItem(STORAGE_KEY);
-if (savedPw) {
-  muatData(savedPw).then(ok => {
-    if (ok) bukaHalaman(savedPw);
-    else { sessionStorage.removeItem(STORAGE_KEY); document.getElementById("pwErr").textContent = "Sesi berakhir, masukkan password lagi."; }
-  });
-}
+muatData();
+setInterval(muatData, 15000);
