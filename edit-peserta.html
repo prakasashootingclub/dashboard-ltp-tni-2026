@@ -86,7 +86,7 @@
   }
 
   /* ---------- pencarian ---------- */
-  #cariInput{
+  #cariInput, #cariDitolakInput{
     width:100%; padding:10px 12px; border-radius:6px; border:1px solid var(--line);
     background:var(--panel); color:var(--ink); font-size:14px; margin-bottom:6px;
   }
@@ -179,6 +179,7 @@
   </div>
 
   <div id="tabDitolak" class="hidden">
+    <input type="text" id="cariDitolakInput" placeholder="Cari Nama, HP, Kategori, Item, atau Alasan...">
     <div id="statusDitolak" style="font-size:12px;color:#5B6660;margin-bottom:10px;">Memuat...</div>
     <div id="listDitolak"></div>
     <div id="formPerbaikiDitolak" class="hidden"></div>
@@ -610,11 +611,37 @@
       .then(function(res){
         if (!res.ok) { kunciUlang_(res.pesan || "Gagal memuat."); return; }
         daftarDitolakAktif = res.data;
-        status.textContent = res.data.length ? res.data.length + " penolakan." : "Belum ada penolakan. Aman.";
-        renderListDitolak(res.data);
+        document.getElementById("cariDitolakInput").value = "";
+        terapkanFilterDitolak();
       })
       .catch(function(err){ status.textContent = "Gagal terhubung ke server: " + err; });
   }
+
+  // Filter CLIENT-SIDE terhadap daftarDitolakAktif yang sudah diambil --
+  // BUKAN request baru ke server tiap ketik (beda dari pencarian tab
+  // "peserta" yang memang ke server). Batas tampilan list_ditolak_edit
+  // baru dinaikkan 50 -> 1000 (permintaan Kang, 16 September 2026, sudah
+  // 105+ penolakan menjelang hari-H) -- tanpa kotak cari ini, daftar
+  // sepanjang itu jadi sulit dipakai. Konsisten dengan pola yang sudah
+  // ada di tab "Penolakan" verifikasi-pembayaran.html.
+  function terapkanFilterDitolak(){
+    var status = document.getElementById("statusDitolak");
+    var kata = document.getElementById("cariDitolakInput").value.trim().toLowerCase();
+    var hasil = !kata ? daftarDitolakAktif : daftarDitolakAktif.filter(function(r){
+      return (r.nama + " " + r.hp + " " + r.kategori + " " + r.item + " " + r.alasan)
+        .toLowerCase().indexOf(kata) !== -1;
+    });
+    status.textContent = daftarDitolakAktif.length
+      ? hasil.length + " dari " + daftarDitolakAktif.length + " penolakan" + (kata ? " (hasil cari)" : "") + "."
+      : "Belum ada penolakan. Aman.";
+    renderListDitolak(hasil);
+  }
+
+  var timerCariDitolak = null;
+  document.getElementById("cariDitolakInput").addEventListener("input", function(){
+    if (timerCariDitolak) clearTimeout(timerCariDitolak);
+    timerCariDitolak = setTimeout(terapkanFilterDitolak, 150);
+  });
 
   function fmtWaktuTolak(iso){
     try { return new Date(iso).toLocaleString("id-ID", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }); }
