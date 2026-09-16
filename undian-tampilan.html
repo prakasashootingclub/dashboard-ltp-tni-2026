@@ -210,6 +210,24 @@
   .pemenang-card .pnama{ font-weight:700; font-size:clamp(16px,1.9vw,24px); color:var(--ink); }
   .pemenang-card .pinstansi{ font-family:var(--mono); font-size:clamp(11px,1.1vw,13px); color:var(--ink-dim); margin-top:4px; }
   .pemenang-card .php{ font-family:var(--mono); font-size:clamp(11px,1.1vw,13px); color:var(--amber-bright); margin-top:6px; }
+  /* Header logo + judul -- permintaan Kang, 16 September 2026, lewat
+     sketsa tangan ("LOGO" pojok kiri + "DOORPRIZE LOMBA TEMBAK PIALA
+     PANGLIMA TNI"). flex:0 0 auto (tinggi tetap sesuai konten) supaya
+     .stage-top & .pemenang-wrap di bawahnya tetap bagi 70:30 dari sisa
+     ruang, bukan dari tinggi layar penuh. */
+  .header-bar{
+    flex:0 0 auto; display:flex; align-items:center; gap:clamp(10px,1.6vw,18px);
+    margin-bottom:clamp(10px,1.6vh,18px);
+  }
+  .header-logo{ width:clamp(36px,4.4vh,56px); height:clamp(36px,4.4vh,56px); flex:none; object-fit:contain; }
+  .header-title-main{
+    font-family:var(--display); font-size:clamp(18px,2.6vw,34px); color:var(--amber-bright);
+    line-height:1; text-shadow:0 0 18px rgba(229,169,74,0.3);
+  }
+  .header-title-sub{
+    font-family:var(--mono); font-size:clamp(10px,1.1vw,13px); color:var(--ink-dim);
+    letter-spacing:.05em; margin-top:4px;
+  }
   .simulasi-badge{
     position:fixed; top:14px; left:14px; z-index:10;
     font-family:var(--mono); font-size:11px; font-weight:700; letter-spacing:.08em;
@@ -246,6 +264,13 @@
   </button>
 
   <div class="stage">
+    <div class="header-bar">
+      <img src="icons/icon-512.png" alt="Logo" class="header-logo">
+      <div class="header-title">
+        <div class="header-title-main">DOORPRIZE</div>
+        <div class="header-title-sub">Lomba Tembak Piala Panglima TNI 2026</div>
+      </div>
+    </div>
     <div class="stage-top">
       <div class="hadiah-box" id="hadiahBox"></div>
       <div class="draw-box" id="drawBox">
