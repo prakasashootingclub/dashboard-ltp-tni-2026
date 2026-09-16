@@ -151,13 +151,19 @@
      Bentuknya juga PERSEGI PANJANG mendatar (lebar > tinggi lewat
      aspect-ratio), bukan kotak tinggi yang stretch penuh ke tinggi
      baris ini, dan disejajarkan tengah (align-self) biar simetris
-     dengan gambar hadiah di sebelahnya. Permintaan Kang, 16 Sep 2026. */
+     dengan gambar hadiah di sebelahnya. Permintaan Kang, 16 Sep 2026.
+     Rasio 2.4:1 (koreksi pertama) kotaknya jadi TERLALU KECIL
+     dibanding gambar hadiah -- kelihatan mengambang dengan banyak
+     ruang kosong di atas/bawahnya, jadi tidak simetris walau sudah
+     center-align. Dilebarkan ke 1.6:1 (masih jelas persegi panjang,
+     bukan kotak) supaya lebih mengisi tinggi kolomnya dan sepadan
+     dengan besar gambar hadiah. Koreksi ke-2, Kang, 16 Sep 2026. */
   .draw-box{
     background:var(--ink); border:1px solid transparent; border-radius:14px;
     display:flex; align-items:center; justify-content:center;
     position:relative; overflow:hidden;
     width:100%; align-self:center;
-    aspect-ratio:2.4 / 1; max-height:100%;
+    aspect-ratio:1.6 / 1; max-height:100%;
     box-shadow:0 18px 46px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(0,0,0,0.06);
     transition:box-shadow .25s ease;
   }
@@ -172,15 +178,15 @@
   .reel-track{ display:flex; flex-direction:column; will-change:transform, filter; }
   .reel-item{
     font-family:var(--display); font-weight:400;
-    font-size:clamp(26px, 5.4vw, 68px);
+    font-size:clamp(32px, 6.4vw, 84px);
     color:#12160F; letter-spacing:.01em; line-height:1.15; white-space:nowrap;
     text-align:center; padding:0 clamp(10px,2vw,26px);
   }
-  .reel-item.mode-nama{ font-family:var(--sans); font-weight:700; font-size:clamp(20px, 3.8vw, 48px); }
+  .reel-item.mode-nama{ font-family:var(--sans); font-weight:700; font-size:clamp(24px, 4.6vw, 58px); }
   /* Placeholder "siap putar" -- ditampilkan di reel SEJAK AWAL (belum
      pernah ada undian jalan sama sekali), gantinya ikon+teks gelap yang
      lama. Permintaan Kang, 16 Sep 2026. */
-  .reel-item.siap{ color:var(--ink-faint); font-family:var(--mono); font-weight:600; letter-spacing:.16em; text-transform:uppercase; font-size:clamp(14px,1.8vw,20px); }
+  .reel-item.siap{ color:var(--ink-faint); font-family:var(--mono); font-weight:600; letter-spacing:.16em; text-transform:uppercase; font-size:clamp(16px,2.2vw,26px); }
 
   /* ---------- pemenang (bawah, 30% tinggi panggung) ---------- */
   /* TIDAK BOLEH scroll (permintaan Kang) -- kalau pemenang banyak
