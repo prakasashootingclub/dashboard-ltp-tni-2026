@@ -118,23 +118,18 @@
     align-items:stretch;
   }
 
-  /* TIDAK ada bingkai/panel di sekitar gambar hadiah -- gambar (PNG,
-     sering transparan) ditampilkan apa adanya. Panel gelap + border
-     HANYA muncul waktu belum ada gambar (placeholder teks), lewat class
-     .kosong-state. Permintaan Kang, 16 September 2026 ("jangan dalam
-     kotak bingkai gitu biarkan aja gambar apa adanya"). */
+  /* TIDAK ADA bingkai/panel/teks apa pun di sekitar gambar hadiah --
+     baik waktu ADA gambar (PNG sering transparan, ditampilkan apa
+     adanya) MAUPUN waktu BELUM ada gambar (kosong total, tanpa placeholder
+     teks "Hadiah belum diatur..." sama sekali). Permintaan Kang, 16
+     September 2026 (2x koreksi -- awalnya cuma diminta hilangkan
+     bingkai, lalu ditegaskan lagi lewat sketsa: "jangan tampilkan
+     bingkai dan tulisan apapun, cukup kosong saja"). */
   .hadiah-box{
     display:flex; flex-direction:column; align-items:center; justify-content:center;
     overflow:hidden; position:relative; min-height:0;
   }
-  .hadiah-box.kosong-state{
-    background:var(--panel); border:1px solid var(--line); border-radius:14px;
-  }
   .hadiah-box img{ max-width:100%; max-height:100%; object-fit:contain; }
-  .hadiah-box .kosong{
-    font-family:var(--mono); font-size:12px; color:var(--ink-faint);
-    text-align:center; padding:20px; letter-spacing:.05em;
-  }
   .hadiah-nama{
     position:absolute; left:0; right:0; bottom:0;
     background:linear-gradient(0deg, rgba(11,15,13,0.92), rgba(11,15,13,0));
@@ -252,9 +247,7 @@
 
   <div class="stage">
     <div class="stage-top">
-      <div class="hadiah-box kosong-state" id="hadiahBox">
-        <div class="kosong" id="hadiahKosong">Hadiah belum diatur<br>dari halaman Kontrol</div>
-      </div>
+      <div class="hadiah-box" id="hadiahBox"></div>
       <div class="draw-box" id="drawBox">
         <div class="idle-content" id="idleContent">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>
@@ -389,28 +382,26 @@
 
     var namaHtml = state.hadiah ? '<div class="hadiah-nama">' + escapeHtml(state.hadiah) + '</div>' : '';
     if (!state.hadiahGambarUrl) {
-      hadiahBox.classList.add("kosong-state");
-      hadiahBox.innerHTML = '<div class="kosong">' +
-        (state.hadiah ? escapeHtml(state.hadiah) : "Hadiah belum diatur<br>dari halaman Kontrol") + '</div>';
+      // Belum ada gambar -- kosong TOTAL, tanpa bingkai/tanpa teks apa
+      // pun sama sekali (bukan cuma tanpa bingkai; nama hadiah juga
+      // TIDAK ditampilkan di sini kalau gambarnya belum ada).
+      hadiahBox.innerHTML = "";
       return;
     }
     if (gambarCache[state.hadiahGambarUrl]) {
-      hadiahBox.classList.remove("kosong-state");
       hadiahBox.innerHTML = '<img src="' + gambarCache[state.hadiahGambarUrl] + '" alt="Hadiah">' + namaHtml;
       return;
     }
-    hadiahBox.classList.add("kosong-state");
-    hadiahBox.innerHTML = '<div class="kosong">Memuat gambar&hellip;</div>';
+    hadiahBox.innerHTML = "";
     apiCall("undian_get_gambar", { ref: state.hadiahGambarUrl }).then(function(res){
-      if (!res.ok) { hadiahBox.innerHTML = '<div class="kosong">' + escapeHtml(res.pesan || "Gagal memuat gambar.") + '</div>'; return; }
+      if (!res.ok) { hadiahBox.innerHTML = ""; return; }
       var dataUri = "data:" + res.mimeType + ";base64," + res.base64;
       gambarCache[state.hadiahGambarUrl] = dataUri;
       if (lastHadiahKey === key) {
-        hadiahBox.classList.remove("kosong-state");
         hadiahBox.innerHTML = '<img src="' + dataUri + '" alt="Hadiah">' + namaHtml;
       }
     }).catch(function(){
-      hadiahBox.innerHTML = '<div class="kosong">Gagal terhubung ke server.</div>';
+      hadiahBox.innerHTML = "";
     });
   }
 
