@@ -110,11 +110,13 @@
     gap:clamp(14px,2.4vh,26px);
   }
   .stage-top{
-    /* flex-grow 7 vs 3 di .pemenang-wrap -- membagi ruang yang TERSISA
-       (setelah gap) persis 70:30, PROPORSIONAL & KONSISTEN di layar
-       berapa pun, tanpa scroll. Permintaan Kang, 16 September 2026. */
-    flex:7 1 0; min-height:0;
-    display:grid; grid-template-columns:1fr 1fr; gap:clamp(16px,2.4vw,36px);
+    /* Proporsi VERTIKAL 3 baris (header:stage-top:pemenang-wrap) =
+       20:60:20 -- lihat flex-grow di .header-bar & .pemenang-wrap.
+       Proporsi HORIZONTAL di baris ini (gambar hadiah : kolom undian)
+       = 70:30 lewat grid-template-columns. Permintaan Kang, 16
+       September 2026 (angka persis dari Kang). */
+    flex:6 1 0; min-height:0;
+    display:grid; grid-template-columns:7fr 3fr; gap:clamp(16px,2.4vw,36px);
     align-items:stretch;
   }
 
@@ -186,7 +188,7 @@
      (lihat fitPemenangGrid()) supaya semua kartu tetap muat persis di
      area ini, bukan didorong meluber atau discroll. */
   .pemenang-wrap{
-    flex:3 1 0; min-height:0;
+    flex:2 1 0; min-height:0;
     display:flex; align-items:center; justify-content:center;
     overflow:hidden; padding:4px;
   }
@@ -212,11 +214,13 @@
   .pemenang-card .php{ font-family:var(--mono); font-size:clamp(11px,1.1vw,13px); color:var(--amber-bright); margin-top:6px; }
   /* Header logo + judul -- permintaan Kang, 16 September 2026, lewat
      sketsa tangan ("LOGO" pojok kiri + "DOORPRIZE LOMBA TEMBAK PIALA
-     PANGLIMA TNI"). flex:0 0 auto (tinggi tetap sesuai konten) supaya
-     .stage-top & .pemenang-wrap di bawahnya tetap bagi 70:30 dari sisa
-     ruang, bukan dari tinggi layar penuh. */
+     PANGLIMA TNI"). Tinggi PROPORSIONAL 20% (flex-grow 2), bukan lagi
+     cuma sesuai konten -- angka persis dari Kang: header 20%, baris
+     gambar+undian 60% (kolom undian di dalamnya 30%), pemenang 20%.
+     Konten logo+judul otomatis di tengah vertikal (align-items:center)
+     kalau 20% itu lebih tinggi dari konten aslinya. */
   .header-bar{
-    flex:0 0 auto; display:flex; align-items:center; justify-content:center;
+    flex:2 1 0; min-height:0; display:flex; align-items:center; justify-content:center;
     gap:clamp(14px,2.2vw,26px);
     margin-bottom:clamp(10px,1.6vh,18px);
   }
