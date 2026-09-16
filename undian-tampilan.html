@@ -216,17 +216,19 @@
      .stage-top & .pemenang-wrap di bawahnya tetap bagi 70:30 dari sisa
      ruang, bukan dari tinggi layar penuh. */
   .header-bar{
-    flex:0 0 auto; display:flex; align-items:center; gap:clamp(10px,1.6vw,18px);
+    flex:0 0 auto; display:flex; align-items:center; justify-content:center;
+    gap:clamp(14px,2.2vw,26px);
     margin-bottom:clamp(10px,1.6vh,18px);
   }
-  .header-logo{ width:clamp(36px,4.4vh,56px); height:clamp(36px,4.4vh,56px); flex:none; object-fit:contain; }
+  .header-logo{ width:clamp(52px,7vh,84px); height:clamp(52px,7vh,84px); flex:none; object-fit:contain; }
+  .header-title{ text-align:center; }
   .header-title-main{
-    font-family:var(--display); font-size:clamp(18px,2.6vw,34px); color:var(--amber-bright);
+    font-family:var(--display); font-size:clamp(28px,4.2vw,54px); color:var(--amber-bright);
     line-height:1; text-shadow:0 0 18px rgba(229,169,74,0.3);
   }
   .header-title-sub{
-    font-family:var(--mono); font-size:clamp(10px,1.1vw,13px); color:var(--ink-dim);
-    letter-spacing:.05em; margin-top:4px;
+    font-family:var(--mono); font-size:clamp(13px,1.5vw,18px); color:var(--ink-dim);
+    letter-spacing:.05em; margin-top:6px;
   }
   .simulasi-badge{
     position:fixed; top:14px; left:14px; z-index:10;
