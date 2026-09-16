@@ -20,6 +20,29 @@
 // ulang duluan tampil duluan) supaya operator gampang bagi gelombang/lajur
 // berurutan sesuai kedatangan.
 
+// Timeout drop-in untuk fetch(WEBAPP_URL, ...) -- didefinisikan di sini
+// langsung (bukan file terpisah) karena checkin-materi.js sudah dipakai
+// bareng oleh 6 halaman checkin-<materi>.html, jadi tidak perlu tambah
+// <script> lagi di 6 tempat. Lihat fetch-timeout.js (dipakai halaman
+// dashboard lain) untuk penjelasan lengkap kenapa ini perlu. Permintaan
+// Kang, 16 September 2026 (sinyal jelek di lokasi lomba).
+function fetchTimeout(url, options, ms) {
+  ms = ms || 20000;
+  var controller = new AbortController();
+  var timer = setTimeout(function () { controller.abort(); }, ms);
+  var opts = Object.assign({}, options, { signal: controller.signal });
+  return fetch(url, opts).then(
+    function (res) { clearTimeout(timer); return res; },
+    function (err) {
+      clearTimeout(timer);
+      if (err && err.name === "AbortError") {
+        throw new Error("Koneksi ke server lambat/menggantung lebih dari " + Math.round(ms / 1000) + " detik -- sinyal mungkin jelek, coba lagi.");
+      }
+      throw err;
+    }
+  );
+}
+
 const FALLING_PLATE_ITEMS = [
   "Falling Plate Optic", "Falling Plate Non Optic",
   "Falling Plate Optic (TNI/Polri)", "Falling Plate Non Optic (TNI/Polri)",
@@ -230,7 +253,7 @@ function render() {
 // lagi mengecek CONFIG.DAFTAR_ULANG_PASSWORD, lihat Code.js.
 async function muatData() {
   try {
-    const res = await fetch(WEBAPP_URL, {
+    const res = await fetchTimeout(WEBAPP_URL, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify({ action: "list_daftar_ulang", materiKey: MATERI_KEY })

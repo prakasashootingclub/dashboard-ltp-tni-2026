@@ -146,6 +146,7 @@
      gerbang password TIDAK PERNAH hilang walau class "hidden" ditambahkan. */
   .hidden{display:none !important;}
 </style>
+<script src="fetch-timeout.js"></script>
 </head>
 <body>
 
@@ -263,7 +264,7 @@
     btn.disabled = true;
     btn.textContent = "Memproses...";
     var pw = sessionStorage.getItem(STORAGE_KEY);
-    fetch(WEBAPP_URL, {
+    fetchTimeout(WEBAPP_URL, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify({ action: "tandai_koreksi_golongan", etiket_id: etiketId, pw: pw })
@@ -349,7 +350,7 @@
       errEl.textContent = "";
       var pw = sessionStorage.getItem(STORAGE_KEY);
       var materi = sessionStorage.getItem(MATERI_KEY);
-      fetch(WEBAPP_URL, {
+      fetchTimeout(WEBAPP_URL, {
         method: "POST",
         headers: { "Content-Type": "text/plain;charset=utf-8" },
         body: JSON.stringify({ action: ACTION_VERIF, etiket_id: etiketId, pw: pw, kategori_materi: materi, nomorKupon: kupon })
@@ -388,7 +389,7 @@
 
     var pw = sessionStorage.getItem(STORAGE_KEY);
     var materi = sessionStorage.getItem(MATERI_KEY);
-    fetch(WEBAPP_URL, {
+    fetchTimeout(WEBAPP_URL, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify({ action: ACTION_CEK, etiket_id: decodedText, pw: pw, kategori_materi: materi })
@@ -448,7 +449,7 @@
     if (errEl) errEl.textContent = "";
     var pw = sessionStorage.getItem(STORAGE_KEY);
     var materi = sessionStorage.getItem(MATERI_KEY);
-    fetch(WEBAPP_URL, {
+    fetchTimeout(WEBAPP_URL, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify({ action: ACTION_VERIF, etiket_id: etiketId, pw: pw, kategori_materi: materi, nomorKupon: kupon || "" })
@@ -480,7 +481,7 @@
     statusEl.textContent = "Mencari...";
     hasilEl.innerHTML = "";
     var pw = sessionStorage.getItem(STORAGE_KEY);
-    fetch(WEBAPP_URL, {
+    fetchTimeout(WEBAPP_URL, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify({ action: "cari_peserta", kueri: q, pw: pw })

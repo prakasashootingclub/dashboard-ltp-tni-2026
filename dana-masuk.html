@@ -154,6 +154,7 @@
     .rincian-block{padding:14px;}
   }
 </style>
+<script src="fetch-timeout.js"></script>
 </head>
 <body>
 
@@ -347,7 +348,7 @@
   function muatData(){
     var pw = sessionStorage.getItem(STORAGE_KEY);
     document.getElementById("lastSync").textContent = "Memuat...";
-    fetch(WEBAPP_URL, {
+    fetchTimeout(WEBAPP_URL, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify({ action: "ringkasan_dana", pw: pw })

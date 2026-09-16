@@ -148,6 +148,7 @@
   #simpanStatus.ok{color:var(--olive-bright);}
   #simpanStatus.err{color:var(--red-bright);}
 </style>
+<script src="fetch-timeout.js"></script>
 </head>
 <body>
 
@@ -229,7 +230,7 @@
     if (!q) { status.textContent = "Ketik untuk mencari peserta."; document.getElementById("hasilCari").innerHTML = ""; return; }
     status.textContent = "Mencari...";
     var pw = sessionStorage.getItem(STORAGE_KEY);
-    fetch(WEBAPP_URL, {
+    fetchTimeout(WEBAPP_URL, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify({ action: "cari_edit_peserta", kueri: q, pw: pw })
@@ -269,7 +270,7 @@
   function muatKatalogKategori(cb){
     if (katalogKategori) { cb(); return; }
     var pw = sessionStorage.getItem(STORAGE_KEY);
-    fetch(WEBAPP_URL, {
+    fetchTimeout(WEBAPP_URL, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify({ action: "get_kategori_edit", pw: pw })
@@ -355,7 +356,7 @@
 
     muatKatalogKategori(function(){
       var pw = sessionStorage.getItem(STORAGE_KEY);
-      fetch(WEBAPP_URL, {
+      fetchTimeout(WEBAPP_URL, {
         method: "POST",
         headers: { "Content-Type": "text/plain;charset=utf-8" },
         body: JSON.stringify({ action: "get_peserta_edit", idPendaftaran: idPendaftaran, pw: pw })
@@ -547,7 +548,7 @@
     btn.textContent = "Menyimpan...";
     statusEl.className = ""; statusEl.textContent = "";
     var pw = sessionStorage.getItem(STORAGE_KEY);
-    fetch(WEBAPP_URL, {
+    fetchTimeout(WEBAPP_URL, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify({ action: "update_peserta_data", idPendaftaran: pesertaAktif.idPendaftaran, perubahan: perubahan, pw: pw })
@@ -600,7 +601,7 @@
     document.getElementById("formPerbaikiDitolak").classList.add("hidden");
     document.getElementById("formPerbaikiDitolak").innerHTML = "";
     var pw = sessionStorage.getItem(STORAGE_KEY);
-    fetch(WEBAPP_URL, {
+    fetchTimeout(WEBAPP_URL, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify({ action: "list_ditolak_edit", pw: pw })
@@ -767,7 +768,7 @@
     btn.textContent = "Memindahkan...";
     statusEl.className = ""; statusEl.textContent = "";
     var pw = sessionStorage.getItem(STORAGE_KEY);
-    fetch(WEBAPP_URL, {
+    fetchTimeout(WEBAPP_URL, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify({ action: "perbaiki_dan_pindahkan_penolakan", baris: baris, data: data, pw: pw })

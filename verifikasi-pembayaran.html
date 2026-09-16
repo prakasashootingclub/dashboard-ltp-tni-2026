@@ -219,6 +219,7 @@
   }
   .toggle-row input{ width:auto; margin:0; }
 </style>
+<script src="fetch-timeout.js"></script>
 </head>
 <body>
 
@@ -380,7 +381,7 @@
         reader.onload = function(){
           var base64 = String(reader.result).split(",")[1];
           var pw = sessionStorage.getItem(STORAGE_KEY);
-          fetch(WEBAPP_URL, {
+          fetchTimeout(WEBAPP_URL, {
             method: "POST",
             headers: { "Content-Type": "text/plain;charset=utf-8" },
             body: JSON.stringify({ action: "upload_bukti_admin", idPendaftaran: item.idPendaftaran, base64: base64, mimeType: hasil.mimeType, pw: pw })
@@ -561,7 +562,7 @@
     var status = document.getElementById("status");
     status.textContent = "Memuat...";
     var pw = sessionStorage.getItem(STORAGE_KEY);
-    fetch(WEBAPP_URL, {
+    fetchTimeout(WEBAPP_URL, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify({ action: "list_pending_pembayaran", pw: pw })
@@ -584,7 +585,7 @@
     btn.disabled = true;
     btn.textContent = "Memproses...";
     var pw = sessionStorage.getItem(STORAGE_KEY);
-    fetch(WEBAPP_URL, {
+    fetchTimeout(WEBAPP_URL, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify({ action: "tandai_lunas", idPendaftaran: idPendaftaran, pw: pw })
@@ -651,7 +652,7 @@
     btn.disabled = true;
     btn.textContent = "Menghapus...";
     var pw = sessionStorage.getItem(STORAGE_KEY);
-    fetch(WEBAPP_URL, {
+    fetchTimeout(WEBAPP_URL, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify({ action: "hapus_peserta_pending", pw: pw, idPendaftaran: card.dataset.id })
@@ -737,7 +738,7 @@
     if (!q) { statusLunas.textContent = "Isi kata kunci pencarian dulu."; document.getElementById("listLunas").innerHTML = ""; return; }
     statusLunas.textContent = "Mencari...";
     var pw = sessionStorage.getItem(STORAGE_KEY);
-    fetch(WEBAPP_URL, {
+    fetchTimeout(WEBAPP_URL, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify({ action: "cari_lunas", kueri: q, pw: pw })
@@ -878,7 +879,7 @@
     btn.disabled = true;
     btn.textContent = "Menghapus...";
     var pw = sessionStorage.getItem(STORAGE_KEY);
-    fetch(WEBAPP_URL, {
+    fetchTimeout(WEBAPP_URL, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify({ action: "hapus_ditolak", pw: pw, baris: btn.dataset.baris })
@@ -925,7 +926,7 @@
     var statusTolak = document.getElementById("statusTolak");
     statusTolak.textContent = "Memuat...";
     var pw = sessionStorage.getItem(STORAGE_KEY);
-    fetch(WEBAPP_URL, {
+    fetchTimeout(WEBAPP_URL, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify({ action: "list_ditolak_terbaru", pw: pw })

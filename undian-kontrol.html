@@ -121,6 +121,7 @@
   }
   .hapus-btn:hover{ text-decoration:underline; }
 </style>
+<script src="fetch-timeout.js"></script>
 </head>
 <body>
 
@@ -231,7 +232,7 @@
   function apiCall(action, extra){
     var pw = sessionStorage.getItem(STORAGE_KEY);
     var body = Object.assign({ action: action, pw: pw }, extra || {});
-    return fetch(WEBAPP_URL, {
+    return fetchTimeout(WEBAPP_URL, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify(body)
