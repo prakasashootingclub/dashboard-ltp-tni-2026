@@ -68,10 +68,14 @@
   .tab-btn.aktif{background:var(--olive); color:var(--bg); border-color:var(--olive);}
 
   /* ---------- kartu ditolak ---------- */
+  /* Kartu ini sekarang diklik langsung (cursor:pointer + hover), bukan
+     lewat tombol terpisah -- disamakan dengan pola .hasil-card di tab
+     "Peserta Terdaftar" (lihat catatan di renderListDitolak). */
   .kartu-tolak{
     background:var(--panel); border:1px solid var(--line); border-left:3px solid var(--red);
-    border-radius:8px; padding:12px 14px; margin-bottom:10px;
+    border-radius:8px; padding:12px 14px; margin-bottom:10px; cursor:pointer;
   }
+  .kartu-tolak:hover{border-color:var(--olive);}
   .kartu-tolak .baris-atas{display:flex; justify-content:space-between; align-items:flex-start; gap:12px;}
   .kartu-tolak .nama{font-size:14px; font-weight:700;}
   .kartu-tolak .waktu{font-family:var(--mono); font-size:11px; color:var(--ink-faint); white-space:nowrap;}
@@ -79,10 +83,6 @@
   .kartu-tolak .alasan{
     font-size:12px; color:var(--amber-bright); margin-top:6px; padding-top:6px;
     border-top:1px solid var(--line);
-  }
-  .kartu-tolak button.perbaiki-btn{
-    width:100%; margin-top:10px; padding:10px; border-radius:6px; border:1px solid var(--olive);
-    background:var(--panel-2); color:var(--olive-bright); font-size:13px; font-weight:700;
   }
 
   /* ---------- pencarian ---------- */
@@ -649,6 +649,13 @@
   }
 
   function renderListDitolak(list){
+    // Kartu ini SEKARANG diklik langsung (seluruh kartu), bukan lewat
+    // tombol terpisah -- disamakan dengan pola ".hasil-card" di tab
+    // "Peserta Terdaftar" (klik kartu manapun langsung buka form edit).
+    // Sebelumnya kartu Penolakan satu-satunya yang masih pakai tombol
+    // penuh di bawah, beda pola dari tab sebelahnya. Permintaan Kang, 16
+    // September 2026 ("tombolnya belum konsisten seperti pada peserta
+    // terdaftar").
     var el = document.getElementById("listDitolak");
     el.innerHTML = list.map(function(r){
       return '<div class="kartu-tolak" data-baris="' + r.baris + '">' +
@@ -658,12 +665,11 @@
         '</div>' +
         '<div class="meta">' + escapeHtml(r.kategori) + ' &middot; ' + escapeHtml(r.item) + ' &middot; HP: ' + escapeHtml(r.hp) + '</div>' +
         '<div class="alasan">' + escapeHtml(r.alasan) + '</div>' +
-        '<button type="button" class="perbaiki-btn" data-baris="' + r.baris + '">Perbaiki &amp; Pindahkan ke Verifikasi Bayar</button>' +
       '</div>';
     }).join("");
-    el.querySelectorAll(".perbaiki-btn").forEach(function(btn){
-      btn.onclick = function(){
-        var entri = daftarDitolakAktif.find(function(r){ return String(r.baris) === btn.dataset.baris; });
+    el.querySelectorAll(".kartu-tolak").forEach(function(kartu){
+      kartu.onclick = function(){
+        var entri = daftarDitolakAktif.find(function(r){ return String(r.baris) === kartu.dataset.baris; });
         if (entri) bukaFormPerbaikiDitolak(entri);
       };
     });
