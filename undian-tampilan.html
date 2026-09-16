@@ -114,10 +114,14 @@
        20:60:20 -- lihat flex-grow di .header-bar & .pemenang-wrap.
        Proporsi HORIZONTAL di baris ini (gambar hadiah : kolom undian)
        = 70:30 lewat grid-template-columns. Permintaan Kang, 16
-       September 2026 (angka persis dari Kang). */
+       September 2026 (angka persis dari Kang).
+       align-items:center (bukan stretch lagi) -- supaya gambar hadiah
+       dan kotak undian sama-sama di tengah baris ini secara vertikal
+       ("simetris"), bukan kotak undian dipaksa full-stretch jadi
+       tinggi/kotak seperti sebelumnya. Permintaan Kang, 16 Sep 2026. */
     flex:6 1 0; min-height:0;
     display:grid; grid-template-columns:7fr 3fr; gap:clamp(16px,2.4vw,36px);
-    align-items:stretch;
+    align-items:center;
   }
 
   /* TIDAK ADA bingkai/panel/teks apa pun di sekitar gambar hadiah --
@@ -130,6 +134,7 @@
   .hadiah-box{
     display:flex; flex-direction:column; align-items:center; justify-content:center;
     overflow:hidden; position:relative; min-height:0;
+    width:100%; height:100%; max-height:100%;
   }
   .hadiah-box img{ max-width:100%; max-height:100%; object-fit:contain; }
   .hadiah-nama{
@@ -140,20 +145,21 @@
     text-shadow:0 4px 14px rgba(0,0,0,0.5);
   }
 
-  /* Idle (belum ada undian jalan) SENGAJA pakai gaya panel gelap yang
-     sama seperti kotak hadiah -- sebelumnya kotak putih polos kosong
-     tampak jelek/kaku waktu belum ada apa-apa. Baru berubah jadi
-     "tiket" putih (gaya lama) begitu SEDANG berputar/sudah mendarat.
-     Permintaan Kang, 16 September 2026. */
+  /* Kotak undian TAMPIL SEBAGAI "tiket" putih siap-putar SEJAK AWAL
+     (sebelum tombol UNDI ditekan sama sekali) -- bukan lagi panel gelap
+     kosong dengan ikon target + teks "Menunggu undian dimulai...".
+     Bentuknya juga PERSEGI PANJANG mendatar (lebar > tinggi lewat
+     aspect-ratio), bukan kotak tinggi yang stretch penuh ke tinggi
+     baris ini, dan disejajarkan tengah (align-self) biar simetris
+     dengan gambar hadiah di sebelahnya. Permintaan Kang, 16 Sep 2026. */
   .draw-box{
-    background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    background:var(--ink); border:1px solid transparent; border-radius:14px;
     display:flex; align-items:center; justify-content:center;
-    position:relative; overflow:hidden; min-height:0;
-    transition:background .25s ease, border-color .25s ease, box-shadow .25s ease;
-  }
-  .draw-box.spinning, .draw-box.landed{
-    background:var(--ink); border-color:transparent;
-    box-shadow:0 18px 46px rgba(0,0,0,0.45), inset 0 0 0 1px rgba(0,0,0,0.06);
+    position:relative; overflow:hidden;
+    width:100%; align-self:center;
+    aspect-ratio:2.4 / 1; max-height:100%;
+    box-shadow:0 18px 46px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(0,0,0,0.06);
+    transition:box-shadow .25s ease;
   }
   .draw-box.spinning{ box-shadow:0 0 0 4px var(--olive-bright), 0 18px 46px rgba(0,0,0,0.45); }
   .draw-box.landed{ box-shadow:0 0 0 4px var(--amber-bright), 0 22px 54px rgba(229,169,74,0.25); }
@@ -166,21 +172,15 @@
   .reel-track{ display:flex; flex-direction:column; will-change:transform, filter; }
   .reel-item{
     font-family:var(--display); font-weight:400;
-    font-size:clamp(30px, 6.4vw, 92px);
+    font-size:clamp(26px, 5.4vw, 68px);
     color:#12160F; letter-spacing:.01em; line-height:1.15; white-space:nowrap;
     text-align:center; padding:0 clamp(10px,2vw,26px);
   }
-  .reel-item.mode-nama{ font-family:var(--sans); font-weight:700; font-size:clamp(24px, 4.6vw, 62px); }
-
-  .idle-content{
-    display:flex; flex-direction:column; align-items:center; gap:clamp(10px,1.6vh,18px);
-    color:var(--ink-faint);
-  }
-  .idle-content svg{ width:clamp(34px,4.4vw,54px); height:clamp(34px,4.4vw,54px); opacity:.55; }
-  .idle-label{
-    font-family:var(--mono); font-size:clamp(13px,1.6vw,17px); color:var(--ink-faint);
-    letter-spacing:.14em; text-transform:uppercase;
-  }
+  .reel-item.mode-nama{ font-family:var(--sans); font-weight:700; font-size:clamp(20px, 3.8vw, 48px); }
+  /* Placeholder "siap putar" -- ditampilkan di reel SEJAK AWAL (belum
+     pernah ada undian jalan sama sekali), gantinya ikon+teks gelap yang
+     lama. Permintaan Kang, 16 Sep 2026. */
+  .reel-item.siap{ color:var(--ink-faint); font-family:var(--mono); font-weight:600; letter-spacing:.16em; text-transform:uppercase; font-size:clamp(14px,1.8vw,20px); }
 
   /* ---------- pemenang (bawah, 30% tinggi panggung) ---------- */
   /* TIDAK BOLEH scroll (permintaan Kang) -- kalau pemenang banyak
@@ -197,21 +197,25 @@
     gap:14px; width:100%;
     transition:transform .18s ease;
   }
+  /* Diperbesar -- kartu pemenang sebelumnya (maks 24px nama) masih
+     terlalu kecil dibaca dari jarak vtron. fitPemenangGrid() tetap
+     jadi jaring pengaman terakhir (scale-down) kalau pemenang sangat
+     banyak sekaligus. Permintaan Kang, 16 Sep 2026. */
   .pemenang-card{
-    background:var(--panel); border:1px solid var(--amber-bright); border-radius:12px;
-    padding:16px 22px; min-width:220px; flex:1 1 260px; max-width:420px;
+    background:var(--panel); border:1px solid var(--amber-bright); border-radius:14px;
+    padding:22px 30px; min-width:280px; flex:1 1 320px; max-width:520px;
     text-align:center; animation:enter .4s ease both;
     box-shadow:0 10px 30px rgba(229,169,74,0.12);
   }
   @keyframes enter{ from{ opacity:0; transform:translateY(10px) scale(.97); } to{ opacity:1; transform:none; } }
   .pemenang-card .pkupon{
-    display:inline-block; font-family:var(--mono); font-weight:700; font-size:12px;
+    display:inline-block; font-family:var(--mono); font-weight:700; font-size:16px;
     color:var(--amber-bright); background:var(--panel-2); border:1px solid var(--line);
-    border-radius:20px; padding:2px 10px; margin-bottom:6px;
+    border-radius:20px; padding:4px 14px; margin-bottom:10px;
   }
-  .pemenang-card .pnama{ font-weight:700; font-size:clamp(16px,1.9vw,24px); color:var(--ink); }
-  .pemenang-card .pinstansi{ font-family:var(--mono); font-size:clamp(11px,1.1vw,13px); color:var(--ink-dim); margin-top:4px; }
-  .pemenang-card .php{ font-family:var(--mono); font-size:clamp(11px,1.1vw,13px); color:var(--amber-bright); margin-top:6px; }
+  .pemenang-card .pnama{ font-weight:700; font-size:clamp(24px,3vw,38px); color:var(--ink); }
+  .pemenang-card .pinstansi{ font-family:var(--mono); font-size:clamp(15px,1.6vw,20px); color:var(--ink-dim); margin-top:6px; }
+  .pemenang-card .php{ font-family:var(--mono); font-size:clamp(15px,1.6vw,20px); color:var(--amber-bright); margin-top:8px; }
   /* Header logo + judul -- permintaan Kang, 16 September 2026, lewat
      sketsa tangan ("LOGO" pojok kiri + "DOORPRIZE LOMBA TEMBAK PIALA
      PANGLIMA TNI"). Tinggi PROPORSIONAL 20% (flex-grow 2), bukan lagi
@@ -224,15 +228,18 @@
     gap:clamp(14px,2.2vw,26px);
     margin-bottom:clamp(10px,1.6vh,18px);
   }
-  .header-logo{ width:clamp(52px,7vh,84px); height:clamp(52px,7vh,84px); flex:none; object-fit:contain; }
+  /* Diperbesar lagi -- ukuran sebelumnya (maks 84px logo / 54px judul)
+     masih "kurang besar" waktu dilihat di vtron. Permintaan Kang, 16
+     Sep 2026 (koreksi ke-2). */
+  .header-logo{ width:clamp(80px,11vh,140px); height:clamp(80px,11vh,140px); flex:none; object-fit:contain; }
   .header-title{ text-align:center; }
   .header-title-main{
-    font-family:var(--display); font-size:clamp(28px,4.2vw,54px); color:var(--amber-bright);
-    line-height:1; text-shadow:0 0 18px rgba(229,169,74,0.3);
+    font-family:var(--display); font-size:clamp(40px,6.2vw,84px); color:var(--amber-bright);
+    line-height:1; text-shadow:0 0 22px rgba(229,169,74,0.35);
   }
   .header-title-sub{
-    font-family:var(--mono); font-size:clamp(13px,1.5vw,18px); color:var(--ink-dim);
-    letter-spacing:.05em; margin-top:6px;
+    font-family:var(--mono); font-size:clamp(16px,2vw,26px); color:var(--ink-dim);
+    letter-spacing:.05em; margin-top:8px;
   }
   .simulasi-badge{
     position:fixed; top:14px; left:14px; z-index:10;
@@ -280,11 +287,7 @@
     <div class="stage-top">
       <div class="hadiah-box" id="hadiahBox"></div>
       <div class="draw-box" id="drawBox">
-        <div class="idle-content" id="idleContent">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>
-          <div class="idle-label">Menunggu undian dimulai&hellip;</div>
-        </div>
-        <div class="reel-viewport hidden" id="reelViewport">
+        <div class="reel-viewport" id="reelViewport">
           <div class="reel-track" id="reelTrack"></div>
         </div>
       </div>
@@ -306,7 +309,6 @@
 
   var hadiahBox = document.getElementById("hadiahBox");
   var drawBox = document.getElementById("drawBox");
-  var idleContent = document.getElementById("idleContent");
   var reelViewport = document.getElementById("reelViewport");
   var reelTrack = document.getElementById("reelTrack");
   var pemenangWrap = document.querySelector(".pemenang-wrap");
@@ -528,8 +530,6 @@
   // pemenang secara berurutan, dan kartunya baru muncul begitu reel
   // benar-benar berhenti di nilai orang itu. Ditemukan Kang, 16 Sep 2026.
   function jalankanUndian(state){
-    idleContent.classList.add("hidden");
-    reelViewport.classList.remove("hidden");
     drawBox.classList.remove("landed");
     drawBox.classList.add("spinning");
     pemenangGrid.innerHTML = "";
@@ -595,13 +595,18 @@
   }
   window.addEventListener("resize", fitPemenangGrid);
 
+  // Kotak undian TETAP tampil sebagai tiket putih siap-putar (bukan
+  // kosong/gelap lagi) -- baik sejak halaman pertama dimuat maupun
+  // sehabis undian selesai/dibersihkan. Permintaan Kang, 16 Sep 2026.
   function tampilkanIdle(){
     drawBox.classList.remove("spinning", "landed");
-    idleContent.classList.remove("hidden");
-    reelViewport.classList.add("hidden");
     reelTrack.innerHTML = "";
     reelTrack.style.transform = "";
     reelTrack.style.filter = "";
+    var el = document.createElement("div");
+    el.className = "reel-item siap";
+    el.textContent = "SIAP DIUNDI";
+    reelTrack.appendChild(el);
     pemenangGrid.innerHTML = "";
     pemenangGrid.style.transform = "";
   }
@@ -647,6 +652,7 @@
     document.getElementById("gate").classList.add("hidden");
     document.getElementById("app").classList.remove("hidden");
     sessionStorage.setItem(STORAGE_KEY, pw);
+    tampilkanIdle();
     poll();
     if (pollTimer) clearInterval(pollTimer);
     pollTimer = setInterval(poll, POLL_MS);
