@@ -118,12 +118,19 @@
     align-items:stretch;
   }
 
+  /* TIDAK ada bingkai/panel di sekitar gambar hadiah -- gambar (PNG,
+     sering transparan) ditampilkan apa adanya. Panel gelap + border
+     HANYA muncul waktu belum ada gambar (placeholder teks), lewat class
+     .kosong-state. Permintaan Kang, 16 September 2026 ("jangan dalam
+     kotak bingkai gitu biarkan aja gambar apa adanya"). */
   .hadiah-box{
-    background:var(--panel); border:1px solid var(--line); border-radius:14px;
     display:flex; flex-direction:column; align-items:center; justify-content:center;
     overflow:hidden; position:relative; min-height:0;
   }
-  .hadiah-box img{ width:100%; height:100%; object-fit:contain; }
+  .hadiah-box.kosong-state{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px;
+  }
+  .hadiah-box img{ max-width:100%; max-height:100%; object-fit:contain; }
   .hadiah-box .kosong{
     font-family:var(--mono); font-size:12px; color:var(--ink-faint);
     text-align:center; padding:20px; letter-spacing:.05em;
@@ -245,7 +252,7 @@
 
   <div class="stage">
     <div class="stage-top">
-      <div class="hadiah-box" id="hadiahBox">
+      <div class="hadiah-box kosong-state" id="hadiahBox">
         <div class="kosong" id="hadiahKosong">Hadiah belum diatur<br>dari halaman Kontrol</div>
       </div>
       <div class="draw-box" id="drawBox">
@@ -382,20 +389,26 @@
 
     var namaHtml = state.hadiah ? '<div class="hadiah-nama">' + escapeHtml(state.hadiah) + '</div>' : '';
     if (!state.hadiahGambarUrl) {
+      hadiahBox.classList.add("kosong-state");
       hadiahBox.innerHTML = '<div class="kosong">' +
         (state.hadiah ? escapeHtml(state.hadiah) : "Hadiah belum diatur<br>dari halaman Kontrol") + '</div>';
       return;
     }
     if (gambarCache[state.hadiahGambarUrl]) {
+      hadiahBox.classList.remove("kosong-state");
       hadiahBox.innerHTML = '<img src="' + gambarCache[state.hadiahGambarUrl] + '" alt="Hadiah">' + namaHtml;
       return;
     }
+    hadiahBox.classList.add("kosong-state");
     hadiahBox.innerHTML = '<div class="kosong">Memuat gambar&hellip;</div>';
     apiCall("undian_get_gambar", { ref: state.hadiahGambarUrl }).then(function(res){
       if (!res.ok) { hadiahBox.innerHTML = '<div class="kosong">' + escapeHtml(res.pesan || "Gagal memuat gambar.") + '</div>'; return; }
       var dataUri = "data:" + res.mimeType + ";base64," + res.base64;
       gambarCache[state.hadiahGambarUrl] = dataUri;
-      if (lastHadiahKey === key) hadiahBox.innerHTML = '<img src="' + dataUri + '" alt="Hadiah">' + namaHtml;
+      if (lastHadiahKey === key) {
+        hadiahBox.classList.remove("kosong-state");
+        hadiahBox.innerHTML = '<img src="' + dataUri + '" alt="Hadiah">' + namaHtml;
+      }
     }).catch(function(){
       hadiahBox.innerHTML = '<div class="kosong">Gagal terhubung ke server.</div>';
     });
