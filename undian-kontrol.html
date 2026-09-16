@@ -362,12 +362,18 @@
     status.textContent = "Mengupload…";
     var reader = new FileReader();
     reader.onload = function(){
-      var base64 = reader.result.split(",")[1];
+      var dataUri = reader.result;
+      var base64 = dataUri.split(",")[1];
       apiCall("undian_upload_gambar", { base64: base64, mimeType: file.type }).then(function(res){
         if (!res.ok) { status.textContent = "Gagal upload: " + (res.pesan || ""); return; }
+        // res.url sekarang "cache:<id>" (bukan link Drive lagi -- link
+        // Drive gagal di-hotlink, lihat Undian.js) jadi TIDAK bisa
+        // langsung dipasang ke <img src>. Preview di sini pakai data URI
+        // yang sudah ada di tangan (dataUri, dari FileReader tadi) --
+        // tidak perlu fetch ulang.
         hadiahGambarUrlSaatIni = res.url;
         var img = document.getElementById("gambarPreview");
-        img.src = res.url;
+        img.src = dataUri;
         img.classList.add("show");
         status.textContent = "Gambar tersimpan -- sudah tampil otomatis di layar Tampilan.";
         dorongHadiahLive();

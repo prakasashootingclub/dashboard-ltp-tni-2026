@@ -37,6 +37,12 @@
     height:100vh; height:100dvh; display:flex; flex-direction:column;
   }
   .hidden{ display:none !important; }
+  /* #app SEBELUMNYA tidak pernah di-flex, jadi tingginya cuma
+     shrink-to-fit ke konten -- .stage-top/.pemenang-wrap yang pakai
+     flex-basis:0 (untuk rasio 70:30) jadi collapse ke 0 karena tidak
+     ada tinggi pasti yang bisa "diperebutkan". Ditemukan Kang, 16
+     September 2026 (redesain layout 70:30). */
+  #app{ flex:1; min-height:0; display:flex; flex-direction:column; }
 
   /* ---------- gerbang password ---------- */
   #gate{
@@ -104,13 +110,11 @@
     gap:clamp(14px,2.4vh,26px);
   }
   .stage-top{
-    /* min-height DIJAMIN (bukan 0) -- kalau banyak pemenang sekaligus
-       ("tak terbatas") dan kartu di bawah butuh banyak ruang, area
-       hadiah/reel di sini dulu bisa kegencet sampai nyaris hilang dan
-       tabrakan sama badge "MODE SIMULASI"/tombol fullscreen di pojok.
-       Ditemukan Kang, 16 September 2026. */
-    flex:1 1 auto; min-height:38vh;
-    display:grid; grid-template-columns:1fr 1.15fr; gap:clamp(16px,2.4vw,36px);
+    /* flex-grow 7 vs 3 di .pemenang-wrap -- membagi ruang yang TERSISA
+       (setelah gap) persis 70:30, PROPORSIONAL & KONSISTEN di layar
+       berapa pun, tanpa scroll. Permintaan Kang, 16 September 2026. */
+    flex:7 1 0; min-height:0;
+    display:grid; grid-template-columns:1fr 1fr; gap:clamp(16px,2.4vw,36px);
     align-items:stretch;
   }
 
@@ -132,12 +136,20 @@
     text-shadow:0 4px 14px rgba(0,0,0,0.5);
   }
 
+  /* Idle (belum ada undian jalan) SENGAJA pakai gaya panel gelap yang
+     sama seperti kotak hadiah -- sebelumnya kotak putih polos kosong
+     tampak jelek/kaku waktu belum ada apa-apa. Baru berubah jadi
+     "tiket" putih (gaya lama) begitu SEDANG berputar/sudah mendarat.
+     Permintaan Kang, 16 September 2026. */
   .draw-box{
-    background:var(--ink); border-radius:14px;
-    box-shadow:0 18px 46px rgba(0,0,0,0.45), inset 0 0 0 1px rgba(0,0,0,0.06);
+    background:var(--panel); border:1px solid var(--line); border-radius:14px;
     display:flex; align-items:center; justify-content:center;
     position:relative; overflow:hidden; min-height:0;
-    transition:box-shadow .2s ease;
+    transition:background .25s ease, border-color .25s ease, box-shadow .25s ease;
+  }
+  .draw-box.spinning, .draw-box.landed{
+    background:var(--ink); border-color:transparent;
+    box-shadow:0 18px 46px rgba(0,0,0,0.45), inset 0 0 0 1px rgba(0,0,0,0.06);
   }
   .draw-box.spinning{ box-shadow:0 0 0 4px var(--olive-bright), 0 18px 46px rgba(0,0,0,0.45); }
   .draw-box.landed{ box-shadow:0 0 0 4px var(--amber-bright), 0 22px 54px rgba(229,169,74,0.25); }
@@ -156,23 +168,30 @@
   }
   .reel-item.mode-nama{ font-family:var(--sans); font-weight:700; font-size:clamp(24px, 4.6vw, 62px); }
 
+  .idle-content{
+    display:flex; flex-direction:column; align-items:center; gap:clamp(10px,1.6vh,18px);
+    color:var(--ink-faint);
+  }
+  .idle-content svg{ width:clamp(34px,4.4vw,54px); height:clamp(34px,4.4vw,54px); opacity:.55; }
   .idle-label{
-    font-family:var(--mono); font-size:clamp(13px,1.6vw,17px); color:#7C8778;
+    font-family:var(--mono); font-size:clamp(13px,1.6vw,17px); color:var(--ink-faint);
     letter-spacing:.14em; text-transform:uppercase;
   }
 
-  /* ---------- pemenang (bawah) ---------- */
-  /* max-height + overflow-y:auto -- kalau pemenang banyak (mode "tak
-     terbatas"), grid ini SENDIRI yang di-scroll, bukan mendorong/
-     mengecilkan kotak hadiah & reel di atasnya sampai berantakan. */
+  /* ---------- pemenang (bawah, 30% tinggi panggung) ---------- */
+  /* TIDAK BOLEH scroll (permintaan Kang) -- kalau pemenang banyak
+     sekaligus ("tak terbatas"), seluruh grid di-scale mengecil lewat JS
+     (lihat fitPemenangGrid()) supaya semua kartu tetap muat persis di
+     area ini, bukan didorong meluber atau discroll. */
   .pemenang-wrap{
-    flex:0 1 auto; min-height:120px; max-height:42vh;
-    display:flex; align-items:flex-start; justify-content:center;
-    overflow-y:auto; padding:2px 2px 6px;
+    flex:3 1 0; min-height:0;
+    display:flex; align-items:center; justify-content:center;
+    overflow:hidden; padding:4px;
   }
   .pemenang-grid{
     display:flex; flex-wrap:wrap; align-items:stretch; justify-content:center;
     gap:14px; width:100%;
+    transition:transform .18s ease;
   }
   .pemenang-card{
     background:var(--panel); border:1px solid var(--amber-bright); border-radius:12px;
@@ -230,10 +249,12 @@
         <div class="kosong" id="hadiahKosong">Hadiah belum diatur<br>dari halaman Kontrol</div>
       </div>
       <div class="draw-box" id="drawBox">
-        <div class="reel-viewport" id="reelViewport">
-          <div class="reel-track" id="reelTrack">
-            <div class="idle-label">Menunggu undian dimulai&hellip;</div>
-          </div>
+        <div class="idle-content" id="idleContent">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>
+          <div class="idle-label">Menunggu undian dimulai&hellip;</div>
+        </div>
+        <div class="reel-viewport hidden" id="reelViewport">
+          <div class="reel-track" id="reelTrack"></div>
         </div>
       </div>
     </div>
@@ -254,8 +275,10 @@
 
   var hadiahBox = document.getElementById("hadiahBox");
   var drawBox = document.getElementById("drawBox");
+  var idleContent = document.getElementById("idleContent");
   var reelViewport = document.getElementById("reelViewport");
   var reelTrack = document.getElementById("reelTrack");
+  var pemenangWrap = document.querySelector(".pemenang-wrap");
   var pemenangGrid = document.getElementById("pemenangGrid");
   var flashLayer = document.getElementById("flashLayer");
   var fsBtn = document.getElementById("fsBtn");
@@ -340,23 +363,42 @@
     }).then(function(r){ return r.json(); });
   }
 
+  var gambarCache = {}; // ref -> data URI, biar tidak fetch ulang tiap poll
   // Bug lama: cuma re-render kalau gambar berubah, jadi kalau nama hadiah
   // diketik operator TANPA gambar, teksnya tidak pernah update di layar
   // ini. Sekarang dibandingkan pakai key gabungan (gambar + nama) supaya
   // KEDUANYA re-render begitu salah satu berubah. Ditemukan Kang, 16
   // September 2026.
+  //
+  // hadiahGambarUrl BUKAN link Drive lagi (link Drive TERBUKTI gagal
+  // di-hotlink <img src> dari browser walau curl berhasil -- 2x dicoba,
+  // 2x gagal). Sekarang formatnya "cache:<id>", diambil sebagai base64
+  // lewat action JSON undian_get_gambar, baru dipasang sebagai data URI.
   function updateHadiah(state){
     var key = (state.hadiahGambarUrl || "") + "|" + (state.hadiah || "");
     if (key === lastHadiahKey) return;
     lastHadiahKey = key;
-    if (state.hadiahGambarUrl) {
-      hadiahBox.innerHTML = '<img src="' + escapeHtml(state.hadiahGambarUrl) + '" alt="Hadiah">' +
-        (state.hadiah ? '<div class="hadiah-nama">' + escapeHtml(state.hadiah) + '</div>' : '');
-    } else {
+    document.getElementById("simulasiBadge").classList.toggle("hidden", !state.simulasi);
+
+    var namaHtml = state.hadiah ? '<div class="hadiah-nama">' + escapeHtml(state.hadiah) + '</div>' : '';
+    if (!state.hadiahGambarUrl) {
       hadiahBox.innerHTML = '<div class="kosong">' +
         (state.hadiah ? escapeHtml(state.hadiah) : "Hadiah belum diatur<br>dari halaman Kontrol") + '</div>';
+      return;
     }
-    document.getElementById("simulasiBadge").classList.toggle("hidden", !state.simulasi);
+    if (gambarCache[state.hadiahGambarUrl]) {
+      hadiahBox.innerHTML = '<img src="' + gambarCache[state.hadiahGambarUrl] + '" alt="Hadiah">' + namaHtml;
+      return;
+    }
+    hadiahBox.innerHTML = '<div class="kosong">Memuat gambar&hellip;</div>';
+    apiCall("undian_get_gambar", { ref: state.hadiahGambarUrl }).then(function(res){
+      if (!res.ok) { hadiahBox.innerHTML = '<div class="kosong">' + escapeHtml(res.pesan || "Gagal memuat gambar.") + '</div>'; return; }
+      var dataUri = "data:" + res.mimeType + ";base64," + res.base64;
+      gambarCache[state.hadiahGambarUrl] = dataUri;
+      if (lastHadiahKey === key) hadiahBox.innerHTML = '<img src="' + dataUri + '" alt="Hadiah">' + namaHtml;
+    }).catch(function(){
+      hadiahBox.innerHTML = '<div class="kosong">Gagal terhubung ke server.</div>';
+    });
   }
 
   function easeOutQuart(t){ return 1 - Math.pow(1 - t, 4); }
@@ -451,9 +493,12 @@
   // pemenang secara berurutan, dan kartunya baru muncul begitu reel
   // benar-benar berhenti di nilai orang itu. Ditemukan Kang, 16 Sep 2026.
   function jalankanUndian(state){
+    idleContent.classList.add("hidden");
+    reelViewport.classList.remove("hidden");
     drawBox.classList.remove("landed");
     drawBox.classList.add("spinning");
     pemenangGrid.innerHTML = "";
+    pemenangGrid.style.transform = "";
 
     var daftarPemenang = (state.pemenang && state.pemenang.length) ? state.pemenang : [{ utama: "----", nama: "-", instansi: "-", hp: "-" }];
     var isNama = state.mode === "nama";
@@ -495,17 +540,35 @@
       '<div class="pinstansi">' + escapeHtml(p.instansi || "-") + '</div>' +
       '<div class="php">' + escapeHtml(p.hp || "-") + '</div>';
     pemenangGrid.appendChild(el);
-    // Pemenang banyak (tak terbatas) -> pemenang-wrap bisa discroll,
-    // ikutkan pandangan ke kartu paling baru tiap kali muncul.
-    el.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    fitPemenangGrid();
   }
+
+  // TIDAK BOLEH scroll (permintaan Kang) -- kalau kartu pemenang makin
+  // banyak (mode "tak terbatas") dan sudah tidak muat lagi di area 30%
+  // bawah, SELURUH grid di-scale mengecil bareng-bareng lewat transform,
+  // supaya semua kartu tetap kelihatan penuh & simetris, bukan meluber
+  // atau kepotong scrollbar.
+  function fitPemenangGrid(){
+    pemenangGrid.style.transform = "";
+    requestAnimationFrame(function(){
+      var wrapRect = pemenangWrap.getBoundingClientRect();
+      var gridRect = pemenangGrid.getBoundingClientRect();
+      if (!gridRect.width || !gridRect.height) return;
+      var skala = Math.min(1, (wrapRect.width - 4) / gridRect.width, (wrapRect.height - 4) / gridRect.height);
+      pemenangGrid.style.transform = skala < 0.999 ? "scale(" + skala.toFixed(3) + ")" : "";
+    });
+  }
+  window.addEventListener("resize", fitPemenangGrid);
 
   function tampilkanIdle(){
     drawBox.classList.remove("spinning", "landed");
-    reelTrack.innerHTML = '<div class="idle-label">Menunggu undian dimulai&hellip;</div>';
+    idleContent.classList.remove("hidden");
+    reelViewport.classList.add("hidden");
+    reelTrack.innerHTML = "";
     reelTrack.style.transform = "";
     reelTrack.style.filter = "";
     pemenangGrid.innerHTML = "";
+    pemenangGrid.style.transform = "";
   }
 
   function poll(){
