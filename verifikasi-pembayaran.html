@@ -1037,6 +1037,23 @@
 
   var saved = sessionStorage.getItem(STORAGE_KEY);
   if (saved) unlock(saved);
+
+  // Muat ulang daftar Verifikasi Bayar & Penolakan otomatis begitu admin
+  // KEMBALI ke tab browser ini -- BUKAN polling terus-menerus (setInterval)
+  // supaya tidak menimpa kartu konfirmasi "Tandai Lunas" yang sengaja
+  // dibuat tetap tampil sampai admin reload manual (lihat catatan di
+  // tandaiLunas()). Skenario nyata yang diperbaiki: admin edit No HP
+  // peserta di tab/halaman LAIN (Edit Data Peserta), lalu balik ke tab
+  // Verifikasi Bayar yang sudah lama terbuka -- pencarian "cariInput"
+  // murni filter data di memori (semuaItem) yang sudah basi, jadi nomor
+  // baru "tidak ditemukan" sampai di-refresh manual. Permintaan Kang, 16
+  // September 2026.
+  document.addEventListener("visibilitychange", function(){
+    if (document.visibilityState !== "visible") return;
+    if (document.getElementById("app").classList.contains("hidden")) return;
+    muatDaftar();
+    muatDaftarTolak();
+  });
 </script>
 
 </body>
