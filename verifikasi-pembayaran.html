@@ -145,6 +145,16 @@
     border-radius:6px; background:#25D366; color:#0E1210; font-size:13px;
     font-weight:700; text-decoration:none;
   }
+  /* Link WA langsung ke peserta -- SELALU ada di tiap kartu apa pun
+     status/bukti-nya (beda dari .wa-ingat yang cuma muncul kalau bukti
+     belum ada). Permintaan Kang, 16 September 2026: sebelumnya tidak ada
+     cara buka WA langsung untuk peserta yang sudah "Menunggu Verifikasi"
+     (bukti sudah ada) -- cuma peserta "Menunggu Bukti Transfer" yang
+     kebagian tombol WA. */
+  .card a.wa-chat-inline{
+    color:#25D366; text-decoration:none; font-weight:700; font-size:12px;
+  }
+  .card a.wa-chat-inline:hover{text-decoration:underline;}
   #empty{
     text-align:center; color:#5B6660; padding:40px 20px; font-size:14px;
   }
@@ -437,6 +447,20 @@
     };
   }
 
+  // Link "Chat WA" polos (tanpa template pesan) ke nomor peserta --
+  // dipakai di SEMUA kartu Verifikasi Bayar apa pun statusnya, beda dari
+  // item.waLinkPengingat (backend) yang cuma diisi untuk status "Menunggu
+  // Bukti Transfer". Sama persis logika normalisasi nomor dengan
+  // waLinkPenolakan di bawah -- disalin ke sini (bukan dipanggil sebagai
+  // fungsi bersama) karena keduanya didefinisikan di bagian berbeda file
+  // ini dan urutan pemuatan skrip tidak dijamin.
+  function waLinkChat_(hpRaw){
+    var hp = String(hpRaw || "").split("/")[0].trim().replace(/[^0-9]/g, "");
+    if (!hp) return null;
+    if (hp.charAt(0) === "0") hp = "62" + hp.substring(1);
+    return "https://wa.me/" + hp;
+  }
+
   function renderList(items){
     var list = document.getElementById("list");
     var empty = document.getElementById("empty");
@@ -503,11 +527,15 @@
           '<div class="upload-status" data-role="status"></div>';
       }
 
+      var waChat = waLinkChat_(item.hp);
+
       card.innerHTML =
         '<div class="nama">' + escapeHtml(item.nama) + '</div>' +
         '<div class="meta">' +
           escapeHtml(namaTampilanMateri(item.kategori)) + ' &middot; ' + escapeHtml(item.item) + '<br>' +
-          'HP: ' + escapeHtml(item.hp) + ' &middot; Golongan: ' + escapeHtml(item.golongan) + '<br>' +
+          'HP: ' + escapeHtml(item.hp) +
+          (waChat ? ' (<a class="wa-chat-inline" href="' + waChat + '" target="_blank" rel="noopener">Chat WA</a>)' : '') +
+          ' &middot; Golongan: ' + escapeHtml(item.golongan) + '<br>' +
           (item.instansiClub && item.instansiClub !== "-" ? 'Instansi/Club: ' + escapeHtml(item.instansiClub) + '<br>' : '') +
           'Metode: <b>' + escapeHtml(item.metodeBayar || "-") + '</b> &middot; Total: <b class="biaya">' + fmtRupiah(item.biaya) + '</b>' +
         '</div>' +
