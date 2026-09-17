@@ -131,6 +131,22 @@
   }
   .readonly-box a{color:var(--amber-bright);}
   .readonly-box .kunci{color:var(--ink-faint);}
+  #buktiTfBox{
+    background:var(--panel-2); border:1px solid var(--line); border-radius:6px;
+    padding:10px 12px; margin-bottom:14px;
+  }
+  #buktiTfBox a{color:var(--amber-bright); font-size:12.5px;}
+  #buktiTfBox .kunci{color:var(--ink-faint); font-size:12.5px;}
+  .upload-lbl-edit{
+    display:inline-block; margin-left:10px; font-size:12px; color:var(--olive-bright);
+    text-decoration:underline; cursor:pointer;
+  }
+  #hapusBuktiBtn{
+    display:inline-block; margin-left:10px; padding:3px 9px; border-radius:5px;
+    border:1px solid var(--red); background:transparent; color:var(--red-bright); font-size:11.5px;
+  }
+  #hapusBuktiBtn:disabled{border-color:#3a4a3a; color:var(--ink-dim);}
+  #buktiTfStatus{font-size:11.5px; color:var(--ink-faint); margin-top:6px; min-height:14px;}
   .status-lunas-lock{
     background:rgba(143,179,90,.1); border:1px solid var(--olive); border-radius:6px;
     padding:9px 10px; font-size:12.5px; color:var(--olive-bright);
@@ -354,6 +370,123 @@
 
   var pesertaAktif = null; // {idPendaftaran, nilai[]} yang sedang diedit
 
+  // Foto kamera HP mentah biasanya 3-8 MB -- kompres dulu di browser
+  // (turunkan resolusi maks 1280px sisi terpanjang, JPEG kualitas 0.7)
+  // sebelum dikirim. Disalin dari verifikasi-pembayaran.html (fungsi
+  // sama persis) -- dua halaman ini beda file HTML jadi tidak bisa
+  // berbagi <script> langsung. PDF/tipe non-gambar dikirim apa adanya.
+  function kompresGambar_(file){
+    return new Promise(function(resolve){
+      if (!file.type || file.type.indexOf("image/") !== 0) {
+        resolve({ blob: file, mimeType: file.type });
+        return;
+      }
+      var url = URL.createObjectURL(file);
+      var img = new Image();
+      img.onload = function(){
+        URL.revokeObjectURL(url);
+        var MAKS_SISI = 1280;
+        var skala = Math.min(1, MAKS_SISI / Math.max(img.width, img.height));
+        var w = Math.max(1, Math.round(img.width * skala));
+        var h = Math.max(1, Math.round(img.height * skala));
+        var canvas = document.createElement("canvas");
+        canvas.width = w; canvas.height = h;
+        var ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, w, h);
+        canvas.toBlob(function(blob){
+          resolve(blob ? { blob: blob, mimeType: "image/jpeg" } : { blob: file, mimeType: file.type });
+        }, "image/jpeg", 0.7);
+      };
+      img.onerror = function(){
+        URL.revokeObjectURL(url);
+        resolve({ blob: file, mimeType: file.type });
+      };
+      img.src = url;
+    });
+  }
+
+  // Widget Bukti Transfer -- lihat/hapus/upload ulang, langsung dari
+  // Edit Data Peserta (sebelumnya cuma bisa lihat link, harus pindah ke
+  // tab Verifikasi Bayar untuk upload). Permintaan Kang, 17 September
+  // 2026. Hapus TIDAK menghapus file dari Google Drive (cuma lepas
+  // link-nya dari data peserta) -- lihat catatan di hapusBuktiTransferEdit_
+  // (Code.js).
+  function renderBuktiTfBox(){
+    var buktiBox = document.getElementById("buktiTfBox");
+    var urlSekarang = v(KOLOM.buktiTransferUrl);
+    buktiBox.innerHTML =
+      (urlSekarang
+        ? '<a href="' + escapeHtml(urlSekarang) + '" target="_blank" rel="noopener">Lihat Bukti Transfer &rarr;</a>' +
+          '<button type="button" id="hapusBuktiBtn">Hapus Bukti</button>'
+        : '<span class="kunci">Belum ada bukti transfer.</span>') +
+      '<label class="upload-lbl-edit" for="uploadBuktiInput">' + (urlSekarang ? "Ganti/upload ulang" : "Upload bukti transfer") + '</label>' +
+      '<input type="file" id="uploadBuktiInput" accept="image/*,application/pdf" style="display:none">' +
+      '<div id="buktiTfStatus"></div>';
+
+    document.getElementById("uploadBuktiInput").addEventListener("change", function(){
+      var input = this;
+      var file = input.files[0];
+      if (!file) return;
+      var statusEl = document.getElementById("buktiTfStatus");
+      statusEl.textContent = "Mengompres foto...";
+      kompresGambar_(file).then(function(hasil){
+        statusEl.textContent = "Mengupload...";
+        var reader = new FileReader();
+        reader.onload = function(){
+          var base64 = String(reader.result).split(",")[1];
+          var pw = sessionStorage.getItem(STORAGE_KEY);
+          fetchTimeout(WEBAPP_URL, {
+            method: "POST",
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify({ action: "upload_bukti_edit", idPendaftaran: pesertaAktif.idPendaftaran, base64: base64, mimeType: hasil.mimeType, pw: pw })
+          })
+            .then(function(r){ return r.json(); })
+            .then(function(res){
+              if (!res.ok) { statusEl.textContent = res.pesan || "Gagal upload."; return; }
+              pesertaAktif.nilai[KOLOM.buktiTransferUrl] = res.buktiUrl;
+              if (res.statusBayarBaru) pesertaAktif.nilai[KOLOM.statusBayar] = res.statusBayarBaru;
+              renderFormEdit();
+            })
+            .catch(function(err){ statusEl.textContent = "Gagal terhubung ke server: " + err; });
+        };
+        reader.onerror = function(){ statusEl.textContent = "Gagal membaca file."; };
+        reader.readAsDataURL(hasil.blob);
+      });
+    });
+
+    var hapusBtn = document.getElementById("hapusBuktiBtn");
+    if (hapusBtn) {
+      hapusBtn.onclick = function(){
+        if (!confirm('Hapus bukti transfer untuk "' + v(KOLOM.nama) + '"?\n\nFile aslinya TETAP ada di Google Drive, ini cuma melepas link-nya dari data peserta ini -- link bisa diupload ulang kapan saja.')) return;
+        hapusBtn.disabled = true;
+        hapusBtn.textContent = "Menghapus...";
+        var pw = sessionStorage.getItem(STORAGE_KEY);
+        fetchTimeout(WEBAPP_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({ action: "hapus_bukti_edit", idPendaftaran: pesertaAktif.idPendaftaran, pw: pw })
+        })
+          .then(function(r){ return r.json(); })
+          .then(function(res){
+            if (!res.ok) {
+              hapusBtn.disabled = false;
+              hapusBtn.textContent = "Hapus Bukti";
+              alert(res.pesan || "Gagal menghapus.");
+              return;
+            }
+            pesertaAktif.nilai[KOLOM.buktiTransferUrl] = "";
+            if (res.statusBayarBaru) pesertaAktif.nilai[KOLOM.statusBayar] = res.statusBayarBaru;
+            renderFormEdit();
+          })
+          .catch(function(err){
+            hapusBtn.disabled = false;
+            hapusBtn.textContent = "Hapus Bukti";
+            alert("Gagal terhubung ke server: " + err);
+          });
+      };
+    }
+  }
+
   function bukaFormEdit(idPendaftaran){
     var box = document.getElementById("formEdit");
     box.classList.remove("hidden");
@@ -406,7 +539,6 @@
     }
 
     var qrLink = v(KOLOM.qrUrl) ? '<a href="' + escapeHtml(v(KOLOM.qrUrl)) + '" target="_blank" rel="noopener">Lihat QR &rarr;</a>' : '<span class="kunci">belum ada</span>';
-    var buktiLink = v(KOLOM.buktiTransferUrl) ? '<a href="' + escapeHtml(v(KOLOM.buktiTransferUrl)) + '" target="_blank" rel="noopener">Lihat &rarr;</a>' : '<span class="kunci">belum ada -- upload lewat tab Verifikasi Bayar</span>';
 
     box.innerHTML =
       '<h3>' + escapeHtml(v(KOLOM.nama)) + '</h3>' +
@@ -414,9 +546,11 @@
 
       '<div class="readonly-box">' +
         'Daftar: ' + escapeHtml(v(KOLOM.timestamp)) + '<br>' +
-        'Bukti Transfer: ' + buktiLink + '<br>' +
         'E-Tiket QR: ' + qrLink + (v(KOLOM.waktuLunas) ? ' &middot; Lunas sejak: ' + escapeHtml(v(KOLOM.waktuLunas)) : '') +
       '</div>' +
+
+      '<div class="section-title">Bukti Transfer</div>' +
+      '<div id="buktiTfBox"></div>' +
 
       '<div class="section-title">Data Peserta</div>' +
       '<div class="row2">' +
@@ -502,6 +636,7 @@
         htmlAnggotaBeregu_("f_", n, namaListLengkap || [], nikListLengkap || []);
     }
     renderAnggotaBereguBox(pisahAnggota_(v(KOLOM.anggotaTim)), pisahAnggota_(v(KOLOM.nikAnggotaTim)));
+    renderBuktiTfBox();
 
     document.getElementById("f_kategori").addEventListener("change", function(){
       document.getElementById("f_item").innerHTML = itemOptionsUntuk(this.value);
