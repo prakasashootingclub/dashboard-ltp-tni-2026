@@ -51,6 +51,7 @@
 
   /* ---------- kotak nomor kupon doorprize ---------- */
   .kupon-lbl{font-size:11px; color:#8C9A8A; display:block; margin:10px 0 4px;}
+  .kupon-anggota-nama{font-size:12px; font-weight:700; color:#E9EAE3; margin:8px 0 3px;}
   .kupon-input{
     width:100%; padding:10px; border-radius:6px; border:1px solid #2A322C;
     background:#0E1210; color:#E9EAE3; font-size:15px; margin-bottom:8px;
@@ -302,12 +303,21 @@
   // 2026. Server juga menolak permintaan kosong (lihat verifikasi_daftar_
   // ulang, Code.js) -- ini cuma penjagaan di sisi tampilan supaya
   // petugas tidak perlu bolak-balik ke server buat tahu kosong itu salah.
+  // kupon bisa berupa string (item Perorangan) ATAU array (item Beregu,
+  // 1 nomor per anggota) -- permintaan Kang, 17 September 2026: "setiap
+  // peserta mendapat kupon", jadi tim Beregu wajib isi kupon SEMUA
+  // anggota, bukan cuma 1 untuk seluruh tim.
   function konfirmasiKupon(kupon){
-    if (!kupon) {
-      alert("Nomor kupon WAJIB diisi.\n\nCek ulang -- pastikan kupon doorprize sudah diserahkan ke peserta, lalu ketik nomornya sebelum Verifikasi.");
+    var arr = Array.isArray(kupon) ? kupon : [kupon];
+    if (arr.some(function(k){ return !k; })) {
+      alert(arr.length > 1
+        ? "Nomor kupon WAJIB diisi untuk SEMUA " + arr.length + " anggota tim ini.\n\nCek ulang -- pastikan kupon doorprize sudah diserahkan ke setiap anggota, lalu ketik semua nomornya sebelum Verifikasi."
+        : "Nomor kupon WAJIB diisi.\n\nCek ulang -- pastikan kupon doorprize sudah diserahkan ke peserta, lalu ketik nomornya sebelum Verifikasi.");
       return false;
     }
-    return confirm("Nomor kupon yang diketik: \"" + kupon + "\"\n\nPASTIKAN nomor ini sudah dicocokkan persis dengan sobekan kupon fisik yang diserahkan peserta. Sudah yakin benar?");
+    var tampil = arr.join(", ");
+    return confirm("Nomor kupon yang diketik: \"" + tampil + "\"\n\nPASTIKAN nomor ini sudah dicocokkan persis dengan sobekan kupon fisik yang diserahkan ke " +
+      (arr.length > 1 ? "MASING-MASING anggota tim" : "peserta") + ". Sudah yakin benar?");
   }
 
   // Tampilkan data peserta + kotak isi nomor kupon doorprize + tombol
@@ -325,6 +335,30 @@
     var hpHtml = hpDigits
       ? '<a href="https://wa.me/' + hpDigits + '" target="_blank" rel="noopener">' + escapeHtml(res.hp) + '</a>'
       : escapeHtml(res.hp);
+
+    // Item Beregu (2-3 orang) -- SETIAP anggota dapat kupon fisik
+    // sendiri-sendiri, jadi tampilkan 1 kotak input PER anggota (dilabeli
+    // namanya), bukan 1 kotak untuk seluruh tim. Permintaan Kang, 17
+    // September 2026 ("setiap peserta mendapat kupon").
+    var anggotaBeregu = res.anggotaBeregu || 0;
+    var namaAnggotaList = res.namaAnggotaList || [];
+    var kuponListSekarang = res.kuponListSekarang || [];
+    var kuponFieldsHtml;
+    if (anggotaBeregu > 1) {
+      kuponFieldsHtml = '<label class="kupon-lbl">Nomor Kupon Doorprize -- WAJIB semua ' + anggotaBeregu + ' anggota diisi</label>';
+      for (var k = 0; k < anggotaBeregu; k++) {
+        var namaAnggotaK = namaAnggotaList[k] ? escapeHtml(namaAnggotaList[k]) : ("Anggota " + (k + 1));
+        var valAnggotaK = kuponListSekarang[k] ? escapeHtml(kuponListSekarang[k]) : "";
+        kuponFieldsHtml +=
+          '<div class="kupon-anggota-nama">' + namaAnggotaK + '</div>' +
+          '<input type="text" class="kupon-input kupon-multi" data-idx="' + k + '" value="' + valAnggotaK + '" placeholder="Contoh: 0452" inputmode="numeric">';
+      }
+    } else {
+      kuponFieldsHtml =
+        '<label class="kupon-lbl">Nomor Kupon Doorprize (WAJIB diisi -- sobekan kupon fisik peserta)</label>' +
+        '<input type="text" id="kuponInput" class="kupon-input" placeholder="Contoh: 0452" inputmode="numeric">';
+    }
+
     box.innerHTML =
       '<div class="pesan">' + escapeHtml(res.pesan) + '</div>' +
       '<div class="nama">' + escapeHtml(res.nama) + '</div>' +
@@ -335,15 +369,20 @@
       (res.instansiClub && res.instansiClub !== "-" ? '<br>Instansi/Club: ' + escapeHtml(res.instansiClub) : '') +
       '</div>' +
       fotoHtml +
-      '<label class="kupon-lbl">Nomor Kupon Doorprize (WAJIB diisi -- sobekan kupon fisik peserta)</label>' +
-      '<input type="text" id="kuponInput" class="kupon-input" placeholder="Contoh: 0452" inputmode="numeric">' +
+      kuponFieldsHtml +
       '<button id="verifKuponBtn" class="btn-verif-kupon">Verifikasi Daftar Ulang</button>' +
       '<button id="batalKuponBtn" type="button" class="btn-batal-kupon">Batal / Scan Ulang</button>' +
       '<div id="kuponErr" class="kupon-err"></div>';
 
     document.getElementById("verifKuponBtn").onclick = function(){
       var btn = this;
-      var kupon = document.getElementById("kuponInput").value.trim();
+      var kupon;
+      if (anggotaBeregu > 1) {
+        kupon = [];
+        box.querySelectorAll(".kupon-multi").forEach(function(inp){ kupon.push(inp.value.trim()); });
+      } else {
+        kupon = document.getElementById("kuponInput").value.trim();
+      }
       var errEl = document.getElementById("kuponErr");
       if (!konfirmasiKupon(kupon)) return;
       btn.disabled = true; btn.textContent = "Memproses...";
@@ -377,7 +416,8 @@
       busy = false;
       if (scanner) scanner.resume();
     };
-    document.getElementById("kuponInput").focus();
+    var fokusEl = anggotaBeregu > 1 ? box.querySelector(".kupon-multi") : document.getElementById("kuponInput");
+    if (fokusEl) fokusEl.focus();
   }
 
   function onScanSuccess(decodedText){
@@ -507,6 +547,26 @@
           var hpHtml = hpDigits
             ? '<a href="https://wa.me/' + hpDigits + '" target="_blank" rel="noopener">' + escapeHtml(p.hp) + '</a>'
             : escapeHtml(p.hp);
+          // Item Beregu -- tampilkan 1 kotak kupon PER anggota, sama
+          // seperti jalur scan QR (renderFormKupon). Permintaan Kang, 17
+          // September 2026.
+          var anggotaBereguP = p.anggotaBeregu || 0;
+          var kuponFieldsManualHtml = "";
+          if (!sudahVerif) {
+            if (anggotaBereguP > 1) {
+              kuponFieldsManualHtml = '<label class="kupon-lbl">Nomor Kupon Doorprize -- WAJIB semua ' + anggotaBereguP + ' anggota diisi</label>';
+              for (var km = 0; km < anggotaBereguP; km++) {
+                var namaAnggotaKm = (p.namaAnggotaList && p.namaAnggotaList[km]) ? escapeHtml(p.namaAnggotaList[km]) : ("Anggota " + (km + 1));
+                kuponFieldsManualHtml +=
+                  '<div class="kupon-anggota-nama">' + namaAnggotaKm + '</div>' +
+                  '<input type="text" class="kupon-input kupon-manual-multi" data-idx="' + km + '" placeholder="Contoh: 0452" inputmode="numeric">';
+              }
+            } else {
+              kuponFieldsManualHtml =
+                '<label class="kupon-lbl">Nomor Kupon Doorprize (WAJIB diisi)</label>' +
+                '<input type="text" class="kupon-input kupon-manual" placeholder="Contoh: 0452" inputmode="numeric">';
+            }
+          }
           card.innerHTML =
             '<div class="nama">' + escapeHtml(p.nama) + '</div>' +
             '<div class="meta">NIK: ' + escapeHtml(p.ktp) + '<br>' +
@@ -517,18 +577,21 @@
               ? 'Sudah daftar ulang' + (p.nomorKupon && p.nomorKupon !== "-" ? ' (Kupon: ' + escapeHtml(p.nomorKupon) + ')' : '')
               : 'Belum daftar ulang') + '</div>' +
             fotoHtml +
-            (sudahVerif ? '' :
-              '<label class="kupon-lbl">Nomor Kupon Doorprize (WAJIB diisi)</label>' +
-              '<input type="text" class="kupon-input kupon-manual" placeholder="Contoh: 0452" inputmode="numeric">'
-            ) +
+            kuponFieldsManualHtml +
             '<button class="verif-manual">' + (sudahVerif ? 'Sudah pernah daftar ulang' : 'Verifikasi Daftar Ulang') + '</button>' +
             (sudahVerif ? '' : '<div class="kupon-err kupon-err-manual"></div>');
           var btn = card.querySelector(".verif-manual");
           if (sudahVerif) btn.disabled = true;
           btn.onclick = function(){
-            var kuponEl = card.querySelector(".kupon-manual");
             var errEl = card.querySelector(".kupon-err-manual");
-            var kuponVal = kuponEl ? kuponEl.value.trim() : "";
+            var kuponVal;
+            if (anggotaBereguP > 1) {
+              kuponVal = [];
+              card.querySelectorAll(".kupon-manual-multi").forEach(function(inp){ kuponVal.push(inp.value.trim()); });
+            } else {
+              var kuponEl = card.querySelector(".kupon-manual");
+              kuponVal = kuponEl ? kuponEl.value.trim() : "";
+            }
             if (!konfirmasiKupon(kuponVal)) return;
             verifikasiManual(p.etiketId, btn, kuponVal, errEl);
           };
