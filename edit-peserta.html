@@ -144,6 +144,11 @@
     width:100%; padding:11px; border-radius:6px; border:1px solid var(--line);
     background:var(--panel-2); color:var(--ink-dim); font-size:13px; font-weight:700; margin-top:8px;
   }
+  #hapusPesertaBtn{
+    width:100%; padding:11px; border-radius:6px; border:1px solid var(--red);
+    background:transparent; color:var(--red-bright); font-size:13px; font-weight:700; margin-top:16px;
+  }
+  #hapusPesertaBtn:disabled{border-color:#3a4a3a; color:var(--ink-dim);}
   #simpanStatus{font-size:12.5px; margin-top:10px; min-height:16px;}
   #simpanStatus.ok{color:var(--olive-bright);}
   #simpanStatus.err{color:var(--red-bright);}
@@ -473,7 +478,8 @@
 
       '<div id="simpanStatus"></div>' +
       '<button id="simpanBtn">Simpan Perubahan</button>' +
-      '<button id="batalBtn" type="button">Batal</button>';
+      '<button id="batalBtn" type="button">Batal</button>' +
+      '<button id="hapusPesertaBtn" type="button">Hapus Peserta Ini (Permanen)</button>';
 
     function field_(label, key, tipe){
       return '<div class="field"><label>' + label + '</label><input type="' + tipe + '" id="f_' + key + '" value="' + escapeHtml(v(KOLOM[key])) + '"></div>';
@@ -510,6 +516,59 @@
       pesertaAktif = null;
     };
     document.getElementById("simpanBtn").onclick = simpanPerubahan;
+    document.getElementById("hapusPesertaBtn").onclick = hapusPesertaIni;
+  }
+
+  // Hapus PERMANEN dari sheet -- SENGAJA tidak ada blokir status Lunas
+  // (beda dari tombol "Hapus" di Verifikasi Bayar yang cuma boleh untuk
+  // yang belum Lunas) karena halaman ini memang khusus Kang, untuk kasus
+  // yang tidak bisa ditangani dari situ: data duplikat/test, salah input
+  // yang sudah kadung Lunas, dsb. Konfirmasi 2 lapis kalau statusnya
+  // sudah Lunas (uang sudah masuk) -- supaya tidak terhapus tanpa
+  // sengaja. TIDAK memproses refund, itu tetap urusan admin di luar
+  // sistem. Permintaan Kang, 17 September 2026.
+  function hapusPesertaIni(){
+    var btn = document.getElementById("hapusPesertaBtn");
+    var statusEl = document.getElementById("simpanStatus");
+    var nama = document.getElementById("f_nama").value.trim();
+    var statusBayarSekarang = v(KOLOM.statusBayar);
+
+    if (!confirm('HAPUS PERMANEN data "' + nama + '" dari sistem?\n\nTindakan ini TIDAK BISA DIBATALKAN. Baris ini akan hilang total dari Spreadsheet.')) return;
+    if (statusBayarSekarang === "Lunas") {
+      if (!confirm('Peserta ini statusnya SUDAH LUNAS (uang sudah masuk).\n\nMenghapus di sini TIDAK memproses refund apa pun -- itu tetap harus diurus manual di luar sistem kalau memang perlu.\n\nYakin tetap hapus "' + nama + '"?')) return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = "Menghapus...";
+    statusEl.className = "";
+    statusEl.textContent = "";
+    var pw = sessionStorage.getItem(STORAGE_KEY);
+    fetchTimeout(WEBAPP_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "hapus_peserta_edit", idPendaftaran: pesertaAktif.idPendaftaran, pw: pw })
+    })
+      .then(function(r){ return r.json(); })
+      .then(function(res){
+        if (!res.ok) {
+          btn.disabled = false;
+          btn.textContent = "Hapus Peserta Ini (Permanen)";
+          statusEl.className = "err";
+          statusEl.textContent = res.pesan || "Gagal menghapus.";
+          return;
+        }
+        document.getElementById("formEdit").classList.add("hidden");
+        document.getElementById("formEdit").innerHTML = "";
+        pesertaAktif = null;
+        document.getElementById("statusCari").textContent = '"' + res.nama + '" sudah dihapus permanen.';
+        document.getElementById("hasilCari").innerHTML = "";
+      })
+      .catch(function(err){
+        btn.disabled = false;
+        btn.textContent = "Hapus Peserta Ini (Permanen)";
+        statusEl.className = "err";
+        statusEl.textContent = "Gagal terhubung ke server: " + err;
+      });
   }
 
   function simpanPerubahan(){
