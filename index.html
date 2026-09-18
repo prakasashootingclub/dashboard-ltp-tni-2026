@@ -91,7 +91,7 @@
 
   /* TOTALS STRIP */
   .totals{
-    display:grid; grid-template-columns:repeat(2,1fr); gap:1px;
+    display:grid; grid-template-columns:repeat(3,1fr); gap:1px;
     background:var(--line); border:1px solid var(--line);
     margin-bottom:24px; border-radius:6px; overflow:hidden;
   }
@@ -238,6 +238,7 @@
   .item-nums{ display:flex; gap:16px; font-family:var(--mono); font-size:11px; color:var(--ink-dim); }
   .item-nums span b{ color:var(--ink); font-size:13px; }
   .item-nums .lbl-verif b{ color:var(--olive-bright); }
+  .item-nums .lbl-lunas b{ color:var(--olive-bright); }
   .item-nums .lbl-checkin b{ color:var(--amber-bright); }
 
   /* ---------- MOBILE ---------- */
@@ -440,7 +441,7 @@ async function muatData(){
     if (!json.ok) throw new Error("Respons endpoint tidak ok");
 
     rows = json.rows.map(r => ({kat: r.kategori, item: r.item, sumber: r.sumber, golongan: r.golongan,
-      terdaftar: r.terdaftar, verif: r.verif, checkin: r.checkin}));
+      terdaftar: r.terdaftar, lunas: r.lunas || 0, verif: r.verif, checkin: r.checkin}));
 
     // Modal detail mungkin sedang terbuka saat data refresh tiap 30 detik — perbarui isinya juga.
     if (modalOpenKat) bukaDetail(modalOpenKat);
@@ -488,6 +489,7 @@ function render(){
   // ada yang Terdaftar sama sekali, supaya tidak menyesatkan seolah 0%.
   const sum = (field)=> fr.reduce((a,r)=>a+r[field],0);
   const terdaftarSum = sum("terdaftar");
+  const lunasSum = sum("lunas");
   const checkinSum = sum("checkin");
   const pct = (num)=> terdaftarSum > 0 ? Math.round(num/terdaftarSum*100)+"%" : "—";
 
@@ -507,8 +509,22 @@ function render(){
   }, 0);
   const pesertaSum = terdaftarSum - reguTeamSum; // Perorangan (non-Beregu) = orang riil juga, 1 baris = 1 orang
   const headcountSum = pesertaSum + reguOrangSum;
+
+  // Sama persis logikanya kayak headcountSum di atas, tapi buat SUBSET yang
+  // sudah Lunas saja (pakai r.lunas, bukan r.terdaftar) -- supaya kotak
+  // "Lunas" juga tampil dalam orang riil, konsisten dengan kotak Terdaftar.
+  const reguTeamLunasSum = fr.filter(r=>r.item.includes("Beregu")).reduce((a,r)=>a+r.lunas,0);
+  const reguOrangLunasSum = fr.reduce((a,r)=>{
+    if (!r.item.includes("Beregu")) return a;
+    const anggotaPerRegu = r.kat === "Senapan" ? 2 : r.kat === "Pistol" ? 3 : 1;
+    return a + r.lunas * anggotaPerRegu;
+  }, 0);
+  const pesertaLunasSum = lunasSum - reguTeamLunasSum;
+  const headcountLunasSum = pesertaLunasSum + reguOrangLunasSum;
+
   const totals = [
     {n:headcountSum, l:"Terdaftar", cls:"", sub:`&bull; ${fmt(pesertaSum)} Perorangan<br>&bull; ${fmt(reguTeamSum)} Regu (${fmt(reguOrangSum)} orang)`},
+    {n:headcountLunasSum, l:"Lunas", cls:"accent", sub:pct(headcountLunasSum)+" dari terdaftar"},
     {n:checkinSum, l:"Daftar Ulang", cls:"amber", sub:pct(checkinSum)+" dari terdaftar"},
   ];
   document.getElementById("totalsStrip").innerHTML = totals.map(t=>`
@@ -524,6 +540,7 @@ function render(){
   grid.innerHTML = kategoriList.map(k=>{
     const kr = fr.filter(r=>k.match(r));
     const t = kr.reduce((a,r)=>a+r.terdaftar,0);
+    const l = kr.reduce((a,r)=>a+r.lunas,0);
     const c = kr.reduce((a,r)=>a+r.checkin,0);
     const max = Math.max(t,1);
     const bar = (val)=> Math.max(4, Math.round(val/max*100));
@@ -564,6 +581,9 @@ function render(){
           <div class="frow"><span class="flab">Terdaftar</span>
             <div class="fbar-track"><div class="fbar-fill s1" style="width:${bar(t)}%"></div></div>
             <span class="fval">${fmt(t)}</span></div>
+          <div class="frow"><span class="flab">Lunas</span>
+            <div class="fbar-track"><div class="fbar-fill s2" style="width:${bar(l)}%"></div></div>
+            <span class="fval">${fmt(l)}</span></div>
           <div class="frow"><span class="flab">Daftar Ulang</span>
             <div class="fbar-track"><div class="fbar-fill s4" style="width:${bar(c)}%"></div></div>
             <span class="fval">${fmt(c)}</span></div>
@@ -589,20 +609,22 @@ function bukaDetail(katKey){
   const kr = filteredRows().filter(r=>k.match(r));
   const byItem = {};
   kr.forEach(r=>{
-    if (!byItem[r.item]) byItem[r.item] = {terdaftar:0, checkin:0};
+    if (!byItem[r.item]) byItem[r.item] = {terdaftar:0, lunas:0, checkin:0};
     byItem[r.item].terdaftar += r.terdaftar;
+    byItem[r.item].lunas += r.lunas;
     byItem[r.item].checkin += r.checkin;
   });
 
   const daftarItem = itemCatalog[katKey] || Object.keys(byItem);
   document.getElementById("modalTitle").textContent = k.nama;
   document.getElementById("modalBody").innerHTML = daftarItem.map(nama=>{
-    const n = byItem[nama] || {terdaftar:0, checkin:0};
+    const n = byItem[nama] || {terdaftar:0, lunas:0, checkin:0};
     return `
       <div class="item-row">
         <div class="item-name">${nama}</div>
         <div class="item-nums">
           <span class="lbl-terdaftar">Terdaftar <b>${fmt(n.terdaftar)}</b></span>
+          <span class="lbl-lunas">Lunas <b>${fmt(n.lunas)}</b></span>
           <span class="lbl-checkin">Daftar Ulang <b>${fmt(n.checkin)}</b></span>
         </div>
       </div>
