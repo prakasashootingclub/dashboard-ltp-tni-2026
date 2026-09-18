@@ -155,6 +155,34 @@
     color:#25D366; text-decoration:none; font-weight:700; font-size:12px;
   }
   .card a.wa-chat-inline:hover{text-decoration:underline;}
+  /* Tampilan format WA + gambar QR langsung di layar (bukan lewat WA) --
+     dipakai kalau WA admin sedang kena peninjauan/dibatasi, jadi peserta
+     bisa foto QR-nya langsung dari HP admin. Permintaan Kang, 18 September
+     2026. */
+  .card button.btn-qr{
+    display:block; width:100%; padding:9px; border-radius:6px;
+    border:1px solid #2A322C; background:#161B17; color:#c68a2e;
+    font-size:12px; font-weight:700; margin-top:6px; cursor:pointer;
+  }
+  .card button.btn-qr:disabled{ opacity:.5; }
+  .qr-box{
+    margin-top:10px; padding:10px; border-radius:6px; background:#0E1210;
+    border:1px solid #2A322C;
+  }
+  .qr-box img{
+    display:block; max-width:220px; width:100%; margin:0 auto 10px;
+    background:#fff; padding:8px; border-radius:6px;
+  }
+  .qr-box textarea{
+    width:100%; min-height:160px; background:#161B17; color:#E9EAE3;
+    border:1px solid #2A322C; border-radius:6px; padding:8px; font-size:12px;
+    font-family:monospace; resize:vertical;
+  }
+  .qr-box .salin-btn{
+    display:block; width:100%; margin-top:6px; padding:8px; border-radius:6px;
+    border:1px solid #2A322C; background:#161B17; color:#9ba488;
+    font-size:11px; font-weight:600; cursor:pointer;
+  }
   #empty{
     text-align:center; color:#5B6660; padding:40px 20px; font-size:14px;
   }
@@ -609,6 +637,42 @@
       });
   }
 
+  // Bangun HTML box "Format WA + QR" dari pesanEtiket/qrBase64 yang
+  // dikirim backend -- dipakai di kartu Tandai Lunas (otomatis, sudah
+  // langsung punya datanya) dan di tab Kirim Ulang E-Tiket (on-demand,
+  // baru diambil begitu tombolnya diklik). Tujuannya supaya admin bisa
+  // langsung tunjukkan QR di layar HP-nya buat difoto peserta, tanpa
+  // harus buka WA sama sekali -- soalnya nomor WA admin sering kena
+  // peninjauan. Permintaan Kang, 18 September 2026.
+  function renderQrBox_(pesanEtiket, qrBase64){
+    var qrHtml = qrBase64
+      ? '<img src="' + qrBase64 + '" alt="QR E-Tiket">'
+      : '<div class="warn">Gambar QR gagal dimuat -- pakai link di teks di bawah.</div>';
+    return (
+      '<div class="qr-box">' +
+        qrHtml +
+        '<textarea readonly>' + escapeHtml(pesanEtiket || "") + '</textarea>' +
+        '<button type="button" class="salin-btn" data-role="salin">Salin Teks Format WA</button>' +
+      '</div>'
+    );
+  }
+  function pasangSalinHandler_(box){
+    var btn = box.querySelector('[data-role="salin"]');
+    var ta = box.querySelector("textarea");
+    if (!btn || !ta) return;
+    btn.onclick = function(){
+      ta.select();
+      try {
+        navigator.clipboard.writeText(ta.value).then(function(){
+          btn.textContent = "Tersalin!";
+          setTimeout(function(){ btn.textContent = "Salin Teks Format WA"; }, 1500);
+        });
+      } catch(e){
+        document.execCommand("copy");
+      }
+    };
+  }
+
   function tandaiLunas(idPendaftaran, card, btn, box){
     btn.disabled = true;
     btn.textContent = "Memproses...";
@@ -638,7 +702,11 @@
             (res.emailDikirim === false
               ? '<div class="tunai">Masa OTS -- email dimatikan, tab WA dibuka otomatis (kalau tidak terbuka, klik tombol ini):</div>'
               : '<div class="tunai">Lunas -- e-tiket sudah dikirim otomatis ke email peserta. Tab WA juga dibuka otomatis (cadangan kalau mau kirim manual juga):</div>') +
-            '<a class="wa-btn" href="' + res.waLink + '" target="_blank" rel="noopener">Kirim E-Tiket via WhatsApp</a>';
+            '<a class="wa-btn" href="' + res.waLink + '" target="_blank" rel="noopener">Kirim E-Tiket via WhatsApp</a>' +
+            (res.pesanEtiket || res.qrBase64
+              ? '<div class="tunai">Atau tunjukkan langsung di HP ini (kalau nomor WA admin sedang kena peninjauan) -- peserta foto QR di bawah:</div>' + renderQrBox_(res.pesanEtiket, res.qrBase64)
+              : '');
+          pasangSalinHandler_(box);
           // Buka otomatis -- sebelumnya admin harus klik tombol ini SATU
           // KALI LAGI setelah Tandai Lunas, padahal Kang maunya begitu klik
           // Tandai Lunas, tab WA-nya langsung kebuka tanpa klik tambahan.
@@ -650,7 +718,11 @@
           // 2026.
           window.open(res.waLink, "_blank", "noopener");
         } else {
-          box.innerHTML = '<div class="tunai">Lunas -- e-tiket sudah terkirim.</div>';
+          box.innerHTML = '<div class="tunai">Lunas -- e-tiket sudah terkirim.</div>' +
+            (res.pesanEtiket || res.qrBase64
+              ? '<div class="tunai">Format WA & QR (kalau perlu tunjukkan ulang):</div>' + renderQrBox_(res.pesanEtiket, res.qrBase64)
+              : '');
+          pasangSalinHandler_(box);
         }
       })
       .catch(function(err){
@@ -746,7 +818,10 @@
         buktiHtml +
         (item.waLink
           ? '<a class="wa-btn" href="' + item.waLink + '" target="_blank" rel="noopener">Kirim Ulang E-Tiket via WhatsApp</a>'
-          : '<div class="warn">QR e-tiket belum tersedia untuk peserta ini -- cek manual di Spreadsheet.</div>');
+          : '<div class="warn">QR e-tiket belum tersedia untuk peserta ini -- cek manual di Spreadsheet.</div>') +
+        (item.waLink
+          ? '<button type="button" class="btn-qr" data-role="tampil-qr">Tampilkan Format WA & QR</button><div data-role="qr-slot"></div>'
+          : '');
 
       var fileInput = card.querySelector('[data-role="input"]');
       if (fileInput) {
@@ -754,6 +829,38 @@
         pasangUploadHandler(fileInput, item, statusEl, function(){ renderListLunas(items); });
         var lbl = card.querySelector('[data-role="upload"], [data-role="reupload"]');
         if (lbl) lbl.onclick = function(e){ e.preventDefault(); fileInput.click(); };
+      }
+
+      var tampilQrBtn = card.querySelector('[data-role="tampil-qr"]');
+      if (tampilQrBtn) {
+        tampilQrBtn.onclick = function(){
+          var slot = card.querySelector('[data-role="qr-slot"]');
+          if (slot.innerHTML) { // sudah pernah diambil -- toggle show/hide, tidak nembak ulang ke server
+            slot.innerHTML = "";
+            return;
+          }
+          tampilQrBtn.disabled = true;
+          tampilQrBtn.textContent = "Memuat...";
+          var pw = sessionStorage.getItem(STORAGE_KEY);
+          fetchTimeout(WEBAPP_URL, {
+            method: "POST",
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify({ action: "ambil_qr_etiket", idPendaftaran: item.idPendaftaran, pw: pw })
+          })
+            .then(function(r){ return r.json(); })
+            .then(function(res){
+              tampilQrBtn.disabled = false;
+              tampilQrBtn.textContent = "Tampilkan Format WA & QR";
+              if (!res.ok) { alert(res.pesan || "Gagal mengambil QR."); return; }
+              slot.innerHTML = renderQrBox_(res.pesanEtiket, res.qrBase64);
+              pasangSalinHandler_(slot);
+            })
+            .catch(function(err){
+              tampilQrBtn.disabled = false;
+              tampilQrBtn.textContent = "Tampilkan Format WA & QR";
+              alert("Gagal terhubung ke server: " + err);
+            });
+        };
       }
 
       list.appendChild(card);
