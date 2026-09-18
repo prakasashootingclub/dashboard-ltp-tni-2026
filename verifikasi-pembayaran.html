@@ -165,23 +165,47 @@
     font-size:12px; font-weight:700; margin-top:6px; cursor:pointer;
   }
   .card button.btn-qr:disabled{ opacity:.5; }
-  .qr-box{
-    margin-top:10px; padding:10px; border-radius:6px; background:#0E1210;
-    border:1px solid #2A322C;
+  /* Halaman khusus (overlay 1 layar penuh, TANPA scroll) -- permintaan
+     Kang, 18 September 2026: sebelumnya expand di dalam kartu bikin
+     peserta harus scroll cari QR-nya. Sekarang QR + data peserta MUAT
+     semua di 1 layar HP, tinggal disodorkan langsung ke peserta buat
+     difoto. height:100dvh (bukan 100vh) supaya tidak kepotong search
+     bar/address bar browser HP. Cuma blok teks WA (kalau kepanjangan)
+     yang boleh scroll SENDIRI di dalam area kecilnya -- bukan seluruh
+     halaman. */
+  #etiketOverlay{
+    display:none; position:fixed; inset:0; z-index:50; background:#0E1210;
+    height:100dvh; flex-direction:column; padding:16px;
   }
-  .qr-box img{
-    display:block; max-width:220px; width:100%; margin:0 auto 10px;
-    background:#fff; padding:8px; border-radius:6px;
+  #etiketOverlay.show{ display:flex; }
+  #etiketOverlay .baris-atas{
+    display:flex; justify-content:space-between; align-items:flex-start;
+    flex-shrink:0;
   }
-  .qr-box textarea{
-    width:100%; min-height:160px; background:#161B17; color:#E9EAE3;
-    border:1px solid #2A322C; border-radius:6px; padding:8px; font-size:12px;
-    font-family:monospace; resize:vertical;
+  #etiketOverlay .nama{ font-size:19px; font-weight:700; line-height:1.25; }
+  #etiketOverlay .meta{ font-size:13px; color:#9ba488; margin-top:4px; }
+  #etiketOverlay button.tutup{
+    flex-shrink:0; width:34px; height:34px; border-radius:8px; border:1px solid #2A322C;
+    background:#161B17; color:#9ba488; font-size:18px; line-height:1; cursor:pointer;
   }
-  .qr-box .salin-btn{
-    display:block; width:100%; margin-top:6px; padding:8px; border-radius:6px;
-    border:1px solid #2A322C; background:#161B17; color:#9ba488;
-    font-size:11px; font-weight:600; cursor:pointer;
+  #etiketOverlay .qr-wrap{
+    flex:1 1 auto; min-height:0; display:flex; align-items:center; justify-content:center;
+    padding:10px 0;
+  }
+  #etiketOverlay .qr-wrap img{
+    max-width:min(78vw, 320px); max-height:100%; width:100%; height:auto;
+    background:#fff; padding:10px; border-radius:10px; object-fit:contain;
+  }
+  #etiketOverlay .pesan-box{
+    flex-shrink:1; min-height:0; max-height:26vh; overflow:auto;
+    background:#161B17; border:1px solid #2A322C; border-radius:8px;
+    padding:8px 10px; font-size:11.5px; color:#c9cfc4; white-space:pre-wrap;
+    font-family:monospace; line-height:1.5;
+  }
+  #etiketOverlay .salin-btn{
+    flex-shrink:0; display:block; width:100%; margin-top:8px; padding:11px;
+    border-radius:6px; border:1px solid #2A322C; background:#161B17; color:#c68a2e;
+    font-size:13px; font-weight:700; cursor:pointer;
   }
   #empty{
     text-align:center; color:#5B6660; padding:40px 20px; font-size:14px;
@@ -260,6 +284,21 @@
 <script src="fetch-timeout.js"></script>
 </head>
 <body>
+
+<!-- Halaman khusus tampilan QR + format WA -- 1 layar penuh, muncul di atas
+     tab mana pun yang sedang aktif, ditutup lewat tombol X. -->
+<div id="etiketOverlay">
+  <div class="baris-atas">
+    <div>
+      <div class="nama" id="etiketNama"></div>
+      <div class="meta" id="etiketMeta"></div>
+    </div>
+    <button type="button" class="tutup" id="etiketTutupBtn">&times;</button>
+  </div>
+  <div class="qr-wrap"><img id="etiketQrImg" alt="QR E-Tiket"></div>
+  <div class="pesan-box" id="etiketPesanBox"></div>
+  <button type="button" class="salin-btn" id="etiketSalinBtn">Salin Teks Format WA</button>
+</div>
 
 <div id="gate">
   <h2>Verifikasi Pembayaran</h2>
@@ -471,7 +510,7 @@
       '</div>';
     box.querySelector(".batal").onclick = function(){ terapkanFilter(); };
     box.querySelector(".ya-lunas").onclick = function(){
-      tandaiLunas(item.idPendaftaran, card, box.querySelector(".ya-lunas"), box);
+      tandaiLunas(item.idPendaftaran, card, box.querySelector(".ya-lunas"), box, item);
     };
   }
 
@@ -637,43 +676,46 @@
       });
   }
 
-  // Bangun HTML box "Format WA + QR" dari pesanEtiket/qrBase64 yang
-  // dikirim backend -- dipakai di kartu Tandai Lunas (otomatis, sudah
-  // langsung punya datanya) dan di tab Kirim Ulang E-Tiket (on-demand,
-  // baru diambil begitu tombolnya diklik). Tujuannya supaya admin bisa
-  // langsung tunjukkan QR di layar HP-nya buat difoto peserta, tanpa
-  // harus buka WA sama sekali -- soalnya nomor WA admin sering kena
-  // peninjauan. Permintaan Kang, 18 September 2026.
-  function renderQrBox_(pesanEtiket, qrBase64){
-    var qrHtml = qrBase64
-      ? '<img src="' + qrBase64 + '" alt="QR E-Tiket">'
-      : '<div class="warn">Gambar QR gagal dimuat -- pakai link di teks di bawah.</div>';
-    return (
-      '<div class="qr-box">' +
-        qrHtml +
-        '<textarea readonly>' + escapeHtml(pesanEtiket || "") + '</textarea>' +
-        '<button type="button" class="salin-btn" data-role="salin">Salin Teks Format WA</button>' +
-      '</div>'
-    );
+  // Halaman khusus (overlay 1 layar penuh, TANPA scroll) berisi QR +
+  // format WA -- dibuka dari kartu Tandai Lunas ATAU tombol "Tampilkan
+  // Format WA & QR" di tab Kirim Ulang E-Tiket. Tujuannya supaya admin
+  // bisa langsung sodorkan HP-nya ke peserta buat difoto QR-nya, tanpa
+  // perlu buka WA sama sekali -- soalnya nomor WA admin sering kena
+  // peninjauan. Semua muat di 1 layar (lihat #etiketOverlay di CSS) --
+  // cuma blok teks pesan yang boleh scroll sendiri kalau kepanjangan,
+  // QR & judul selalu kelihatan. Permintaan Kang, 18 September 2026.
+  function bukaOverlayEtiket_(nama, metaTeks, pesanEtiket, qrBase64){
+    document.getElementById("etiketNama").textContent = nama || "-";
+    document.getElementById("etiketMeta").textContent = metaTeks || "";
+    var img = document.getElementById("etiketQrImg");
+    if (qrBase64) { img.src = qrBase64; img.style.display = ""; }
+    else { img.removeAttribute("src"); img.style.display = "none"; }
+    document.getElementById("etiketPesanBox").textContent = pesanEtiket || "(Teks format WA tidak tersedia.)";
+    document.getElementById("etiketOverlay").classList.add("show");
   }
-  function pasangSalinHandler_(box){
-    var btn = box.querySelector('[data-role="salin"]');
-    var ta = box.querySelector("textarea");
-    if (!btn || !ta) return;
-    btn.onclick = function(){
-      ta.select();
-      try {
-        navigator.clipboard.writeText(ta.value).then(function(){
-          btn.textContent = "Tersalin!";
-          setTimeout(function(){ btn.textContent = "Salin Teks Format WA"; }, 1500);
-        });
-      } catch(e){
-        document.execCommand("copy");
-      }
-    };
+  function tutupOverlayEtiket_(){
+    document.getElementById("etiketOverlay").classList.remove("show");
   }
+  document.getElementById("etiketTutupBtn").onclick = tutupOverlayEtiket_;
+  document.getElementById("etiketSalinBtn").onclick = function(){
+    var teks = document.getElementById("etiketPesanBox").textContent;
+    var btn = document.getElementById("etiketSalinBtn");
+    function tandaiSukses(){
+      btn.textContent = "Tersalin!";
+      setTimeout(function(){ btn.textContent = "Salin Teks Format WA"; }, 1500);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(teks).then(tandaiSukses).catch(function(){});
+    } else {
+      var ta = document.createElement("textarea");
+      ta.value = teks; ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand("copy"); tandaiSukses(); } catch(e){}
+      document.body.removeChild(ta);
+    }
+  };
 
-  function tandaiLunas(idPendaftaran, card, btn, box){
+  function tandaiLunas(idPendaftaran, card, btn, box, item){
     btn.disabled = true;
     btn.textContent = "Memproses...";
     var pw = sessionStorage.getItem(STORAGE_KEY);
@@ -704,9 +746,13 @@
               : '<div class="tunai">Lunas -- e-tiket sudah dikirim otomatis ke email peserta. Tab WA juga dibuka otomatis (cadangan kalau mau kirim manual juga):</div>') +
             '<a class="wa-btn" href="' + res.waLink + '" target="_blank" rel="noopener">Kirim E-Tiket via WhatsApp</a>' +
             (res.pesanEtiket || res.qrBase64
-              ? '<div class="tunai">Atau tunjukkan langsung di HP ini (kalau nomor WA admin sedang kena peninjauan) -- peserta foto QR di bawah:</div>' + renderQrBox_(res.pesanEtiket, res.qrBase64)
+              ? '<button type="button" class="btn-qr" data-role="buka-etiket">Tampilkan Format WA & QR (kalau nomor WA lagi kena peninjauan)</button>'
               : '');
-          pasangSalinHandler_(box);
+          if (box.querySelector('[data-role="buka-etiket"]')) {
+            box.querySelector('[data-role="buka-etiket"]').onclick = function(){
+              bukaOverlayEtiket_(item && item.nama, item && (item.kategori + ' · ' + item.item), res.pesanEtiket, res.qrBase64);
+            };
+          }
           // Buka otomatis -- sebelumnya admin harus klik tombol ini SATU
           // KALI LAGI setelah Tandai Lunas, padahal Kang maunya begitu klik
           // Tandai Lunas, tab WA-nya langsung kebuka tanpa klik tambahan.
@@ -720,9 +766,13 @@
         } else {
           box.innerHTML = '<div class="tunai">Lunas -- e-tiket sudah terkirim.</div>' +
             (res.pesanEtiket || res.qrBase64
-              ? '<div class="tunai">Format WA & QR (kalau perlu tunjukkan ulang):</div>' + renderQrBox_(res.pesanEtiket, res.qrBase64)
+              ? '<button type="button" class="btn-qr" data-role="buka-etiket">Tampilkan Format WA & QR</button>'
               : '');
-          pasangSalinHandler_(box);
+          if (box.querySelector('[data-role="buka-etiket"]')) {
+            box.querySelector('[data-role="buka-etiket"]').onclick = function(){
+              bukaOverlayEtiket_(item && item.nama, item && (item.kategori + ' · ' + item.item), res.pesanEtiket, res.qrBase64);
+            };
+          }
         }
       })
       .catch(function(err){
@@ -820,7 +870,7 @@
           ? '<a class="wa-btn" href="' + item.waLink + '" target="_blank" rel="noopener">Kirim Ulang E-Tiket via WhatsApp</a>'
           : '<div class="warn">QR e-tiket belum tersedia untuk peserta ini -- cek manual di Spreadsheet.</div>') +
         (item.waLink
-          ? '<button type="button" class="btn-qr" data-role="tampil-qr">Tampilkan Format WA & QR</button><div data-role="qr-slot"></div>'
+          ? '<button type="button" class="btn-qr" data-role="tampil-qr">Tampilkan Format WA & QR</button>'
           : '');
 
       var fileInput = card.querySelector('[data-role="input"]');
@@ -833,12 +883,10 @@
 
       var tampilQrBtn = card.querySelector('[data-role="tampil-qr"]');
       if (tampilQrBtn) {
+        var cacheQr = null; // simpan hasil biar klik ulang tidak nembak server lagi
+        var metaTeks = namaTampilanMateri(item.kategori) + ' · ' + item.item;
         tampilQrBtn.onclick = function(){
-          var slot = card.querySelector('[data-role="qr-slot"]');
-          if (slot.innerHTML) { // sudah pernah diambil -- toggle show/hide, tidak nembak ulang ke server
-            slot.innerHTML = "";
-            return;
-          }
+          if (cacheQr) { bukaOverlayEtiket_(item.nama, metaTeks, cacheQr.pesanEtiket, cacheQr.qrBase64); return; }
           tampilQrBtn.disabled = true;
           tampilQrBtn.textContent = "Memuat...";
           var pw = sessionStorage.getItem(STORAGE_KEY);
@@ -852,8 +900,8 @@
               tampilQrBtn.disabled = false;
               tampilQrBtn.textContent = "Tampilkan Format WA & QR";
               if (!res.ok) { alert(res.pesan || "Gagal mengambil QR."); return; }
-              slot.innerHTML = renderQrBox_(res.pesanEtiket, res.qrBase64);
-              pasangSalinHandler_(slot);
+              cacheQr = res;
+              bukaOverlayEtiket_(item.nama, metaTeks, res.pesanEtiket, res.qrBase64);
             })
             .catch(function(err){
               tampilQrBtn.disabled = false;
