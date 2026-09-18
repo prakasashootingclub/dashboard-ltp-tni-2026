@@ -175,35 +175,51 @@
      halaman. */
   #etiketOverlay{
     display:none; position:fixed; inset:0; z-index:50; background:#0E1210;
-    height:100dvh; flex-direction:column; padding:16px;
+    height:100dvh; flex-direction:column; padding:12px 16px;
   }
   #etiketOverlay.show{ display:flex; }
   #etiketOverlay .baris-atas{
     display:flex; justify-content:space-between; align-items:flex-start;
     flex-shrink:0;
   }
-  #etiketOverlay .nama{ font-size:19px; font-weight:700; line-height:1.25; }
-  #etiketOverlay .meta{ font-size:13px; color:#9ba488; margin-top:4px; }
+  #etiketOverlay .nama{ font-size:17px; font-weight:700; line-height:1.2; }
+  #etiketOverlay .meta{ font-size:12px; color:#9ba488; margin-top:2px; }
   #etiketOverlay button.tutup{
-    flex-shrink:0; width:34px; height:34px; border-radius:8px; border:1px solid #2A322C;
-    background:#161B17; color:#9ba488; font-size:18px; line-height:1; cursor:pointer;
+    flex-shrink:0; width:30px; height:30px; border-radius:8px; border:1px solid #2A322C;
+    background:#161B17; color:#9ba488; font-size:16px; line-height:1; cursor:pointer;
   }
+  /* QR dikunci ukurannya (bukan ikut membesar mengisi ruang) -- cukup
+     besar buat difoto/scan, TIDAK perlu sebesar mungkin. Sisa ruang
+     layar sengaja diprioritaskan buat blok teks di bawahnya (12+ baris
+     data peserta), supaya keduanya sama-sama muat tanpa scroll. Rasio
+     ini ditemukan lewat pengukuran DOM langsung di layar 375x667 (HP
+     kecil) -- kalau QR dibiarkan flex:2 seperti sebelumnya, teksnya
+     masih kepotong ~130px dan tetap harus di-scroll. Permintaan Kang,
+     18 September 2026.
+  */
   #etiketOverlay .qr-wrap{
-    flex:1 1 auto; min-height:0; display:flex; align-items:center; justify-content:center;
-    padding:10px 0;
+    flex:0 1 auto; min-height:0; display:flex; align-items:center; justify-content:center;
+    padding:4px 0;
   }
   #etiketOverlay .qr-wrap img{
-    max-width:min(78vw, 320px); max-height:100%; width:100%; height:auto;
-    background:#fff; padding:10px; border-radius:10px; object-fit:contain;
+    max-width:min(62vw, 220px); max-height:32vh; width:auto; height:auto;
+    background:#fff; padding:8px; border-radius:10px; object-fit:contain;
   }
+  /* flex:1 1 auto -- box ambil SEMUA sisa ruang layar setelah header+QR,
+     bukan patokan tinggi tetap yang bisa kepotong di HP layar pendek.
+     overflow:auto TETAP dipasang sebagai jaring pengaman kalau ada
+     peserta Beregu dengan daftar anggota sangat panjang -- tapi sejak
+     baris "PENTING: ..." dibuang dari tampilan (permintaan Kang, 18
+     September 2026), sisa teksnya jauh lebih pendek dan normalnya muat
+     tanpa perlu scroll sama sekali. */
   #etiketOverlay .pesan-box{
-    flex-shrink:1; min-height:0; max-height:26vh; overflow:auto;
+    flex:1 1 auto; min-height:0; overflow:auto;
     background:#161B17; border:1px solid #2A322C; border-radius:8px;
     padding:8px 10px; font-size:11.5px; color:#c9cfc4; white-space:pre-wrap;
-    font-family:monospace; line-height:1.5;
+    font-family:monospace; line-height:1.4;
   }
   #etiketOverlay .salin-btn{
-    flex-shrink:0; display:block; width:100%; margin-top:8px; padding:11px;
+    flex-shrink:0; display:block; width:100%; margin-top:6px; padding:10px;
     border-radius:6px; border:1px solid #2A322C; background:#161B17; color:#c68a2e;
     font-size:13px; font-weight:700; cursor:pointer;
   }
@@ -684,13 +700,28 @@
   // peninjauan. Semua muat di 1 layar (lihat #etiketOverlay di CSS) --
   // cuma blok teks pesan yang boleh scroll sendiri kalau kepanjangan,
   // QR & judul selalu kelihatan. Permintaan Kang, 18 September 2026.
+  // Baris "PENTING: ..." dst DIBUANG dari tampilan layar (bukan dari teks
+  // yang disalin lewat tombol "Salin") -- isinya instruksi buat peserta
+  // kalau pesan ini dikirim manual via WA (screenshot QR, simpan di
+  // galeri, dst), TIDAK relevan lagi kalau admin+peserta sudah sama-sama
+  // lihat QR-nya langsung di layar ini. Membuangnya bikin sisa teks jauh
+  // lebih pendek, muat 1 layar HP tanpa scroll. Permintaan Kang, 18
+  // September 2026.
+  function potongSebelumPenting_(teks){
+    var idx = String(teks || "").indexOf("PENTING:");
+    if (idx === -1) return teks || "";
+    return teks.slice(0, idx).replace(/\n+$/, "");
+  }
+  var etiketPesanLengkap_ = ""; // teks UTUH (termasuk PENTING:) -- dipakai tombol Salin
   function bukaOverlayEtiket_(nama, metaTeks, pesanEtiket, qrBase64){
     document.getElementById("etiketNama").textContent = nama || "-";
     document.getElementById("etiketMeta").textContent = metaTeks || "";
     var img = document.getElementById("etiketQrImg");
     if (qrBase64) { img.src = qrBase64; img.style.display = ""; }
     else { img.removeAttribute("src"); img.style.display = "none"; }
-    document.getElementById("etiketPesanBox").textContent = pesanEtiket || "(Teks format WA tidak tersedia.)";
+    etiketPesanLengkap_ = pesanEtiket || "";
+    document.getElementById("etiketPesanBox").textContent =
+      potongSebelumPenting_(pesanEtiket) || "(Teks format WA tidak tersedia.)";
     document.getElementById("etiketOverlay").classList.add("show");
   }
   function tutupOverlayEtiket_(){
@@ -698,7 +729,7 @@
   }
   document.getElementById("etiketTutupBtn").onclick = tutupOverlayEtiket_;
   document.getElementById("etiketSalinBtn").onclick = function(){
-    var teks = document.getElementById("etiketPesanBox").textContent;
+    var teks = etiketPesanLengkap_ || document.getElementById("etiketPesanBox").textContent;
     var btn = document.getElementById("etiketSalinBtn");
     function tandaiSukses(){
       btn.textContent = "Tersalin!";
