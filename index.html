@@ -9,6 +9,53 @@
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-512.png">
 <script>if("serviceWorker" in navigator){navigator.serviceWorker.register("sw.js");}</script>
+<style>
+  html.terkunci body > *:not(#gerbang){display:none !important}
+  #gerbang{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#0f1411;z-index:99999;padding:16px}
+  #gerbang .kotak{width:100%;max-width:340px;background:#1a211d;border:1px solid #33403a;border-radius:14px;padding:24px 20px;text-align:center;color:#e9efe9;font-family:system-ui,sans-serif}
+  #gerbang h2{margin:0 0 6px;font-size:18px} #gerbang p{margin:0 0 16px;font-size:13px;color:#9fb0a5}
+  #gerbang input{width:100%;box-sizing:border-box;padding:12px;font-size:20px;text-align:center;letter-spacing:6px;border-radius:10px;border:1px solid #33403a;background:#0f1411;color:#fff}
+  #gerbang button{margin-top:12px;width:100%;padding:12px;font-size:15px;font-weight:600;border:0;border-radius:10px;background:#7fae5a;color:#0f1411;cursor:pointer}
+  #gerbang .salah{color:#ff8a80;font-size:13px;margin-top:10px;min-height:16px}
+</style>
+<script>
+/* Gerbang password dashboard utama (permintaan Kang, 20 Sept 2026). PERHATIAN: ini pengaman ringan di sisi browser
+   (repo ini publik, kodenya bisa dibaca); bukan pengaman data sungguhan. Password disimpan sebagai hash SHA-256. */
+(function () {
+  var HASH = "9af15b336e6a9619928537df30b2e6a2376569fcf9d7e773eccede65606529a0";
+  var ok = false;
+  try { ok = sessionStorage.getItem("dash_ok") === "1"; } catch (e) {}
+  if (ok) return;
+  document.documentElement.classList.add("terkunci");
+  function hashHex(t) {
+    if (!window.crypto || !crypto.subtle) return Promise.resolve(null);
+    return crypto.subtle.digest("SHA-256", new TextEncoder().encode(t)).then(function (b) {
+      return Array.prototype.map.call(new Uint8Array(b), function (x) { return ("0" + x.toString(16)).slice(-2); }).join("");
+    });
+  }
+  document.addEventListener("DOMContentLoaded", function () {
+    var g = document.createElement("div");
+    g.id = "gerbang";
+    g.innerHTML = '<div class="kotak"><h2>Dashboard Panitia</h2><p>Masukkan password untuk membuka.</p>' +
+      '<input id="gpw" type="password" inputmode="numeric" autocomplete="off" placeholder="••••">' +
+      '<button id="gbtn">Buka</button><div class="salah" id="gerr"></div></div>';
+    document.body.appendChild(g);
+    var inp = document.getElementById("gpw"), err = document.getElementById("gerr");
+    function coba() {
+      hashHex(inp.value).then(function (h) {
+        if (h === HASH) {
+          try { sessionStorage.setItem("dash_ok", "1"); } catch (e) {}
+          document.documentElement.classList.remove("terkunci");
+          g.remove();
+        } else { err.textContent = "Password salah."; inp.value = ""; inp.focus(); }
+      });
+    }
+    document.getElementById("gbtn").addEventListener("click", coba);
+    inp.addEventListener("keydown", function (e) { if (e.key === "Enter") coba(); });
+    inp.focus();
+  });
+})();
+</script>
 <title>LTP TNI 2026 — Dashboard Pendaftaran</title>
 <style>
   :root{
